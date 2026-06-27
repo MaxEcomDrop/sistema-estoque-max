@@ -8,6 +8,10 @@ yarn.lock
 .env.local
 .env.*.local
 
+# Database
+data/estoque.db
+data/*.db
+
 # Logs
 logs/
 *.log
@@ -33,3 +37,7 @@ coverage/
 # Build
 dist/
 build/
+
+# Temporary files
+tmp/
+temp/

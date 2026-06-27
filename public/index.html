@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Estoque Max</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      padding: 40px;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #666;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #667eea;
+      margin-top: 20px;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .info {
+      background: #f0f7ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .error {
+      background: #ffe0e0;
+      border-left: 4px solid #ff6b6b;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #d32f2f;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📦 Sistema de Estoque Max</h1>
+    <p class="subtitle">Gerencie seu estoque com a integração Bling</p>
+
+    <div id="error" class="error"></div>
+
+    <div class="info">
+      <strong>Como funciona:</strong>
+      <ul style="margin-left: 15px; margin-top: 5px;">
+        <li>Você será redirecionado para autorizar no Bling</li>
+        <li>Seus produtos serão sincronizados automaticamente</li>
+        <li>Acesso apenas aos seus dados</li>
+      </ul>
+    </div>
+
+    <button class="btn btn-primary" onclick="handleBlingAuth()">
+      🔗 Autenticar com Bling
+    </button>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Redirecionando para Bling...</p>
+    </div>
+  </div>
+
+  <script>
+    async function handleBlingAuth() {
+      try {
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+
+        loading.style.display = 'block';
+        errorDiv.style.display = 'none';
+
+        const response = await fetch('/api/auth/url');
+        const data = await response.json();
+
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        } else {
+          throw new Error('Não foi possível obter URL de autenticação');
+        }
+      } catch (error) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = `Erro: ${error.message}`;
+        console.error('Erro:', error);
+      }
+    }
+
+    // Verificar se já está autenticado
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/auth/user');
+        if (response.ok) {
+          window.location.href = '/dashboard';
+        }
+      } catch (error) {
+        console.log('Não autenticado');
+      }
+    }
+
+    checkAuth();
+  </script>
+</body>
+</html>
