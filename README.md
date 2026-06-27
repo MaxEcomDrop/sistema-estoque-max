@@ -186,14 +186,67 @@ NODE_ENV                 # Ambiente (development/production)
 JWT_SECRET               # Chave secreta para JWT
 ```
 
-## 🚀 Deploy
+## 🚀 Deploy em Produção
 
-### Vercel
-1. Conecte seu repositório GitHub ao Vercel
-2. Configure as variáveis de ambiente
-3. Deploy automático ao fazer push
+### ✅ Vercel (Recomendado)
 
-**Nota**: O SQLite funciona melhor com Vercel usando KV storage ou um banco de dados externo em produção.
+**Pré-requisitos:**
+- Conta GitHub com o repositório
+- Conta Vercel (grátis)
+
+**Passo 1: Conectar ao Vercel**
+1. Acesse [vercel.com](https://vercel.com)
+2. Clique em "New Project"
+3. Selecione seu repositório GitHub
+4. Clique em "Import"
+
+**Passo 2: Configurar Variáveis de Ambiente**
+1. Vá para **Settings → Environment Variables**
+2. Adicione as seguintes variáveis:
+   ```
+   BLING_CLIENT_ID=seu_client_id
+   BLING_CLIENT_SECRET=sua_client_secret
+   BLING_REDIRECT_URI=https://seu-dominio.vercel.app/api/auth/callback
+   JWT_SECRET=chave_segura_aleatoria
+   NODE_ENV=production
+   ```
+
+**Passo 3: Deploy**
+1. Clique em "Deploy"
+2. Aguarde o deploy completar (~2 minutos)
+3. Acesse sua URL em produção
+
+**Passo 4: Configurar Webhooks no Bling**
+1. Vá em **Configurações → Integrações → Webhooks** no Bling
+2. Configure a URL do webhook:
+   ```
+   https://seu-dominio.vercel.app/api/webhook/bling
+   ```
+3. Selecione os eventos:
+   - ✅ Produto Criado
+   - ✅ Produto Atualizado
+   - ✅ Estoque Atualizado
+4. Salve
+
+### Docker (Alternativa)
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
+COPY . .
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+### Dados em Produção
+- SQLite armazena dados localmente no Vercel (não persiste entre deploys)
+- Para persistência, configure um banco de dados externo:
+  - PostgreSQL (Vercel Postgres)
+  - MongoDB (Atlas)
+  - Firebase Realtime Database
+
+**Nota para produção**: Se você quiser que os dados persistam entre deploys, substitua SQLite por um banco de dados externo.
 
 ### Docker
 ```dockerfile
