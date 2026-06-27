@@ -1,0 +1,18 @@
+{
+  "name": "sistema-estoque-max",
+  "version": "1.0.0",
+  "description": "Sistema de gestão de estoque para Max Renovação",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["estoque", "inventory", "sistema"],
+  "author": "guienhjo2019@gmail.com",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
