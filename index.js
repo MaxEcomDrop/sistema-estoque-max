@@ -23,6 +23,20 @@ const JWT_SECRET          = process.env.JWT_SECRET          || 'estoque_max_jwt_
 // In-memory change log (resets on cold start)
 const changeLog = [];
 
+// Cache do depósito padrão (evita chamada extra a cada edição de estoque)
+let _depositoId = null;
+async function getDepositoId(token) {
+  if (_depositoId) return _depositoId;
+  try {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/depositos', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const deps = Array.isArray(data?.data) ? data.data : [];
+    _depositoId = (deps.find(d => d.padrao) || deps[0])?.id || 1;
+  } catch { _depositoId = 1; }
+  return _depositoId;
+}
+
 // ── Auth helpers ─────────────────────────────────────────────────
 
 function safeEqual(a, b) {
@@ -149,9 +163,9 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       nome:       p.nome       || 'Sem nome',
       codigo:     p.codigo     || '',
       preco:      typeof p.preco === 'number' ? p.preco : 0,
-      estoque:    p.estoque?.saldoVirtualTotal ?? p.estoque ?? 0,
+      estoque:    typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
       categoria:  p.categoria?.descricao || '',
-      situacao:   p.situacao  || 'A',
+      situacao:   String(p.situacao?.valor || p.situacao || 'A'),
       imagemUrl:  p.imagem?.link || p.imageThumbnailURL || '',
     }));
 
@@ -174,30 +188,34 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
 
   try {
     if (preco !== undefined) {
-      await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`,
-        { preco: Number(preco) },
+      // Busca o produto completo antes de atualizar (Bling exige objeto completo no PUT)
+      const { data: current } = await axios.get(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { headers: blingHeaders(token) }
+      );
+      const prod = current?.data || {};
+      await axios.put(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
       changeLog.push({
-        id: changeLog.length + 1,
-        produto_id: id,
-        produto_nome: nome_produto || `#${id}`,
-        campo: 'preço',
+        id: changeLog.length + 1, produto_id: id,
+        produto_nome: nome_produto || `#${id}`, campo: 'preço',
         valor_anterior: valor_anterior || '—',
         valor_novo: `R$ ${Number(preco).toFixed(2)}`,
         timestamp: new Date().toISOString(),
       });
     }
     if (estoque !== undefined) {
-      await axios.patch('https://www.bling.com.br/Api/v3/estoques',
-        { produto: { id: Number(id) }, operacao: 'B', quantidade: Number(estoque) },
+      const depositoId = await getDepositoId(token);
+      await axios.post('https://www.bling.com.br/Api/v3/estoques',
+        { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
       changeLog.push({
-        id: changeLog.length + 1,
-        produto_id: id,
-        produto_nome: nome_produto || `#${id}`,
-        campo: 'estoque',
+        id: changeLog.length + 1, produto_id: id,
+        produto_nome: nome_produto || `#${id}`, campo: 'estoque',
         valor_anterior: valor_anterior || '—',
         valor_novo: `${Number(estoque)} un.`,
         timestamp: new Date().toISOString(),
@@ -206,7 +224,8 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[Update]', err.response?.data || err.message);
-    res.status(500).json({ error: 'Erro ao atualizar produto', detail: err.response?.data });
+    const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+    res.status(500).json({ error: 'Erro ao atualizar produto', detail });
   }
 });
 
@@ -231,8 +250,9 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
         );
       }
       if (p.estoque !== undefined && p.estoque !== '') {
-        await axios.patch('https://www.bling.com.br/Api/v3/estoques',
-          { produto: { id: Number(p.id) }, operacao: 'B', quantidade: Number(p.estoque) },
+        const depositoId = await getDepositoId(token);
+        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+          { produto: { id: Number(p.id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(p.estoque) },
           { headers: blingHeaders(token) }
         );
       }
@@ -271,7 +291,7 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       numero:    p.numero,
       data:      p.data,
       valor:     p.totalProdutos || p.totalVenda || 0,
-      situacao:  p.situacao?.nome || p.situacao || '—',
+      situacao:  String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
       contato:   p.contato?.nome || '—',
     }));
 
@@ -282,6 +302,36 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     res.status(500).json({ error: 'Erro ao buscar pedidos', detail: err.message });
+  }
+});
+
+// ── Notas Fiscais ─────────────────────────────────────────────────
+
+app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfe', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limite: 50, pagina: 1 },
+    });
+    const notas = (Array.isArray(data?.data) ? data.data : []).map(n => ({
+      id:          n.id,
+      numero:      n.numero,
+      serie:       n.serie || '1',
+      dataEmissao: n.dataEmissao || n.data || '',
+      total:       n.totalProdutos || n.total || n.valor || 0,
+      situacao:    String(n.situacao?.nome || n.situacao?.valor || n.situacao || '—'),
+      chave:       n.chaveAcesso || n.chave || '',
+      contato:     n.contato?.nome || '—',
+    }));
+    res.json({ total: notas.length, notas });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    res.status(500).json({ error: 'Erro ao buscar NF-e', detail: err.message });
   }
 });
 

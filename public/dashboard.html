@@ -266,6 +266,37 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
 .rep-val{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 .rep-tcard{background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;margin-top:0}
 
+/* LAYOUT TOGGLE */
+.layout-toggle{display:flex;border:1px solid var(--bord);border-radius:6px;overflow:hidden;flex-shrink:0}
+.lt-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--mu);transition:all .1s}
+.lt-btn.on{background:var(--acc-bg);color:var(--acc-t)}
+.lt-btn svg{width:14px;height:14px}
+/* GRID / CATALOG CARDS */
+#card-container{padding:16px;display:none}
+#card-container.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:12px}
+#card-container.vc{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.pcard{background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;transition:box-shadow .15s,border-color .15s;display:flex;flex-direction:column;cursor:default}
+.pcard:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:var(--bord)}
+.pcard.sel{border-color:var(--acc);background:var(--acc-bg)}
+.pcard-img{width:100%;aspect-ratio:1;background:var(--bord-l);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border-bottom:1px solid var(--bord-l)}
+.pcard-img img{width:100%;height:100%;object-fit:cover}
+.pcard-img svg{width:28px;height:28px;color:var(--fa)}
+.pcard-body{padding:10px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+.pcard-name{font-size:12px;font-weight:600;color:var(--tx);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pcard-sku{font-size:10px;color:var(--fa);font-family:monospace}
+.pcard-cat{font-size:10px;color:var(--mu);background:var(--bg);border:1px solid var(--bord-l);border-radius:3px;padding:1px 5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.pcard-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--bord-l)}
+.pcard-price{font-size:13px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.pcard-stock{font-size:11px;color:var(--mu)}
+/* Catalog: 2 columns with horizontal layout */
+.vc .pcard{flex-direction:row;align-items:stretch}
+.vc .pcard-img{width:90px;aspect-ratio:1;border-bottom:none;border-right:1px solid var(--bord-l);flex-shrink:0}
+.vc .pcard-body{padding:12px 14px}
+.vc .pcard-name{-webkit-line-clamp:1;font-size:13px}
+/* NF-e status */
+.nfe-ok{color:var(--ok);font-weight:500}.nfe-can{color:var(--er-t);font-weight:500}.nfe-pen{color:var(--wa);font-weight:500}
+.nfe-key{font-family:monospace;font-size:10px;color:var(--fa);word-break:break-all}
+
 @media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}.sb{display:none}.main{margin-left:0!important}}
 @media(max-width:600px){.kpi-row{grid-template-columns:1fr}}
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -301,6 +332,10 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
     <button class="ni" id="ni-relatorio" onclick="setView('relatorio')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span class="ni-label">Relatório</span>
+    </button>
+    <button class="ni" id="ni-notas" onclick="setView('notas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="ni-label">Notas Fiscais</span>
     </button>
     <button class="ni" onclick="window.location.href='/'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
@@ -391,6 +426,12 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
             Filtros <span class="fa-cnt" id="fa-cnt" style="display:none"></span>
           </button>
           <button class="bts" onclick="toggleGroup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span id="grp-lbl">Agrupar</span></button>
+          <div class="dvv"></div>
+          <div class="layout-toggle">
+            <button class="lt-btn on" id="lt-list" onclick="setLayout('list')" title="Tabela (L)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+            <button class="lt-btn" id="lt-grid" onclick="setLayout('grid')" title="Grade (G)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+            <button class="lt-btn" id="lt-cat" onclick="setLayout('catalog')" title="Catálogo (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg></button>
+          </div>
           <div class="tr">
             <button class="bts" onclick="openModal('im-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar</button>
             <button class="bts" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
@@ -414,7 +455,8 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
           </div>
         </div>
 
-        <div class="twrap">
+        <div id="card-container"></div>
+        <div class="twrap" id="list-container">
           <table>
             <thead>
               <tr>
@@ -467,6 +509,14 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
 
   </div>
 </div>
+
+    <!-- VIEW NOTAS FISCAIS -->
+    <div class="view" id="view-notas">
+      <div class="tcard">
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Notas Fiscais (NF-e)</span><div class="tr"><button class="btp" onclick="loadNotas()">Atualizar</button></div></div>
+        <div class="vtable" id="notas-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><p class="st-d">Clique em Atualizar para carregar as notas fiscais do Bling.</p></div></div>
+      </div>
+    </div>
 
 <!-- BATCH BAR -->
 <div class="bbar" id="bbar">
@@ -554,6 +604,7 @@ const S = {
   grouped:false, page:0, PAGE:50,
   lastSync:null, autoRefresh:parseInt(localStorage.getItem('ar')||'0'),
   arTimer:null, arCountdown:0,
+  layout:localStorage.getItem('layout')||'list',
   dark:localStorage.getItem('dm')==='1',
   collapsed:localStorage.getItem('sc')==='1',
   presets:JSON.parse(localStorage.getItem('presets')||'[]'),
@@ -579,8 +630,41 @@ function applyTheme(){document.documentElement.setAttribute('data-theme',S.dark?
 function toggleDark(){S.dark=!S.dark;localStorage.setItem('dm',S.dark?'1':'0');applyTheme();}
 function toggleSidebar(){S.collapsed=!S.collapsed;localStorage.setItem('sc',S.collapsed?'1':'0');$('sidebar').classList.toggle('col',S.collapsed);}
 
+// ── LAYOUT ─────────────────────────────────────────
+function setLayout(l){
+  S.layout=l;localStorage.setItem('layout',l);
+  ['list','grid','cat'].forEach(k=>{const el=$('lt-'+k);if(el)el.classList.toggle('on',k===l||(k==='cat'&&l==='catalog'));});
+  const cc=$('card-container'),lc=$('list-container');
+  if(l==='list'){cc.className='';cc.style.display='none';lc.style.display='';}
+  else{lc.style.display='none';cc.className='card-grid '+(l==='grid'?'vg':'vc');renderCards();}
+}
+function renderCards(){
+  const cc=$('card-container');
+  const q=($('search').value||'').trim();
+  const slice=S.filtered.slice(0,(S.page+1)*S.PAGE);
+  if(!slice.length){cc.innerHTML=`<div class="st-wrap" style="grid-column:1/-1"><p class="st-t">Nenhum produto</p></div>`;return;}
+  cc.innerHTML=slice.map(p=>{
+    const isSel=S.selected.has(p.id);
+    const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+    const badge=statusBadge(p.estoque);
+    return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}" onclick="toggleRow(${p.id},!S.selected.has(${p.id}));renderCards()">
+      <div class="pcard-img">${thumb}</div>
+      <div class="pcard-body">
+        <div class="pcard-name" title="${esc(p.nome)}">${esc(p.nome)}</div>
+        <div class="pcard-sku">${esc(p.codigo||'—')}</div>
+        ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
+        <div class="pcard-meta">
+          <span class="pcard-price">${fmt(p.preco)}</span>
+          <span class="pcard-stock">${fmtN(p.estoque)} un.</span>
+        </div>
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório'};
+const VIEWS={produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais'};
 function setView(v){
   S.view=v;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
@@ -589,6 +673,7 @@ function setView(v){
   $('ni-'+v)&&$('ni-'+v).classList.add('on');
   $('tb-title').textContent=VIEWS[v]||v;
   if(v==='relatorio')renderReport();
+  if(v==='notas')loadNotas();
 }
 
 // ── LOAD ──────────────────────────────────────────
@@ -677,6 +762,7 @@ function toggleGroup(){S.grouped=!S.grouped;$('grp-lbl').textContent=S.grouped?'
 
 // ── RENDER TABLE ──────────────────────────────────
 function renderTable(){
+  if(S.layout!=='list'){renderCards();return;}
   const tb=$('tbody');
   const q=($('search').value||'').trim();
   const slice=S.filtered.slice(0,(S.page+1)*S.PAGE);
@@ -875,7 +961,7 @@ async function loadPedidos(){
     if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
     const peds=d.pedidos||[];
     if(!peds.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum pedido encontrado.</p></div>';return;}
-    body.innerHTML=`<table><thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Valor</th><th>Situação</th></tr></thead><tbody>${peds.map(p=>{const s=p.situacao.toLowerCase();const cls=s.includes('atend')||s.includes('conclui')?'o-ok':s.includes('cancel')?'o-can':'o-pen';return`<tr><td><span class="sku">${p.numero||p.id}</span></td><td>${p.data?p.data.substring(0,10):'—'}</td><td>${esc(p.contato)}</td><td class="o-val">${fmt(p.valor)}</td><td class="${cls}">${esc(p.situacao)}</td></tr>`;}).join('')}</tbody></table>`;
+    body.innerHTML=`<table><thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Valor</th><th>Situação</th></tr></thead><tbody>${peds.map(p=>{const s=(p.situacao||'').toLowerCase();const cls=s.includes('atend')||s.includes('conclui')?'o-ok':s.includes('cancel')?'o-can':'o-pen';return`<tr><td><span class="sku">${p.numero||p.id}</span></td><td>${p.data?p.data.substring(0,10):'—'}</td><td>${esc(p.contato)}</td><td class="o-val">${fmt(p.valor)}</td><td class="${cls}">${esc(p.situacao)}</td></tr>`;}).join('')}</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 async function loadHistorico(){
@@ -887,6 +973,17 @@ async function loadHistorico(){
     body.innerHTML=`<table><thead><tr><th>Produto</th><th>Campo</th><th>Antes</th><th>Depois</th><th>Quando</th></tr></thead><tbody>${hist.map(h=>`<tr><td>${esc(h.produto_nome)}</td><td><span class="h-campo">${esc(h.campo)}</span></td><td class="h-from">${esc(h.valor_anterior)}</td><td class="h-to">${esc(h.valor_novo)}</td><td style="color:var(--fa);font-size:12px">${new Date(h.timestamp).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
+async function loadNotas(){
+  const body=$('notas-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  try{
+    const r=await fetch('/api/notas-fiscais'),d=await r.json();
+    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
+    const notas=d.notas||[];
+    if(!notas.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div>';return;}
+    body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${notas.map(n=>{const s=(n.situacao||'').toLowerCase();const cls=s.includes('autoriza')?'nfe-ok':s.includes('cancel')?'nfe-can':'nfe-pen';return`<tr><td><span class="sku">${n.numero||n.id}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td class="${cls}">${esc(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,20)+'…':'—'}</span></td></tr>`;}).join('')}</tbody></table>`;
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+
 function renderReport(){
   const ps=S.products;
   $('rep-parado').textContent=fmtN(ps.filter(p=>p.estoque===0).length);
@@ -913,6 +1010,9 @@ document.addEventListener('keydown',e=>{
   else if(k==='q')  openQuick();
   else if(k==='b'&&S.selected.size)  openBulk();
   else if(k==='d')  toggleDark();
+  else if(k==='l')  setLayout('list');
+  else if(k==='g')  setLayout('grid');
+  else if(k==='c')  setLayout('catalog');
   else if(k==='z')  undoLast();
   else if(k==='a')  {$('cb-all').checked=true;toggleAllCb();}
   else if(k==='?')  openModal('sc-modal');
@@ -929,6 +1029,7 @@ async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.l
   renderPresets();
   $('si-nome').textContent='↑';
   if(S.autoRefresh>0)setAutoRefresh(S.autoRefresh);
+  setLayout(S.layout);
   loadProducts();
   setInterval(updateSyncTs,30000);
 })();
