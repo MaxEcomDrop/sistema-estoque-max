@@ -3,322 +3,301 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Estoque Max</title>
+  <title>Conectar Bling — Estoque Max</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #f8fafc;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      height: 56px;
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      background: #4f46e5;
+      border-radius: 7px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
     }
 
-    .container {
-      background: white;
+    .brand-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .btn-logout {
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-logout:hover { background: #f8fafc; color: #0f172a; }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+    }
+
+    .connect-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      padding: 60px;
-      max-width: 450px;
+      padding: 48px 48px 40px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
     }
 
-    .logo {
-      font-size: 60px;
-      margin-bottom: 20px;
+    .bling-badge {
+      width: 64px;
+      height: 64px;
+      background: #f0fdf4;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
     }
+
+    .bling-badge svg { color: #16a34a; }
 
     h1 {
-      color: #333;
-      font-size: 32px;
-      margin-bottom: 10px;
+      font-size: 22px;
       font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
     }
 
-    .subtitle {
-      color: #666;
-      font-size: 16px;
-      margin-bottom: 40px;
-      line-height: 1.5;
-    }
-
-    .info-box {
-      background: #f0f7ff;
-      border-left: 4px solid #667eea;
-      padding: 20px;
-      margin-bottom: 30px;
-      border-radius: 8px;
-      text-align: left;
+    .desc {
       font-size: 14px;
-      color: #333;
+      color: #64748b;
       line-height: 1.6;
+      margin-bottom: 32px;
     }
 
-    .info-box strong {
-      color: #667eea;
-      display: block;
-      margin-bottom: 10px;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .info-box ul {
-      margin-left: 20px;
-    }
-
-    .info-box li {
-      margin-bottom: 8px;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 16px;
-      border: none;
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      padding: 11px 16px;
       border-radius: 8px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-bottom: 12px;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-secondary {
-      background: #f0f0f0;
-      color: #333;
-    }
-
-    .btn-secondary:hover {
-      background: #e0e0e0;
-    }
-
-    .loading {
+      font-size: 13px;
+      margin-bottom: 20px;
       display: none;
-      text-align: center;
-      color: #667eea;
-      margin-top: 20px;
+      text-align: left;
     }
+
+    .btn-connect {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      height: 46px;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .btn-connect:hover { background: #4338ca; box-shadow: 0 4px 14px rgba(79,70,229,.25); }
+    .btn-connect:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
 
     .spinner {
-      border: 3px solid #f0f0f0;
-      border-top: 3px solid #667eea;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
       border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 10px;
+      animation: spin .7s linear infinite;
+      display: none;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .divider {
+      border: none;
+      border-top: 1px solid #f1f5f9;
+      margin: 28px 0 24px;
     }
 
     .steps {
-      margin-top: 30px;
-      padding-top: 30px;
-      border-top: 1px solid #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
       text-align: left;
-    }
-
-    .steps h3 {
-      color: #333;
-      font-size: 16px;
-      margin-bottom: 20px;
-      text-align: center;
     }
 
     .step {
       display: flex;
-      margin-bottom: 15px;
       align-items: flex-start;
+      gap: 12px;
     }
 
-    .step-number {
-      background: #667eea;
-      color: white;
-      width: 32px;
-      height: 32px;
+    .step-num {
+      width: 22px;
+      height: 22px;
+      background: #f1f5f9;
       border-radius: 50%;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
       flex-shrink: 0;
-      margin-right: 15px;
-      font-size: 14px;
+      margin-top: 1px;
     }
 
-    .step-content {
-      color: #666;
-      font-size: 14px;
+    .step-text {
+      font-size: 13px;
+      color: #475569;
       line-height: 1.5;
     }
 
-    .step-content strong {
-      color: #333;
+    .step-text strong {
       display: block;
-      margin-bottom: 2px;
-    }
-
-    .error {
-      background: #ffcdd2;
-      color: #c62828;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      display: none;
-      font-size: 14px;
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 40px 20px;
-      }
-
-      h1 {
-        font-size: 24px;
-      }
-
-      .subtitle {
-        font-size: 14px;
-      }
+      font-weight: 500;
+      color: #1e293b;
+      margin-bottom: 1px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="logo">📦</div>
-    <h1>Sistema de Estoque Max</h1>
-    <p class="subtitle">Gerencie seu estoque com integração Bling</p>
 
-    <div class="error" id="error"></div>
-
-    <div class="info-box">
-      <strong>✨ Funcionalidades</strong>
-      <ul>
-        <li>Login com Bling (OAuth2)</li>
-        <li>Dashboard de produtos</li>
-        <li>Edição inline de estoque e preço</li>
-        <li>Sincronização automática</li>
-        <li>Webhooks em tempo real</li>
-      </ul>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">EM</div>
+      <span class="brand-name">Estoque Max</span>
     </div>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </header>
 
-    <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
-      🔗 Autenticar com Bling
-    </button>
+  <main class="main">
+    <div class="connect-card">
 
-    <button class="btn btn-secondary" onclick="verDashboard()">
-      👀 Ver Dashboard (Demo)
-    </button>
+      <div class="bling-badge">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
 
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      <p>Redirecionando para Bling...</p>
+      <h1>Conectar ao Bling</h1>
+      <p class="desc">Autorize o acesso à sua conta Bling para visualizar e gerenciar seus produtos e estoques.</p>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <button class="btn-connect" id="btnConnect" onclick="connectBling()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnText">Conectar com Bling</span>
+      </button>
+
+      <hr class="divider">
+
+      <div class="steps">
+        <div class="step">
+          <span class="step-num">1</span>
+          <div class="step-text"><strong>Autorizações</strong> Você será redirecionado para o Bling para aprovar o acesso.</div>
+        </div>
+        <div class="step">
+          <span class="step-num">2</span>
+          <div class="step-text"><strong>Retorno seguro</strong> Após autorizar, voltará automaticamente ao painel.</div>
+        </div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <div class="step-text"><strong>Produtos sincronizados</strong> Seus produtos e estoques serão carregados em tempo real.</div>
+        </div>
+      </div>
+
     </div>
-
-    <div class="steps">
-      <h3>Como funciona?</h3>
-      <div class="step">
-        <div class="step-number">1</div>
-        <div class="step-content">
-          <strong>Clique em Autenticar</strong>
-          <p>Você será redirecionado para o Bling</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-number">2</div>
-        <div class="step-content">
-          <strong>Autorize a aplicação</strong>
-          <p>Permita acesso aos seus dados</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-number">3</div>
-        <div class="step-content">
-          <strong>Dashboard carrega</strong>
-          <p>Veja seus produtos sincronizados</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-number">4</div>
-        <div class="step-content">
-          <strong>Edite conforme precisa</strong>
-          <p>Clique em qualquer valor para editar</p>
-        </div>
-      </div>
-    </div>
-  </div>
+  </main>
 
   <script>
-    async function handleLogin() {
-      const btn = document.getElementById('loginBtn');
-      const loading = document.getElementById('loading');
-      const error = document.getElementById('error');
+    // Verificar erro vindo do OAuth
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    if (err) {
+      const box = document.getElementById('errorBox');
+      const msgs = {
+        invalid_request:       'Requisição inválida. Verifique a configuração do aplicativo no Bling.',
+        access_denied:         'Acesso negado. Autorize o aplicativo no Bling para continuar.',
+        token_exchange_failed: 'Falha ao obter o token. Tente novamente.',
+      };
+      box.textContent = msgs[err] || `Erro: ${err}`;
+      box.style.display = 'block';
+    }
+
+    async function connectBling() {
+      const btn     = document.getElementById('btnConnect');
+      const spinner = document.getElementById('spinner');
+      const btnText = document.getElementById('btnText');
 
       btn.disabled = true;
-      error.style.display = 'none';
+      spinner.style.display = 'block';
+      btnText.textContent = 'Aguarde…';
 
       try {
-        const response = await fetch('/api/auth/url');
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error);
+        const res  = await fetch('/api/auth/url');
+        const data = await res.json();
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        } else {
+          throw new Error(data.error || 'URL inválida');
         }
-
-        loading.style.display = 'block';
-        window.location.href = data.authUrl;
-      } catch (err) {
+      } catch (e) {
+        document.getElementById('errorBox').textContent = e.message;
+        document.getElementById('errorBox').style.display = 'block';
         btn.disabled = false;
-        error.style.display = 'block';
-        error.textContent = `❌ Erro: ${err.message}`;
-        console.error('Erro:', err);
+        spinner.style.display = 'none';
+        btnText.textContent = 'Conectar com Bling';
       }
     }
 
-    function verDashboard() {
-      window.location.href = '/dashboard.html';
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
     }
-
-    // Verificar se já está autenticado
-    async function checkAuth() {
-      try {
-        const response = await fetch('/api/auth/user');
-        if (response.ok) {
-          window.location.href = '/dashboard.html';
-        }
-      } catch (error) {
-        // Não autenticado, fica na home
-      }
-    }
-
-    checkAuth();
   </script>
 </body>
 </html>
