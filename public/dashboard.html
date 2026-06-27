@@ -245,6 +245,77 @@
       color: #c62828;
       display: block;
     }
+
+    .editable-cell {
+      position: relative;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .editable-cell:hover {
+      background: #f0f0f0;
+    }
+
+    .editable-cell input {
+      width: 100%;
+      padding: 6px;
+      border: 2px solid #667eea;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .editable-cell input:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    }
+
+    .cell-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    .cell-actions button {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-save-cell {
+      background: #2e7d32;
+      color: white;
+    }
+
+    .btn-save-cell:hover {
+      background: #1b5e20;
+    }
+
+    .btn-cancel-cell {
+      background: #ccc;
+      color: #333;
+    }
+
+    .btn-cancel-cell:hover {
+      background: #bbb;
+    }
+
+    .edit-icon {
+      display: inline-block;
+      margin-left: 8px;
+      opacity: 0.5;
+      font-size: 12px;
+      transition: opacity 0.2s ease;
+    }
+
+    .editable-cell:hover .edit-icon {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -342,11 +413,17 @@
           </thead>
           <tbody>
             ${products.map(p => `
-              <tr>
+              <tr data-product-id="${p.id}">
                 <td>${p.nome}</td>
                 <td><code>${p.codigo || '-'}</code></td>
-                <td>R$ ${parseFloat(p.preco || 0).toFixed(2)}</td>
-                <td>${p.estoque || 0} un.</td>
+                <td class="editable-cell" onclick="editCell(this, 'preco', ${p.id})">
+                  R$ ${parseFloat(p.preco || 0).toFixed(2)}
+                  <span class="edit-icon">✏️</span>
+                </td>
+                <td class="editable-cell" onclick="editCell(this, 'estoque', ${p.id})">
+                  ${p.estoque || 0} un.
+                  <span class="edit-icon">✏️</span>
+                </td>
                 <td>
                   <span class="status-${p.situacao === 'A' ? 'ativo' : 'inativo'}">
                     ${p.situacao === 'A' ? 'Ativo' : 'Inativo'}
@@ -360,6 +437,77 @@
       `;
 
       container.innerHTML = html;
+    }
+
+    function editCell(cell, field, productId) {
+      if (cell.querySelector('input')) return;
+
+      let currentValue = cell.textContent.trim();
+
+      if (field === 'preco') {
+        currentValue = currentValue.replace('R$ ', '').replace('✏️', '').trim();
+      } else if (field === 'estoque') {
+        currentValue = currentValue.replace(' un.', '').replace('✏️', '').trim();
+      }
+
+      const inputHtml = `
+        <input type="number" step="${field === 'preco' ? '0.01' : '1'}" value="${currentValue}" min="0">
+        <div class="cell-actions">
+          <button class="btn-save-cell" onclick="saveCell(this, '${field}', ${productId})">Salvar</button>
+          <button class="btn-cancel-cell" onclick="cancelCell(this, '${field}', '${currentValue}')">Cancelar</button>
+        </div>
+      `;
+
+      cell.innerHTML = inputHtml;
+      cell.querySelector('input').focus();
+      cell.querySelector('input').select();
+    }
+
+    async function saveCell(btn, field, productId) {
+      const cell = btn.closest('.editable-cell');
+      const input = cell.querySelector('input');
+      const newValue = parseFloat(input.value);
+
+      if (newValue < 0) {
+        showMessage('❌ O valor deve ser maior ou igual a 0', 'error');
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.textContent = '⏳ Salvando...';
+
+        const payload = {};
+        payload[field] = newValue;
+
+        const response = await fetch(`/api/produtos/${productId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao salvar');
+        }
+
+        showMessage('✅ Produto atualizado com sucesso!', 'success');
+
+        setTimeout(() => {
+          loadProducts();
+        }, 500);
+      } catch (error) {
+        showMessage(`❌ Erro: ${error.message}`, 'error');
+        cancelCell(btn, field, input.value);
+      }
+    }
+
+    function cancelCell(btn, field, originalValue) {
+      const cell = btn.closest('.editable-cell');
+      if (field === 'preco') {
+        cell.innerHTML = `R$ ${parseFloat(originalValue).toFixed(2)}<span class="edit-icon">✏️</span>`;
+      } else if (field === 'estoque') {
+        cell.innerHTML = `${originalValue} un.<span class="edit-icon">✏️</span>`;
+      }
     }
 
     function updateStats(products) {

@@ -148,3 +148,57 @@ exports.searchProdutos = (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
+
+exports.updateProduto = (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const { estoque, preco } = req.body;
+
+    if (estoque === undefined && preco === undefined) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+
+    db.get(
+      'SELECT * FROM products WHERE id = ? AND user_id = ?',
+      [id, userId],
+      (err, product) => {
+        if (err) {
+          return res.status(500).json({ error: 'Erro ao buscar produto' });
+        }
+
+        if (!product) {
+          return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+
+        const novoEstoque = estoque !== undefined ? estoque : product.estoque;
+        const novoPreco = preco !== undefined ? preco : product.preco;
+
+        db.run(
+          `UPDATE products
+           SET estoque = ?, preco = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [novoEstoque, novoPreco, id],
+          function (updateErr) {
+            if (updateErr) {
+              return res.status(500).json({ error: 'Erro ao atualizar produto' });
+            }
+
+            res.json({
+              message: 'Produto atualizado com sucesso',
+              product: {
+                id,
+                ...product,
+                estoque: novoEstoque,
+                preco: novoPreco,
+              },
+            });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    console.error('Erro ao atualizar produto:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
