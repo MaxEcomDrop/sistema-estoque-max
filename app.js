@@ -2,7 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const db = require('./config/database');
+
+// Inicializar banco de dados
+const dbConfig = require('./config/database-vercel');
+const db = dbConfig.init();
+
 const authRoutes = require('./src/routes/authRoutes');
 const productRoutes = require('./src/routes/productRoutes');
 const webhookRoutes = require('./src/routes/webhookRoutes');
@@ -46,10 +50,34 @@ app.use('/api', authRoutes);
 app.use('/api', productRoutes);
 app.use('/api', webhookRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  console.log(`Ambiente: ${process.env.NODE_ENV}`);
-  console.log(`Webhook URL: ${process.env.NODE_ENV === 'production' ? `https://${process.env.VERCEL_URL || 'seu-dominio.vercel.app'}/api/webhook/bling` : 'http://localhost:3000/api/webhook/bling'}`);
+// Middleware de erro
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err);
+
+  if (err.message && err.message.includes('ENOENT')) {
+    return res.status(500).json({
+      error: 'Erro de banco de dados',
+      message: 'Sistema inicializando, tente novamente em alguns segundos',
+    });
+  }
+
+  res.status(err.status || 500).json({
+    error: err.message || 'Erro interno do servidor',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
 });
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Rota não encontrada' });
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Ambiente: ${process.env.NODE_ENV}`);
+    console.log(`Webhook URL: http://localhost:3000/api/webhook/bling`);
+  });
+}
 
 module.exports = app;
