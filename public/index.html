@@ -279,6 +279,7 @@
 
       try {
         const res  = await fetch('/api/auth/url');
+        if (res.status === 401) { window.location.href = '/login'; return; }
         const data = await res.json();
         if (data.authUrl) {
           window.location.href = data.authUrl;
