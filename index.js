@@ -2,10 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const axios = require('axios');
 
 const app = express();
 
-// Middleware essencial
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -13,174 +13,197 @@ app.use(cors());
 app.use(express.static('public'));
 
 // ============================================
-// 🎯 ROTAS SIMPLES E FUNCIONAIS
+// VERIFICAR VARIÁVEIS DE AMBIENTE
 // ============================================
 
-// 1. Health Check
+const BLING_CLIENT_ID = process.env.BLING_CLIENT_ID;
+const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET;
+const BLING_REDIRECT_URI = process.env.BLING_REDIRECT_URI;
+
+if (!BLING_CLIENT_ID || !BLING_CLIENT_SECRET || !BLING_REDIRECT_URI) {
+  console.warn('\n⚠️  AVISO: Variáveis de ambiente não configuradas!');
+  console.warn('Configure no Vercel Dashboard:');
+  console.warn('  - BLING_CLIENT_ID');
+  console.warn('  - BLING_CLIENT_SECRET');
+  console.warn('  - BLING_REDIRECT_URI');
+  console.warn('\n');
+}
+
+// ============================================
+// ROTAS
+// ============================================
+
+// Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', time: new Date().toISOString() });
+  res.json({ status: 'OK', env_configured: !!BLING_CLIENT_ID });
 });
 
-// 1.5 Dashboard
-app.get('/dashboard', (req, res) => {
-  res.sendFile(__dirname + '/public/dashboard.html');
-});
-
-app.get('/dashboard.html', (req, res) => {
-  res.sendFile(__dirname + '/public/dashboard.html');
-});
-
-// 2. Servir página inicial (index.html)
+// Home
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
-// 3. Login - Redireciona para Bling OAuth
-app.get('/api/auth/url', (req, res) => {
-  const clientId = process.env.BLING_CLIENT_ID;
-  const redirectUri = process.env.BLING_REDIRECT_URI;
+// Dashboard
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(__dirname + '/public/dashboard.html');
+});
 
-  if (!clientId || !redirectUri) {
+// ============================================
+// OAUTH - LOGIN COM BLING
+// ============================================
+
+app.get('/api/auth/url', (req, res) => {
+  if (!BLING_CLIENT_ID || !BLING_REDIRECT_URI) {
     return res.status(400).json({
       error: 'Variáveis de ambiente não configuradas',
       required: ['BLING_CLIENT_ID', 'BLING_REDIRECT_URI'],
+      help: 'Configure no Vercel Dashboard → Settings → Environment Variables',
     });
   }
 
-  const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}`;
-
+  const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${BLING_CLIENT_ID}&redirect_uri=${BLING_REDIRECT_URI}`;
   res.json({ authUrl });
 });
 
-// 4. Callback (simples)
-app.get('/api/auth/callback', (req, res) => {
+// Callback do Bling
+app.get('/api/auth/callback', async (req, res) => {
   const { code, error } = req.query;
 
   if (error) {
-    return res.status(400).json({
-      error: 'Erro ao autorizar',
-      message: error,
-    });
+    return res.status(400).redirect(`/?error=${error}`);
   }
 
   if (!code) {
-    return res.status(400).json({
-      error: 'Código não fornecido',
-    });
+    return res.status(400).redirect('/?error=no_code');
   }
 
-  // Salvar token de teste
-  res.cookie('auth_token', code, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-  });
+  if (!BLING_CLIENT_SECRET) {
+    return res.status(500).redirect('/?error=env_not_configured');
+  }
 
-  res.redirect('/dashboard.html');
+  try {
+    // Trocar código por token
+    const tokenResponse = await axios.post(
+      'https://www.bling.com.br/Api/v3/oauth/token',
+      {
+        grant_type: 'authorization_code',
+        code,
+        client_id: BLING_CLIENT_ID,
+        client_secret: BLING_CLIENT_SECRET,
+        redirect_uri: BLING_REDIRECT_URI,
+      }
+    );
+
+    const { access_token } = tokenResponse.data;
+
+    // Salvar token no cookie
+    res.cookie('bling_token', access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 3600000, // 1 hora
+    });
+
+    res.redirect('/dashboard.html?success=true');
+  } catch (error) {
+    console.error('Erro ao trocar código por token:', error.message);
+    res.redirect('/?error=token_exchange_failed');
+  }
 });
 
-// 5. Status do usuário
-app.get('/api/auth/user', (req, res) => {
-  const token = req.cookies?.auth_token;
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('bling_token');
+  res.json({ message: 'Desconectado' });
+});
+
+// ============================================
+// API - PRODUTOS DO BLING
+// ============================================
+
+app.get('/api/produtos', async (req, res) => {
+  const token = req.cookies?.bling_token;
 
   if (!token) {
     return res.status(401).json({ error: 'Não autenticado' });
   }
 
-  res.json({
-    authenticated: true,
-    token: token.substring(0, 10) + '...',
-  });
+  try {
+    const response = await axios.get(
+      'https://www.bling.com.br/Api/v3/produtos',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const produtos = response.data.data || [];
+
+    res.json({
+      total: produtos.length,
+      products: produtos.map(p => ({
+        id: p.id,
+        nome: p.nome,
+        codigo: p.codigo,
+        preco: p.preco,
+        estoque: p.estoque,
+        situacao: p.situacao,
+      })),
+    });
+  } catch (error) {
+    if (error.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado' });
+    }
+    console.error('Erro ao buscar produtos:', error.message);
+    res.status(500).json({ error: 'Erro ao buscar produtos do Bling' });
+  }
 });
 
-// 6. Logout
-app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('auth_token');
-  res.json({ message: 'Desconectado' });
-});
-
-// 7. Webhook status
-app.get('/api/webhook/bling', (req, res) => {
-  res.json({
-    status: 'ready',
-    endpoint: '/api/webhook/bling',
-    method: 'POST',
-  });
-});
-
-// 8. Receber webhook
-app.post('/api/webhook/bling', (req, res) => {
-  console.log('[WEBHOOK]', req.body);
-  res.json({ received: true });
-});
-
-// 9. Produtos (simulado)
-app.get('/api/produtos', (req, res) => {
-  // Simular produtos
-  const produtos = [
-    {
-      id: 1,
-      nome: 'Mini Seladora',
-      codigo: 'MINI-SELADORA-001',
-      preco: 89.90,
-      estoque: 150,
-    },
-    {
-      id: 2,
-      nome: 'Aroma Sachê',
-      codigo: 'AROMA-SACHÊ',
-      preco: 12.50,
-      estoque: 320,
-    },
-    {
-      id: 3,
-      nome: 'Vela Aromática',
-      codigo: 'VELA-AROM-001',
-      preco: 35.00,
-      estoque: 89,
-    },
-  ];
-
-  res.json({
-    total: produtos.length,
-    products: produtos,
-  });
-});
-
-// 10. Buscar produto
-app.get('/api/produtos/:id', (req, res) => {
-  res.json({
-    id: req.params.id,
-    nome: 'Produto',
-    preco: 99.90,
-    estoque: 100,
-  });
-});
-
-// 11. Atualizar produto
-app.patch('/api/produtos/:id', (req, res) => {
+// Atualizar produto
+app.patch('/api/produtos/:id', async (req, res) => {
+  const token = req.cookies?.bling_token;
+  const { id } = req.params;
   const { estoque, preco } = req.body;
 
-  res.json({
-    message: 'Produto atualizado',
-    id: req.params.id,
-    estoque,
-    preco,
-  });
-});
+  if (!token) {
+    return res.status(401).json({ error: 'Não autenticado' });
+  }
 
-// 12. Buscar produtos
-app.get('/api/produtos/search', (req, res) => {
-  const { q } = req.query;
+  try {
+    const payload = {};
+    if (estoque !== undefined) payload.estoque = estoque;
+    if (preco !== undefined) payload.preco = preco;
 
-  res.json({
-    query: q,
-    results: [],
-  });
+    // Nota: A API do Bling pode não suportar PATCH direto
+    // Esta é uma simulação. Ajuste conforme sua integração real.
+    res.json({
+      message: 'Produto será atualizado no Bling',
+      id,
+      changes: payload,
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar:', error.message);
+    res.status(500).json({ error: 'Erro ao atualizar produto' });
+  }
 });
 
 // ============================================
-// 🛡️ TRATAMENTO DE ERROS
+// WEBHOOKS (Placeholder)
+// ============================================
+
+app.get('/api/webhook/bling', (req, res) => {
+  res.json({ status: 'ready', endpoint: '/api/webhook/bling' });
+});
+
+app.post('/api/webhook/bling', (req, res) => {
+  console.log('[WEBHOOK] Recebido:', req.body);
+  res.json({ received: true });
+});
+
+// ============================================
+// TRATAMENTO DE ERROS
 // ============================================
 
 app.use((req, res) => {
@@ -188,13 +211,18 @@ app.use((req, res) => {
 });
 
 // ============================================
-// 🚀 INICIALIZAR (APENAS EM DEV)
+// INICIALIZAR
 // ============================================
 
 if (process.env.NODE_ENV !== 'production' && require.main === module) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`\n✅ Sistema online em http://localhost:${PORT}\n`);
+    console.log(`\n✅ Servidor iniciado em http://localhost:${PORT}`);
+    console.log(`   Dashboard: http://localhost:${PORT}/dashboard.html`);
+    if (!BLING_CLIENT_ID) {
+      console.warn('\n⚠️  Variáveis de ambiente não configuradas!');
+    }
+    console.log('\n');
   });
 }
 
