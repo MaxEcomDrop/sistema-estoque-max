@@ -66,7 +66,7 @@ app.get('/api/auth/url', (req, res) => {
 });
 
 // Callback do Bling
-app.get('/api/auth/callback', async (req, res) => {
+app.get('/api/webhook/bling', async (req, res) => {
   const { code, error } = req.query;
 
   if (error) {
