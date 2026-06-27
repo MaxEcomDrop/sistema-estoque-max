@@ -16,18 +16,15 @@ app.use(express.static('public'));
 // VERIFICAR VARIÁVEIS DE AMBIENTE
 // ============================================
 
-const BLING_CLIENT_ID = process.env.BLING_CLIENT_ID;
-const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET;
-const BLING_REDIRECT_URI = process.env.BLING_REDIRECT_URI;
+const BLING_CLIENT_ID = process.env.BLING_CLIENT_ID || '56f15479eddae7460b8028e56f2d5f8a64970fe0';
+const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET || 'ef779c0b849b7ef04446320077e5a109e9e3c81c9abe8b9c0d437759b43b';
+const BLING_REDIRECT_URI = process.env.BLING_REDIRECT_URI || 'https://sistema-estoque-max.vercel.app/api/webhook/bling';
 
-if (!BLING_CLIENT_ID || !BLING_CLIENT_SECRET || !BLING_REDIRECT_URI) {
-  console.warn('\n⚠️  AVISO: Variáveis de ambiente não configuradas!');
-  console.warn('Configure no Vercel Dashboard:');
-  console.warn('  - BLING_CLIENT_ID');
-  console.warn('  - BLING_CLIENT_SECRET');
-  console.warn('  - BLING_REDIRECT_URI');
-  console.warn('\n');
-}
+console.log('\n🔐 Variáveis de Ambiente:');
+console.log('   BLING_CLIENT_ID:', BLING_CLIENT_ID ? '✅ Configurado' : '❌ Não configurado');
+console.log('   BLING_CLIENT_SECRET:', BLING_CLIENT_SECRET ? '✅ Configurado' : '❌ Não configurado');
+console.log('   BLING_REDIRECT_URI:', BLING_REDIRECT_URI);
+console.log('\n');
 
 // ============================================
 // ROTAS
