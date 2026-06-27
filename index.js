@@ -138,17 +138,17 @@ app.get('/api/produtos', async (req, res) => {
       }
     );
 
-    const produtos = response.data.data || [];
+    const produtos = (Array.isArray(response.data?.data) ? response.data.data : []);
 
     res.json({
       total: produtos.length,
       products: produtos.map(p => ({
         id: p.id,
-        nome: p.nome,
-        codigo: p.codigo,
-        preco: p.preco,
-        estoque: p.estoque,
-        situacao: p.situacao,
+        nome: p.nome || 'N/A',
+        codigo: p.codigo || 'N/A',
+        preco: p.preco || 0,
+        estoque: p.estoque || 0,
+        situacao: p.situacao || 'A',
       })),
     });
   } catch (error) {
@@ -157,7 +157,7 @@ app.get('/api/produtos', async (req, res) => {
       return res.status(401).json({ error: 'Token expirado' });
     }
     console.error('Erro ao buscar produtos:', error.message);
-    res.status(500).json({ error: 'Erro ao buscar produtos do Bling' });
+    res.status(500).json({ error: 'Erro ao buscar produtos do Bling', details: error.message });
   }
 });
 
