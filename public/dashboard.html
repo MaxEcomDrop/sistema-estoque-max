@@ -565,7 +565,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(+n||0);
 const fmtN=n=>new Intl.NumberFormat('pt-BR').format(+n||0);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-function hl(text,q){if(!q)return esc(text);const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})','gi');return esc(text).replace(re,'<mark>$1</mark>');}
+function hl(text,q){if(!q)return esc(text);const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');return esc(text).replace(re,'<mark>$1</mark>');}
 function statusBadge(s){if(s===0)return`<span class="sb2 s-out"><span class="sdot"></span>Sem estoque</span>`;if(s<=3)return`<span class="sb2 s-lo"><span class="sdot"></span>Estoque baixo</span>`;return`<span class="sb2 s-ok"><span class="sdot"></span>Em estoque</span>`;}
 const editIco=`<span class="eh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>`;
 let toastT=null;
@@ -693,7 +693,7 @@ function renderTable(){
     const ppOld=S.prevPrices[p.id];
     const arr=ppOld!==undefined&&ppOld!==p.preco?(p.preco>ppOld?`<span class="parr up">↑</span>`:`<span class="parr dn">↓</span>`):'';
     const thumb=p.imagemUrl?`<div class="thumb"><img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\'/><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"></div>`:`<div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
-    const nameHl=q?esc(p.nome).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})','gi'),'<mark>$1</mark>'):esc(p.nome);
+    const nameHl=q?esc(p.nome).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>'):esc(p.nome);
     html+=`<tr data-id="${p.id}" class="${isSel?'sel':''} ${isDup?'dup-row':''}">
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
       <td>${thumb}</td>
@@ -786,7 +786,7 @@ async function saveQuick(){
     try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){if(body.preco!==undefined)p.preco=body.preco;if(body.estoque!==undefined)p.estoque=body.estoque;ok++;}else err++;}
     catch{err++;}
   }
-  if(ok>0){updateKpis();updateLowBadge();applyFilters();toast(`${ok} produto${ok!==1?'s':''} salvo${ok!==1?'s':''}','ok');closeQuick();}
+  if(ok>0){updateKpis();updateLowBadge();applyFilters();toast(`${ok} produto${ok!==1?'s':''} salvo${ok!==1?'s':''}`, 'ok');closeQuick();}
   else if(err>0)toast(`${err} erro(s) ao salvar`,'err');
   else{toast('Nenhuma alteração');closeQuick();}
 }
@@ -808,7 +808,7 @@ function exportCSV(ids=null){
   const cols=['id','codigo','nome','categoria','preco','estoque'];
   const csv=[cols.join(','),...rows.map(p=>cols.map(c=>{const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`estoque_${new Date().toISOString().slice(0,10)}.csv`;a.click();
-  toast(`${rows.length} produto${rows.length!==1?'s':''} exportado${rows.length!==1?'s':''}','ok');
+  toast(`${rows.length} produto${rows.length!==1?'s':''} exportado${rows.length!==1?'s':''}`, 'ok');
 }
 function batchExport(){exportCSV(S.selected);}
 
