@@ -17,7 +17,7 @@ app.use(express.static('public'));
 // ============================================
 
 const BLING_CLIENT_ID = process.env.BLING_CLIENT_ID || '56f15479eddae7460b8028e56f2d5f8a64970fe0';
-const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET || 'ef779c0b849b7ef04446320077e5a109e9e3c81c9abe8b9c0d437759b43b';
+const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET || 'de5d5bc2fa78c1b151392e81aae3ab2377bad770724dce3e13c0ec454674';
 const BLING_REDIRECT_URI = process.env.BLING_REDIRECT_URI || 'https://sistema-estoque-max.vercel.app/api/webhook/bling';
 
 console.log('\n🔐 Variáveis de Ambiente:');
