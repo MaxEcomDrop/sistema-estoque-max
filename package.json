@@ -2,10 +2,10 @@
   "name": "sistema-estoque-max",
   "version": "1.0.0",
   "description": "Sistema de gestão de estoque para Max Renovação",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "node --watch app.js",
+    "start": "node index.js",
+    "dev": "node --watch index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
