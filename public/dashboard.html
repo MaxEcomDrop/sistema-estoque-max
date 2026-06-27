@@ -2,7 +2,12 @@
 <html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Estoque Max">
+<link rel="manifest" href="/manifest.json">
 <title>Estoque Max</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -297,13 +302,107 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
 .nfe-ok{color:var(--ok);font-weight:500}.nfe-can{color:var(--er-t);font-weight:500}.nfe-pen{color:var(--wa);font-weight:500}
 .nfe-key{font-family:monospace;font-size:10px;color:var(--fa);word-break:break-all}
 
-@media(max-width:900px){.kpi-row{grid-template-columns:1fr 1fr}.sb{display:none}.main{margin-left:0!important}}
-@media(max-width:600px){.kpi-row{grid-template-columns:1fr}}
+/* TABLE - acento lateral, sem grade Excel */
+tbody tr{border-bottom:1px solid var(--bord-l);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr td:first-child{transition:box-shadow .12s}
+tbody tr:hover td{background:var(--acc-bg)!important}
+tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+tbody tr.sel td{background:var(--acc-bg)!important}
+tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
+/* KPI accent line */
+.kpi{overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.kpi:nth-child(1)::before{background:var(--acc)}
+.kpi:nth-child(2)::before{background:var(--ok)}
+.kpi:nth-child(3)::before{background:var(--er)}
+.kpi:nth-child(4)::before{background:var(--wa)}
+/* Product name link */
+.plink{cursor:pointer;transition:color .12s;display:inline-block}
+.plink:hover{color:var(--acc-t)!important;text-decoration:underline;text-underline-offset:2px}
+/* EDITOR DRAWER */
+.edraw-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
+.edraw-ov.open{opacity:1;pointer-events:all}
+.edraw{position:fixed;right:-100%;top:0;bottom:0;width:440px;max-width:97vw;background:var(--surf);border-left:1px solid var(--bord);z-index:900;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
+.edraw.open{right:0}
+.edraw-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bord);flex-shrink:0}
+.edraw-title{font-size:14px;font-weight:600;color:var(--tx);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edraw-x{background:none;border:none;font-size:22px;color:var(--mu);cursor:pointer;padding:2px 8px;border-radius:6px;line-height:1;transition:background .1s,color .1s;flex-shrink:0}
+.edraw-x:hover{background:var(--bg);color:var(--tx)}
+.edraw-bd{flex:1;overflow-y:auto;padding:16px 18px}
+.edraw-ft{padding:12px 18px;border-top:1px solid var(--bord);display:flex;gap:10px;flex-shrink:0}
+.df{margin-bottom:14px}
+.df label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:5px}
+.df input,.df select,.df textarea{width:100%;height:36px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:7px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;transition:border-color .12s,box-shadow .12s}
+.df input:focus,.df select:focus,.df textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(79,70,229,.1);background:var(--surf)}
+.df textarea{height:auto;min-height:72px;padding:8px 10px;resize:vertical;line-height:1.5}
+.df-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.df-margin{font-size:11px;color:var(--mu);margin-top:-8px;margin-bottom:12px;padding:6px 10px;background:var(--bg);border-radius:5px;font-weight:500}
+.df-margin strong{font-weight:700}
+.edraw-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);padding:8px 0 10px;margin-top:4px;border-top:1px solid var(--bord-l)}
+.edraw-img{width:100%;max-height:130px;object-fit:contain;border-radius:8px;margin-bottom:14px;border:1px solid var(--bord);background:var(--bord-l);display:block}
+/* NOTIFICATION STACK */
+#noti-stack{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:360px}
+.noti{width:100%;padding:11px 13px;border-radius:10px;background:var(--surf);border:1px solid var(--bord);box-shadow:0 4px 20px rgba(0,0,0,.13);display:flex;align-items:flex-start;gap:9px;animation:nti .22s cubic-bezier(.34,1.56,.64,1) both;font-size:13px;color:var(--tx);line-height:1.4;pointer-events:all}
+.noti.out{animation:nto .16s ease forwards}
+.noti-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.noti.ok .noti-dot{background:var(--ok)}.noti.err .noti-dot{background:var(--er)}.noti.warn .noti-dot{background:var(--wa)}.noti.info .noti-dot{background:var(--acc)}
+.noti-x{margin-left:auto;background:none;border:none;color:var(--fa);cursor:pointer;font-size:16px;padding:0 0 0 10px;line-height:1;flex-shrink:0;transition:color .1s}
+.noti-x:hover{color:var(--tx)}
+@keyframes nti{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes nto{to{opacity:0;transform:translateX(16px)}}
+/* FINANCIAL VIEW */
+.fin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px}
+.fin-card{background:var(--surf);border:1px solid var(--bord);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
+.fin-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.fin-card.c-a::before{background:var(--acc)}.fin-card.c-g::before{background:var(--ok)}.fin-card.c-y::before{background:var(--wa)}.fin-card.c-r::before{background:var(--er)}.fin-card.c-p::before{background:#7c3aed}
+.fin-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:8px}
+.fin-val{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
+.fin-sub{font-size:11px;color:var(--fa);margin-top:5px}
+.fin-split{display:flex;background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.fin-seg{flex:1;min-width:90px;padding:14px 16px;text-align:center;border-right:1px solid var(--bord)}
+.fin-seg:last-child{border-right:none}
+.fin-sv{font-size:22px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.fin-sl{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:3px}
+.fin-seg.ok .fin-sv{color:var(--ok)}.fin-seg.warn .fin-sv{color:var(--wa)}.fin-seg.bad .fin-sv{color:var(--er)}
+/* MOBILE BOTTOM NAV */
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around}
+.bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:500;font-family:inherit;padding:4px 0;transition:color .1s}
+.bnav-item.on{color:var(--acc)}.bnav-item svg{width:20px;height:20px}
+/* RESPONSIVE */
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .sb,.col-btn{display:none!important}
+  .main{margin-left:0!important}
+  .bnav{display:flex}
+  .content{padding-bottom:74px}
+  #noti-stack{bottom:72px}
+  .bbar{bottom:68px}
+  .undo{bottom:68px}
+}
+@media(max-width:600px){
+  .kpi-row{grid-template-columns:1fr}
+  .sinp{width:130px}
+  .edraw{width:100vw;max-width:100vw}
+  .content{padding:12px 8px 74px}
+  .fin-grid{grid-template-columns:1fr 1fr}
+}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--bord);border-radius:10px}
 .spin{animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.fade-in{animation:fdin .3s ease both}
+@keyframes fdin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.create-box{width:520px;max-width:95vw}
+/* Cards hover */
+.pcard:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:var(--acc);transform:translateY(-1px)}
+.pcard{transition:box-shadow .15s,border-color .15s,transform .15s}
+.pcard-edit{position:absolute;top:7px;right:7px;width:26px;height:26px;background:var(--surf);border:1px solid var(--bord);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pcard-img{position:relative}
+.pcard:hover .pcard-edit{opacity:1}
+.pcard-edit svg{width:12px;height:12px;color:var(--acc)}
 </style>
 </head>
 <body>
@@ -336,6 +435,10 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
     <button class="ni" id="ni-notas" onclick="setView('notas')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       <span class="ni-label">Notas Fiscais</span>
+    </button>
+    <button class="ni" id="ni-financeiro" onclick="setView('financeiro')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span class="ni-label">Financeiro</span>
     </button>
     <button class="ni" onclick="window.location.href='/'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
@@ -433,6 +536,7 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
             <button class="lt-btn" id="lt-cat" onclick="setLayout('catalog')" title="Catálogo (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg></button>
           </div>
           <div class="tr">
+            <button class="btp" onclick="openCreate()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Novo Produto</button>
             <button class="bts" onclick="openModal('im-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar</button>
             <button class="bts" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
             <button class="bts" onclick="openQuick()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Entrada rápida</button>
@@ -507,9 +611,6 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
       </div>
     </div>
 
-  </div>
-</div>
-
     <!-- VIEW NOTAS FISCAIS -->
     <div class="view" id="view-notas">
       <div class="tcard">
@@ -517,6 +618,28 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
         <div class="vtable" id="notas-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><p class="st-d">Clique em Atualizar para carregar as notas fiscais do Bling.</p></div></div>
       </div>
     </div>
+
+    <!-- VIEW FINANCEIRO -->
+    <div class="view" id="view-financeiro">
+      <div class="fin-grid" id="fin-kpis">
+        <div class="fin-card c-a"><div class="fin-lbl">Receita bruta (mês)</div><div class="fin-val" id="fin-bruto">—</div><div class="fin-sub" id="fin-mes">carregando…</div></div>
+        <div class="fin-card c-g"><div class="fin-lbl">Receita concluída</div><div class="fin-val" id="fin-rec">—</div><div class="fin-sub">pedidos entregues</div></div>
+        <div class="fin-card c-y"><div class="fin-lbl">Ticket médio</div><div class="fin-val" id="fin-ticket">—</div><div class="fin-sub">por pedido</div></div>
+        <div class="fin-card c-p"><div class="fin-lbl">Total de pedidos</div><div class="fin-val" id="fin-total">—</div><div class="fin-sub">no mês corrente</div></div>
+      </div>
+      <div class="fin-split" id="fin-split">
+        <div class="fin-seg ok"><div class="fin-sv" id="fin-conc">—</div><div class="fin-sl">Concluídos</div></div>
+        <div class="fin-seg warn"><div class="fin-sv" id="fin-pend">—</div><div class="fin-sl">Pendentes</div></div>
+        <div class="fin-seg bad"><div class="fin-sv" id="fin-canc">—</div><div class="fin-sl">Cancelados</div></div>
+      </div>
+      <div class="tcard" style="margin-top:0">
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(preço de venda vs custo)</span><div class="tr"><button class="btp" onclick="loadFinanceiro()">Atualizar</button></div></div>
+        <div class="vtable" id="fin-margin-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para carregar os dados financeiros.</p></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- BATCH BAR -->
 <div class="bbar" id="bbar">
@@ -589,11 +712,72 @@ input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1p
   </div>
 </div>
 
+<!-- EDITOR DRAWER (full product edit) -->
+<div class="edraw-ov" id="edraw-ov" onclick="closeEditor()"></div>
+<div class="edraw" id="edraw">
+  <div class="edraw-hd">
+    <span class="edraw-title" id="edraw-title">Editar produto</span>
+    <button class="edraw-x" onclick="closeEditor()">×</button>
+  </div>
+  <div class="edraw-bd" id="edraw-bd">
+    <div class="st-wrap"><p class="st-d">Carregando…</p></div>
+  </div>
+  <div class="edraw-ft">
+    <button class="btp" id="edraw-save" onclick="saveEditorFull()" style="flex:1">Salvar alterações</button>
+    <button class="bts" onclick="closeEditor()">Cancelar</button>
+  </div>
+</div>
+
+<!-- CREATE PRODUCT MODAL -->
+<div class="modal" id="create-modal" onclick="if(event.target===this)closeModal('create-modal')">
+  <div class="mbox create-box">
+    <div class="m-title">Novo produto</div>
+    <div class="m-desc">Preencha os dados básicos para cadastrar o produto no Bling.</div>
+    <div class="df"><label>Nome do produto *</label><input type="text" id="cr-nome" placeholder="Ex: Camiseta Básica Branca"></div>
+    <div class="df-2">
+      <div class="df"><label>SKU / Código</label><input type="text" id="cr-codigo" placeholder="CAM-BRA-M"></div>
+      <div class="df"><label>Tipo</label><select id="cr-tipo"><option value="P">Produto</option><option value="S">Serviço</option></select></div>
+    </div>
+    <div class="df-2">
+      <div class="df"><label>Preço de venda (R$) *</label><input type="number" id="cr-preco" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="df"><label>Custo (R$)</label><input type="number" id="cr-custo" placeholder="0.00" min="0" step="0.01"></div>
+    </div>
+    <div class="df-2">
+      <div class="df"><label>Estoque inicial</label><input type="number" id="cr-estoque" placeholder="0" min="0"></div>
+      <div class="df"><label>Unidade</label><input type="text" id="cr-unidade" placeholder="un" value="un"></div>
+    </div>
+    <div class="df"><label>Descrição</label><textarea id="cr-descricao" rows="2" placeholder="Descrição do produto (opcional)"></textarea></div>
+    <div class="m-foot">
+      <button class="btp" id="cr-btn" onclick="saveCreate()">Cadastrar produto</button>
+      <button class="bts" onclick="closeModal('create-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- UNDO TOAST -->
 <div class="undo" id="undo-toast"><span id="undo-msg">Edição salva</span><button class="undo-btn" onclick="undoLast()">Desfazer</button></div>
 
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
+<!-- NOTIFICATION STACK -->
+<div id="noti-stack"></div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="bnav" id="bnav">
+  <button class="bnav-item on" id="bn-produtos" onclick="setView('produtos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg>Produtos
+  </button>
+  <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Pedidos
+  </button>
+  <button class="bnav-item" id="bn-financeiro" onclick="setView('financeiro')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financeiro
+  </button>
+  <button class="bnav-item" id="bn-relatorio" onclick="setView('relatorio')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatório
+  </button>
+  <button class="bnav-item" id="bn-notas" onclick="setView('notas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>NF-e
+  </button>
+</nav>
 
 <script>
 // ── STATE ──────────────────────────────────────────
@@ -619,8 +803,16 @@ const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 function hl(text,q){if(!q)return esc(text);const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');return esc(text).replace(re,'<mark>$1</mark>');}
 function statusBadge(s){if(s===0)return`<span class="sb2 s-out"><span class="sdot"></span>Sem estoque</span>`;if(s<=3)return`<span class="sb2 s-lo"><span class="sdot"></span>Estoque baixo</span>`;return`<span class="sb2 s-ok"><span class="sdot"></span>Em estoque</span>`;}
 const editIco=`<span class="eh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>`;
-let toastT=null;
-function toast(msg,type=''){const el=$('toast');el.textContent=msg;el.className='toast vis'+(type?' '+type:'');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('vis'),3000);}
+function toast(msg,type=''){
+  const stack=$('noti-stack');if(!stack)return;
+  const id='n'+Date.now()+Math.random().toString(36).slice(2);
+  const div=document.createElement('div');
+  div.className='noti '+(type||'info');div.id=id;
+  div.innerHTML=`<span class="noti-dot"></span><span style="flex:1">${esc(msg)}</span><button class="noti-x" onclick="dismissNoti('${id}')">×</button>`;
+  stack.appendChild(div);
+  setTimeout(()=>dismissNoti(id),4500);
+}
+function dismissNoti(id){const el=$(id);if(!el)return;el.classList.add('out');setTimeout(()=>el?.remove(),200);}
 function lbStart(){$('lbar').className='go';}
 function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.className='',300);}
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
@@ -647,15 +839,18 @@ function renderCards(){
     const isSel=S.selected.has(p.id);
     const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
     const badge=statusBadge(p.estoque);
-    return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}" onclick="toggleRow(${p.id},!S.selected.has(${p.id}));renderCards()">
-      <div class="pcard-img">${thumb}</div>
+    return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}">
+      <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">${thumb}
+        <button class="pcard-edit" onclick="event.stopPropagation();openEditor(${p.id})" title="Editar produto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
       <div class="pcard-body">
-        <div class="pcard-name" title="${esc(p.nome)}">${esc(p.nome)}</div>
+        <div class="pcard-name plink" title="Clique para editar" onclick="openEditor(${p.id})">${esc(p.nome)}</div>
         <div class="pcard-sku">${esc(p.codigo||'—')}</div>
         ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
         <div class="pcard-meta">
           <span class="pcard-price">${fmt(p.preco)}</span>
           <span class="pcard-stock">${fmtN(p.estoque)} un.</span>
+          <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc)" title="Selecionar">
         </div>
         ${badge}
       </div>
@@ -664,16 +859,21 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais'};
+const VIEWS={produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro'};
 function setView(v){
   S.view=v;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
-  $('view-'+v).classList.add('on');
-  $('ni-'+v)&&$('ni-'+v).classList.add('on');
+  document.querySelectorAll('.bnav-item').forEach(el=>el.classList.remove('on'));
+  $('view-'+v)?.classList.add('on');
+  $('ni-'+v)?.classList.add('on');
+  $('bn-'+v)?.classList.add('on');
   $('tb-title').textContent=VIEWS[v]||v;
   if(v==='relatorio')renderReport();
   if(v==='notas')loadNotas();
+  if(v==='pedidos')loadPedidos();
+  if(v==='historico')loadHistorico();
+  if(v==='financeiro')loadFinanceiro();
 }
 
 // ── LOAD ──────────────────────────────────────────
@@ -784,7 +984,7 @@ function renderTable(){
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
       <td>${thumb}</td>
       <td><span class="sku">${esc(p.codigo||'—')}</span>${isDup?`<span class="dup-flag">DUP</span>`:''}</td>
-      <td><span class="pname" title="${esc(p.nome)}">${nameHl}</span></td>
+      <td><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}</span></td>
       <td><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
       <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}'">${fmt(p.preco)}${arr}${editIco}</span></td>
       <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}'">${fmtN(p.estoque)} un.${editIco}</span></td>
@@ -1016,8 +1216,174 @@ document.addEventListener('keydown',e=>{
   else if(k==='z')  undoLast();
   else if(k==='a')  {$('cb-all').checked=true;toggleAllCb();}
   else if(k==='?')  openModal('sc-modal');
-  else if(k==='escape'){closeSheet();closeQuick();closeModal('sc-modal');closeModal('im-modal');$('undo-toast').classList.remove('vis');}
+  else if(k==='escape'){closeSheet();closeQuick();closeModal('sc-modal');closeModal('im-modal');closeModal('create-modal');closeEditor();$('undo-toast').classList.remove('vis');}
+  else if(k==='n'&&S.view==='produtos')openCreate();
 });
+
+// ── EDITOR DRAWER ─────────────────────────────────
+let editorId=null,editorProduct=null;
+async function openEditor(id){
+  editorId=id;editorProduct=null;
+  $('edraw-ov').classList.add('open');$('edraw').classList.add('open');
+  $('edraw-title').textContent='Carregando…';
+  $('edraw-save').disabled=true;
+  $('edraw-bd').innerHTML='<div class="st-wrap"><p class="st-d">Carregando produto…</p></div>';
+  try{
+    const r=await fetch(`/api/produtos/${id}`);
+    if(!r.ok)throw new Error('Falha ao carregar produto');
+    const p=await r.json();editorProduct=p;
+    const sit=String(p.situacao?.valor||p.situacao||'A');
+    const tipo=p.tipo||'P';
+    const preco=p.preco||0;
+    const custo=p.precoCusto||0;
+    const margem=preco&&custo?Math.round(((preco-custo)/preco)*100):null;
+    const mCor=margem!==null?(margem<20?'var(--er-t)':margem<40?'var(--wa-t)':'var(--ok-t)'):'';
+    const curEstoque=typeof p.estoque==='object'?(p.estoque?.saldoVirtualTotal||0):(p.estoque||0);
+    $('edraw-title').textContent=p.nome||'Editar produto';
+    $('edraw-save').disabled=false;
+    $('edraw-bd').innerHTML=`
+      ${p.imagem?.link?`<img class="edraw-img" src="${esc(p.imagem.link)}" alt="">`:''}
+      <div class="df-2">
+        <div class="df"><label>Situação</label><select id="ed-sit">
+          <option value="A" ${sit==='A'?'selected':''}>Ativo</option>
+          <option value="I" ${sit==='I'?'selected':''}>Inativo</option>
+        </select></div>
+        <div class="df"><label>Tipo</label><select id="ed-tipo">
+          <option value="P" ${tipo==='P'?'selected':''}>Produto</option>
+          <option value="S" ${tipo==='S'?'selected':''}>Serviço</option>
+          <option value="K" ${tipo==='K'?'selected':''}>Kit</option>
+        </select></div>
+      </div>
+      <div class="df"><label>Nome do produto</label><input type="text" id="ed-nome" value="${esc(p.nome||'')}"></div>
+      <div class="df-2">
+        <div class="df"><label>SKU / Código</label><input type="text" id="ed-codigo" value="${esc(p.codigo||'')}"></div>
+        <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
+      </div>
+      <div class="edraw-sec">Preços</div>
+      <div class="df-2">
+        <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
+        <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
+      </div>
+      <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
+        Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
+      </div>
+      <div class="edraw-sec">Estoque</div>
+      <div class="df-2">
+        <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
+        <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
+      </div>
+      <div class="edraw-sec">Outros</div>
+      <div class="df-2">
+        <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
+        <div class="df"><label>Categoria</label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||'')}"></div>
+      </div>
+      <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
+    `;
+  }catch(e){
+    $('edraw-bd').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;
+    $('edraw-save').disabled=true;
+  }
+}
+function updateMargem(){
+  const preco=parseFloat($('ed-preco')?.value)||0;
+  const custo=parseFloat($('ed-custo')?.value)||0;
+  const el=$('df-margem');if(!el)return;
+  if(preco>0&&custo>0){
+    const m=Math.round(((preco-custo)/preco)*100);
+    const cor=m<20?'var(--er-t)':m<40?'var(--wa-t)':'var(--ok-t)';
+    el.style.display='';
+    el.innerHTML=`Margem: <strong style="color:${cor}">${m}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>`;
+  }else el.style.display='none';
+}
+function closeEditor(){
+  $('edraw-ov').classList.remove('open');$('edraw').classList.remove('open');
+  editorId=null;editorProduct=null;
+}
+async function saveEditorFull(){
+  if(!editorId||!editorProduct)return;
+  const btn=$('edraw-save');btn.disabled=true;btn.textContent='Salvando…';
+  const nome=$('ed-nome').value.trim();
+  if(!nome){toast('Nome é obrigatório','err');btn.disabled=false;btn.textContent='Salvar alterações';return;}
+  const newEstoque=parseFloat($('ed-estoque').value);
+  const updated={...editorProduct,nome,
+    codigo:$('ed-codigo').value.trim(),
+    gtin:$('ed-ean').value.trim(),
+    preco:parseFloat($('ed-preco').value)||0,
+    precoCusto:parseFloat($('ed-custo').value)||0,
+    pesoBruto:parseFloat($('ed-peso').value)||0,
+    unidade:$('ed-unidade').value.trim()||'un',
+    situacao:$('ed-sit').value,
+    tipo:$('ed-tipo').value,
+    descricaoComplementar:$('ed-desc').value,
+  };
+  try{
+    const body={_fullUpdate:updated};
+    const p=S.products.find(x=>x.id===editorId);
+    const oldEst=p?p.estoque:null;
+    if(!isNaN(newEstoque)&&newEstoque!==oldEst)body.estoque=newEstoque;
+    const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+    if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;if(!isNaN(newEstoque))p.estoque=newEstoque;}
+    toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Salvar alterações';}
+}
+
+// ── CRIAR PRODUTO ─────────────────────────────────
+function openCreate(){
+  ['cr-nome','cr-codigo','cr-preco','cr-custo','cr-estoque','cr-descricao'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  $('cr-unidade').value='un';$('cr-tipo').value='P';
+  openModal('create-modal');
+  setTimeout(()=>$('cr-nome')?.focus(),100);
+}
+async function saveCreate(){
+  const nome=$('cr-nome').value.trim();
+  const preco=parseFloat($('cr-preco').value);
+  if(!nome){toast('Nome é obrigatório','err');$('cr-nome').focus();return;}
+  if(!preco||preco<=0){toast('Preço de venda é obrigatório','err');$('cr-preco').focus();return;}
+  const btn=$('cr-btn');btn.disabled=true;btn.textContent='Cadastrando…';
+  try{
+    const body={nome,codigo:$('cr-codigo').value.trim(),preco,precoCusto:parseFloat($('cr-custo').value)||0,
+      tipo:$('cr-tipo').value,unidade:$('cr-unidade').value.trim()||'un',situacao:'A',
+      descricaoComplementar:$('cr-descricao').value.trim()};
+    const r=await fetch('/api/produtos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro ao criar produto');}
+    const criado=await r.json();
+    const estoque=parseInt($('cr-estoque').value);
+    if(estoque>0&&criado?.id){
+      await fetch(`/api/produtos/${criado.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estoque})}).catch(()=>{});
+    }
+    toast('Produto cadastrado com sucesso!','ok');closeModal('create-modal');await loadProducts(false);
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Cadastrar produto';}
+}
+
+// ── FINANCEIRO ────────────────────────────────────
+async function loadFinanceiro(){
+  const body=$('fin-margin-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados financeiros…</p></div>';
+  ['fin-bruto','fin-rec','fin-ticket','fin-total','fin-conc','fin-pend','fin-canc'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
+  try{
+    const r=await fetch('/api/financeiro'),d=await r.json();
+    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
+    if(!r.ok)throw new Error(d.error||'Erro');
+    $('fin-bruto').textContent=fmt(d.totalBruto);
+    $('fin-rec').textContent=fmt(d.receitaConcluida);
+    $('fin-ticket').textContent=fmt(d.ticketMedio);
+    $('fin-total').textContent=fmtN(d.totalPedidos);
+    $('fin-conc').textContent=fmtN(d.concluidos);
+    $('fin-pend').textContent=fmtN(d.pendentes);
+    $('fin-canc').textContent=fmtN(d.cancelados);
+    if(d.mes){const[ano,mes]=d.mes.split('-');const mn=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];$('fin-mes').textContent=`${mn[parseInt(mes)-1]} ${ano}`;}
+    // Margem table
+    const prods=S.products.filter(p=>p.precoCusto>0&&p.preco>0).sort((a,b)=>{const ma=(a.preco-a.precoCusto)/a.preco;const mb=(b.preco-b.precoCusto)/b.preco;return ma-mb;});
+    if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
+    body.innerHTML=`<table><thead><tr><th>Produto</th><th class="r">Custo</th><th class="r">Venda</th><th class="r">Lucro unit.</th><th class="r">Margem</th></tr></thead><tbody>${
+      prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
+      return`<tr><td><span class="pname" style="max-width:220px">${esc(p.nome)}</span></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r" style="font-weight:500">${fmt(lucro)}</td><td class="r"><strong style="color:var(--${c}-t)">${m}%</strong></td></tr>`;}).join('')
+    }</tbody></table>`;
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
 
 // ── AUTH ─────────────────────────────────────────
 async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}

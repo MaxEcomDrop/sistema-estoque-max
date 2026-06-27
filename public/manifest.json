@@ -1,0 +1,22 @@
+{
+  "name": "Estoque Max",
+  "short_name": "Estoque Max",
+  "description": "Gestão de estoque e produtos integrado ao Bling ERP",
+  "start_url": "/dashboard.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%234f46e5'/><text x='96' y='130' text-anchor='middle' font-size='90' font-weight='700' fill='white' font-family='Inter,sans-serif'>EM</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234f46e5'/><text x='256' y='340' text-anchor='middle' font-size='240' font-weight='700' fill='white' font-family='Inter,sans-serif'>EM</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

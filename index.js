@@ -163,7 +163,12 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       nome:       p.nome       || 'Sem nome',
       codigo:     p.codigo     || '',
       preco:      typeof p.preco === 'number' ? p.preco : 0,
+      precoCusto: typeof p.precoCusto === 'number' ? p.precoCusto : 0,
       estoque:    typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
+      tipo:       p.tipo || 'P',
+      unidade:    p.unidade || 'un',
+      peso:       p.pesoBruto || 0,
+      descricao:  p.descricaoComplementar || p.descricao || '',
       categoria:  p.categoria?.descricao || '',
       situacao:   String(p.situacao?.valor || p.situacao || 'A'),
       imagemUrl:  p.imagem?.link || p.imageThumbnailURL || '',
@@ -179,12 +184,117 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
   }
 });
 
+// Busca produto completo (para editor)
+app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  try {
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${req.params.id}`, {
+      headers: blingHeaders(token),
+    });
+    res.json(data?.data || {});
+  } catch (err) {
+    if (err.response?.status === 404) return res.status(404).json({ error: 'Produto não encontrado' });
+    res.status(500).json({ error: 'Erro ao buscar produto', detail: err.message });
+  }
+});
+
+// Criar produto novo
+app.post('/api/produtos', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  try {
+    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
+      headers: blingHeaders(token),
+    });
+    const criado = data?.data || data;
+    changeLog.push({
+      id: changeLog.length + 1, produto_id: criado?.id || '—',
+      produto_nome: req.body.nome || 'Novo produto', campo: 'criação',
+      valor_anterior: '—', valor_novo: req.body.nome || '—',
+      timestamp: new Date().toISOString(),
+    });
+    res.json(criado);
+  } catch (err) {
+    const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+    res.status(500).json({ error: 'Erro ao criar produto', detail });
+  }
+});
+
+// Resumo financeiro (mês atual)
+app.get('/api/financeiro', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const hoje = new Date();
+    const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+    const fim = hoje.toISOString().split('T')[0];
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limite: 100, pagina: 1, dataInicial: inicio, dataFinal: fim },
+    });
+    const pedidos = Array.isArray(data?.data) ? data.data : [];
+    const categorize = s => {
+      const n = String(s?.nome || s?.valor || s || '').toLowerCase();
+      if (n.includes('cancel')) return 'cancelado';
+      if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
+      return 'pendente';
+    };
+    const totalBruto = pedidos.reduce((a, p) => a + (p.totalVenda || p.totalProdutos || 0), 0);
+    const concluidos = pedidos.filter(p => categorize(p.situacao) === 'concluido');
+    const cancelados = pedidos.filter(p => categorize(p.situacao) === 'cancelado');
+    const pendentes  = pedidos.filter(p => categorize(p.situacao) === 'pendente');
+    res.json({
+      mes: inicio,
+      totalBruto,
+      receitaConcluida: concluidos.reduce((a, p) => a + (p.totalVenda || p.totalProdutos || 0), 0),
+      totalPedidos: pedidos.length,
+      concluidos: concluidos.length,
+      cancelados: cancelados.length,
+      pendentes: pendentes.length,
+      ticketMedio: pedidos.length > 0 ? totalBruto / pedidos.length : 0,
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    res.status(500).json({ error: 'Erro ao buscar dados financeiros', detail: err.message });
+  }
+});
+
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = req.cookies?.bling_token;
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
 
   const { id } = req.params;
-  const { estoque, preco, nome_produto, valor_anterior } = req.body;
+  const { estoque, preco, nome_produto, valor_anterior, _fullUpdate } = req.body;
+
+  // Atualização completa via drawer editor
+  if (_fullUpdate) {
+    try {
+      await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, _fullUpdate, {
+        headers: blingHeaders(token),
+      });
+      if (estoque !== undefined) {
+        const depositoId = await getDepositoId(token);
+        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+          { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
+          { headers: blingHeaders(token) }
+        );
+      }
+      changeLog.push({
+        id: changeLog.length + 1, produto_id: id,
+        produto_nome: _fullUpdate.nome || `#${id}`, campo: 'edição completa',
+        valor_anterior: '—', valor_novo: 'campos atualizados',
+        timestamp: new Date().toISOString(),
+      });
+      return res.json({ success: true });
+    } catch (err) {
+      const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+      return res.status(500).json({ error: 'Erro ao salvar produto', detail });
+    }
+  }
 
   try {
     if (preco !== undefined) {
