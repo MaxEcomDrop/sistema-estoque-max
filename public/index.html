@@ -12,47 +12,83 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 20px;
     }
 
     .container {
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-      padding: 40px;
-      max-width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 60px;
+      max-width: 450px;
       width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 60px;
+      margin-bottom: 20px;
     }
 
     h1 {
       color: #333;
+      font-size: 32px;
       margin-bottom: 10px;
-      text-align: center;
+      font-weight: 700;
     }
 
     .subtitle {
       color: #666;
-      text-align: center;
+      font-size: 16px;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+
+    .info-box {
+      background: #f0f7ff;
+      border-left: 4px solid #667eea;
+      padding: 20px;
       margin-bottom: 30px;
+      border-radius: 8px;
+      text-align: left;
       font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .info-box strong {
+      color: #667eea;
+      display: block;
+      margin-bottom: 10px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-box ul {
+      margin-left: 20px;
+    }
+
+    .info-box li {
+      margin-bottom: 8px;
     }
 
     .btn {
       width: 100%;
-      padding: 12px;
+      padding: 16px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .btn-primary {
@@ -62,7 +98,13 @@
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .btn-secondary {
@@ -82,7 +124,7 @@
     }
 
     .spinner {
-      border: 3px solid #f3f3f3;
+      border: 3px solid #f0f0f0;
       border-top: 3px solid #667eea;
       border-radius: 50%;
       width: 30px;
@@ -96,77 +138,172 @@
       100% { transform: rotate(360deg); }
     }
 
-    .info {
-      background: #f0f7ff;
-      border-left: 4px solid #667eea;
-      padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-      font-size: 13px;
+    .steps {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #f0f0f0;
+      text-align: left;
+    }
+
+    .steps h3 {
       color: #333;
+      font-size: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .step {
+      display: flex;
+      margin-bottom: 15px;
+      align-items: flex-start;
+    }
+
+    .step-number {
+      background: #667eea;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-right: 15px;
+      font-size: 14px;
+    }
+
+    .step-content {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .step-content strong {
+      color: #333;
+      display: block;
+      margin-bottom: 2px;
     }
 
     .error {
-      background: #ffe0e0;
-      border-left: 4px solid #ff6b6b;
-      padding: 15px;
-      border-radius: 4px;
+      background: #ffcdd2;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 8px;
       margin-bottom: 20px;
-      font-size: 13px;
-      color: #d32f2f;
       display: none;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 40px 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📦 Sistema de Estoque Max</h1>
-    <p class="subtitle">Gerencie seu estoque com a integração Bling</p>
+    <div class="logo">📦</div>
+    <h1>Sistema de Estoque Max</h1>
+    <p class="subtitle">Gerencie seu estoque com integração Bling</p>
 
-    <div id="error" class="error"></div>
+    <div class="error" id="error"></div>
 
-    <div class="info">
-      <strong>Como funciona:</strong>
-      <ul style="margin-left: 15px; margin-top: 5px;">
-        <li>Você será redirecionado para autorizar no Bling</li>
-        <li>Seus produtos serão sincronizados automaticamente</li>
-        <li>Acesso apenas aos seus dados</li>
+    <div class="info-box">
+      <strong>✨ Funcionalidades</strong>
+      <ul>
+        <li>Login com Bling (OAuth2)</li>
+        <li>Dashboard de produtos</li>
+        <li>Edição inline de estoque e preço</li>
+        <li>Sincronização automática</li>
+        <li>Webhooks em tempo real</li>
       </ul>
     </div>
 
-    <button class="btn btn-primary" onclick="handleBlingAuth()">
+    <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
       🔗 Autenticar com Bling
+    </button>
+
+    <button class="btn btn-secondary" onclick="verDashboard()">
+      👀 Ver Dashboard (Demo)
     </button>
 
     <div class="loading" id="loading">
       <div class="spinner"></div>
       <p>Redirecionando para Bling...</p>
     </div>
+
+    <div class="steps">
+      <h3>Como funciona?</h3>
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <strong>Clique em Autenticar</strong>
+          <p>Você será redirecionado para o Bling</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <strong>Autorize a aplicação</strong>
+          <p>Permita acesso aos seus dados</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <strong>Dashboard carrega</strong>
+          <p>Veja seus produtos sincronizados</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <strong>Edite conforme precisa</strong>
+          <p>Clique em qualquer valor para editar</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    async function handleBlingAuth() {
+    async function handleLogin() {
+      const btn = document.getElementById('loginBtn');
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+
+      btn.disabled = true;
+      error.style.display = 'none';
+
       try {
-        const loading = document.getElementById('loading');
-        const errorDiv = document.getElementById('error');
-
-        loading.style.display = 'block';
-        errorDiv.style.display = 'none';
-
         const response = await fetch('/api/auth/url');
         const data = await response.json();
 
-        if (data.authUrl) {
-          window.location.href = data.authUrl;
-        } else {
-          throw new Error('Não foi possível obter URL de autenticação');
+        if (data.error) {
+          throw new Error(data.error);
         }
-      } catch (error) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').textContent = `Erro: ${error.message}`;
-        console.error('Erro:', error);
+
+        loading.style.display = 'block';
+        window.location.href = data.authUrl;
+      } catch (err) {
+        btn.disabled = false;
+        error.style.display = 'block';
+        error.textContent = `❌ Erro: ${err.message}`;
+        console.error('Erro:', err);
       }
+    }
+
+    function verDashboard() {
+      window.location.href = '/dashboard.html';
     }
 
     // Verificar se já está autenticado
@@ -174,10 +311,10 @@
       try {
         const response = await fetch('/api/auth/user');
         if (response.ok) {
-          window.location.href = '/dashboard';
+          window.location.href = '/dashboard.html';
         }
       } catch (error) {
-        console.log('Não autenticado');
+        // Não autenticado, fica na home
       }
     }
 
