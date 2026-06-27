@@ -5,6 +5,7 @@ const cors = require('cors');
 const db = require('./config/database');
 const authRoutes = require('./src/routes/authRoutes');
 const productRoutes = require('./src/routes/productRoutes');
+const webhookRoutes = require('./src/routes/webhookRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,11 @@ app.get('/', (req, res) => {
         list: 'GET /api/produtos',
         search: 'GET /api/produtos/search?q=termo',
         getById: 'GET /api/produtos/:id',
+        update: 'PATCH /api/produtos/:id',
+      },
+      webhooks: {
+        blingStatus: 'GET /api/webhook/bling',
+        blingReceive: 'POST /api/webhook/bling',
       },
     },
   });
@@ -38,10 +44,12 @@ app.get('/', (req, res) => {
 
 app.use('/api', authRoutes);
 app.use('/api', productRoutes);
+app.use('/api', webhookRoutes);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   console.log(`Ambiente: ${process.env.NODE_ENV}`);
+  console.log(`Webhook URL: ${process.env.NODE_ENV === 'production' ? `https://${process.env.VERCEL_URL || 'seu-dominio.vercel.app'}/api/webhook/bling` : 'http://localhost:3000/api/webhook/bling'}`);
 });
 
 module.exports = app;

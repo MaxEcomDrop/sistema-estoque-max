@@ -5,12 +5,15 @@ Sistema de gestão de estoque com integração OAuth2 com a API do Bling para Ma
 ## 🚀 Características
 
 - ✅ Autenticação OAuth2 com Bling
-- ✅ Sincronização automática de produtos
+- ✅ Sincronização automática de produtos via OAuth
+- ✅ **Webhooks em tempo real** do Bling (novo!)
+- ✅ Edição inline de quantidades e preços
 - ✅ Banco de dados SQLite
 - ✅ API RESTful completa
 - ✅ Dashboard responsivo
 - ✅ Busca de produtos
 - ✅ Estatísticas de estoque
+- ✅ Renovação automática de tokens
 
 ## 📋 Requisitos
 
@@ -98,6 +101,29 @@ sistema-estoque-max/
 4. **Token**: Sistema troca o código por um access token
 5. **Sincronização**: Produtos são importados e armazenados localmente
 6. **Dashboard**: Usuário acessa o dashboard com seus produtos
+
+## 🔄 Webhooks em Tempo Real (NEW!)
+
+Quando você faz mudanças no Bling, o sistema é notificado automaticamente:
+
+```
+[Você cria produto no Bling]
+         ↓
+[Bling POST para /api/webhook/bling]
+         ↓
+[Sistema busca dados completos na API]
+         ↓
+[SQLite é atualizado automaticamente]
+         ↓
+✅ Novo produto aparece no dashboard em segundos!
+```
+
+**Eventos suportados:**
+- `produto.criacao` - Novo produto criado
+- `produto.atualizacao` - Produto editado
+- `estoque.atualizacao` - Estoque alterado
+
+📖 **Guia completo**: Veja [WEBHOOK_SETUP.md](WEBHOOK_SETUP.md)
 
 ## 🔌 Endpoints da API
 
