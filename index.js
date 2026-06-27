@@ -21,13 +21,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', time: new Date().toISOString() });
 });
 
-// 2. Info da API
+// 1.5 Dashboard
+app.get('/dashboard', (req, res) => {
+  res.sendFile(__dirname + '/public/dashboard.html');
+});
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(__dirname + '/public/dashboard.html');
+});
+
+// 2. Servir página inicial (index.html)
 app.get('/', (req, res) => {
-  res.json({
-    name: 'Sistema de Estoque Max',
-    version: '1.0.0',
-    status: 'online',
-  });
+  res.sendFile(__dirname + '/public/index.html');
 });
 
 // 3. Login - Redireciona para Bling OAuth
