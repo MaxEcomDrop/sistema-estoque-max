@@ -13,10 +13,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors());
 
-// Static assets que não precisam de auth (css, js, fontes)
-// Páginas HTML protegidas são servidas pelas rotas abaixo
-app.use(express.static('public', { index: false }));
-
 const BLING_CLIENT_ID     = process.env.BLING_CLIENT_ID     || '56f15479eddae7460b8028e56f2d5f8a64970fe0';
 const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET || 'de5d5bc2fa78c1b151392e81aae3ab2377bad770724dce3e13c0ec454674';
 const BLING_REDIRECT_URI  = process.env.BLING_REDIRECT_URI  || 'https://sistema-estoque-max.vercel.app/api/webhook/bling';
@@ -59,6 +55,10 @@ app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.
 app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
 app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length }));
+
+// Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
+// para que /index.html e /dashboard.html passem pela autenticação acima
+app.use(express.static('public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────
 

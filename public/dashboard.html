@@ -598,9 +598,8 @@ async function loadProducts(showToast=false){
   btn.disabled=true;ico.classList.add('spin');
   try{
     const r=await fetch('/api/produtos');
+    if(r.status===401){const d=await r.json();if(d.code==='BLING_NOT_CONNECTED'){renderNoBling();return;}if(d.code==='BLING_TOKEN_EXPIRED'){renderExpired();return;}window.location.href='/login';return;}
     const d=await r.json();
-    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){renderNoBling();return;}
-    if(r.status===401&&d.code==='BLING_TOKEN_EXPIRED'){renderExpired();return;}
     if(!r.ok)throw new Error(d.error||'Erro');
     S.products.forEach(p=>{S.prevPrices[p.id]=p.preco;S.prevStocks[p.id]=p.estoque;});
     S.products=d.products||[];
