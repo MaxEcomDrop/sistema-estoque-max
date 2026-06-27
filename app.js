@@ -3,81 +3,117 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
-// Inicializar banco de dados
-const dbConfig = require('./config/database-vercel');
-const db = dbConfig.init();
-
-const authRoutes = require('./src/routes/authRoutes');
-const productRoutes = require('./src/routes/productRoutes');
-const webhookRoutes = require('./src/routes/webhookRoutes');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware básico
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
 app.use(express.static('public'));
 
+console.log('[INIT] Sistema de Estoque Max iniciando...');
+console.log('[ENV] NODE_ENV:', process.env.NODE_ENV);
+console.log('[PORT] PORT:', PORT);
+
+// Health check (deve funcionar sempre)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+  });
+});
+
+// API Info
 app.get('/', (req, res) => {
   res.json({
-    message: 'Sistema de Estoque Max API',
+    name: 'Sistema de Estoque Max',
     version: '1.0.0',
-    endpoints: {
-      auth: {
-        getAuthUrl: 'GET /api/auth/url',
-        callback: 'GET /api/auth/callback?code=xxx',
-        logout: 'POST /api/auth/logout',
-        currentUser: 'GET /api/auth/user',
-      },
-      produtos: {
-        sync: 'POST /api/produtos/sync',
-        list: 'GET /api/produtos',
-        search: 'GET /api/produtos/search?q=termo',
-        getById: 'GET /api/produtos/:id',
-        update: 'PATCH /api/produtos/:id',
-      },
-      webhooks: {
-        blingStatus: 'GET /api/webhook/bling',
-        blingReceive: 'POST /api/webhook/bling',
-      },
-    },
+    status: 'online',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+    docs: 'https://github.com/MaxEcomDrop/sistema-estoque-max',
   });
 });
 
-app.use('/api', authRoutes);
-app.use('/api', productRoutes);
-app.use('/api', webhookRoutes);
+// Carregamento lazy das rotas (não quebra se houver erro)
+let routesLoaded = false;
 
-// Middleware de erro
-app.use((err, req, res, next) => {
-  console.error('[ERROR]', err);
+try {
+  // Inicializar banco de dados
+  console.log('[DB] Inicializando banco de dados...');
+  const dbConfig = require('./config/database-vercel');
+  const db = dbConfig.init();
 
-  if (err.message && err.message.includes('ENOENT')) {
-    return res.status(500).json({
-      error: 'Erro de banco de dados',
+  // Carregar rotas
+  console.log('[ROUTES] Carregando rotas...');
+  const authRoutes = require('./src/routes/authRoutes');
+  const productRoutes = require('./src/routes/productRoutes');
+  const webhookRoutes = require('./src/routes/webhookRoutes');
+
+  app.use('/api', authRoutes);
+  app.use('/api', productRoutes);
+  app.use('/api', webhookRoutes);
+
+  routesLoaded = true;
+  console.log('[ROUTES] ✅ Todas as rotas carregadas');
+} catch (error) {
+  console.error('[INIT] ⚠️ Erro ao carregar rotas:', error.message);
+  console.error('[INIT] Stack:', error.stack);
+
+  // Mesmo se as rotas não carregarem, a API básica funciona
+  app.use('/api', (req, res) => {
+    res.status(503).json({
+      error: 'Serviço indisponível',
       message: 'Sistema inicializando, tente novamente em alguns segundos',
+      path: req.path,
     });
-  }
-
-  res.status(err.status || 500).json({
-    error: err.message || 'Erro interno do servidor',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
-});
-
-// 404
-app.use((req, res) => {
-  res.status(404).json({ error: 'Rota não encontrada' });
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-    console.log(`Ambiente: ${process.env.NODE_ENV}`);
-    console.log(`Webhook URL: http://localhost:3000/api/webhook/bling`);
   });
 }
+
+// Middleware de erro (último)
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', {
+    message: err.message,
+    path: req.path,
+    method: req.method,
+  });
+
+  res.status(err.status || 500).json({
+    error: 'Erro interno',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Tente novamente',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 (deve ser o último)
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Rota não encontrada',
+    path: req.path,
+  });
+});
+
+// Iniciar servidor em desenvolvimento
+if (process.env.NODE_ENV !== 'production' && require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`\n✅ Servidor iniciado com sucesso`);
+    console.log(`📍 URL: http://localhost:${PORT}`);
+    console.log(`🔗 Health: http://localhost:${PORT}/health`);
+    console.log(`🎯 Webhook: http://localhost:${PORT}/api/webhook/bling\n`);
+  });
+
+  server.on('error', (error) => {
+    console.error('[SERVER] Erro ao iniciar:', error);
+    process.exit(1);
+  });
+}
+
+console.log('[INIT] ✅ Aplicação exportada para Vercel\n');
 
 module.exports = app;

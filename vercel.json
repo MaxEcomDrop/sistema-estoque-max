@@ -1,26 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "npm install",
+  "buildCommand": "npm ci",
   "devCommand": "npm run dev",
+  "public": true,
   "builds": [
     {
       "src": "app.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "memory": 1024
-      }
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/public/(.*)",
-      "dest": "/public/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "app.js"
@@ -28,29 +17,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/public/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600"
-        }
-      ]
-    }
-  ]
+  }
 }
