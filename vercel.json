@@ -1,21 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "npm ci",
-  "devCommand": "npm run dev",
-  "public": true,
   "builds": [
     {
-      "src": "app.js",
+      "src": "index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "app.js"
+      "dest": "index.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
