@@ -561,16 +561,123 @@ app.post('/api/push/send', requireAuthJson, async (req, res) => {
       notification: { title, body },
       webpush: { fcmOptions: { link: url } },
     });
-    // Remove tokens inválidos
+    // Remove tokens inválidos e salva no histórico
     const invalid = result.responses
       .map((r, i) => (!r.success && r.error?.code === 'messaging/registration-token-not-registered') ? tokens[i] : null)
       .filter(Boolean);
+    const ops = [];
     if (invalid.length) {
       const batch = admin.firestore().batch();
       invalid.forEach(t => batch.delete(admin.firestore().collection('fcm_tokens').doc(t.slice(0, 128))));
-      await batch.commit();
+      ops.push(batch.commit());
     }
+    ops.push(admin.firestore().collection('notif_history').add({
+      title, body, url, action: req.body?.action || null,
+      status: 'sent', sent: result.successCount, failed: result.failureCount,
+      sentAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    }));
+    await Promise.all(ops);
     res.json({ ok: true, sent: result.successCount, failed: result.failureCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Notificações Push ────────────────────────────────────────────
+
+app.get('/api/notif/history', requireAuthJson, async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.json({ history: [], subscribers: 0 });
+  try {
+    const [histSnap, tokSnap] = await Promise.all([
+      admin.firestore().collection('notif_history').orderBy('createdAt', 'desc').limit(50).get(),
+      admin.firestore().collection('fcm_tokens').get(),
+    ]);
+    const history = histSnap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        title: data.title,
+        body: data.body,
+        url: data.url,
+        action: data.action,
+        status: data.status,
+        sent: data.sent ?? null,
+        sendAt: data.sendAt?.toDate?.()?.toISOString() ?? data.sendAt ?? null,
+        sentAt: data.sentAt?.toDate?.()?.toISOString() ?? null,
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+      };
+    });
+    res.json({ history, subscribers: tokSnap.size });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/notif/schedule', requireAuthJson, async (req, res) => {
+  const { title, body, url = '/dashboard.html', action, sendAt } = req.body || {};
+  if (!title || !body) return res.status(400).json({ error: 'title e body são obrigatórios' });
+  if (!sendAt) return res.status(400).json({ error: 'sendAt é obrigatório' });
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Firebase não configurado' });
+  try {
+    const ref = await admin.firestore().collection('notif_history').add({
+      title, body, url, action: action || null,
+      sendAt: new Date(sendAt),
+      status: 'scheduled',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    res.json({ ok: true, id: ref.id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/notif/schedule/:id', requireAuthJson, async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Firebase não configurado' });
+  try {
+    await admin.firestore().collection('notif_history').doc(req.params.id).delete();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
+app.get('/api/cron/push', async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  try {
+    const now = new Date();
+    const snap = await admin.firestore().collection('notif_history')
+      .where('status', '==', 'scheduled')
+      .where('sendAt', '<=', now)
+      .get();
+    if (snap.empty) return res.json({ ok: true, sent: 0 });
+    const tokSnap = await admin.firestore().collection('fcm_tokens').get();
+    const tokens = tokSnap.docs.map(d => d.data().token).filter(Boolean);
+    let sent = 0;
+    const batch = admin.firestore().batch();
+    for (const doc of snap.docs) {
+      const { title, body, url = '/dashboard.html', action } = doc.data();
+      try {
+        let successCount = 0;
+        if (tokens.length) {
+          const msg = { tokens, notification: { title, body }, webpush: { fcmOptions: { link: url } } };
+          if (action) msg.webpush.notification = { actions: [{ action: 'open', title: action }] };
+          const result = await admin.messaging().sendEachForMulticast(msg);
+          successCount = result.successCount;
+        }
+        batch.update(doc.ref, { status: 'sent', sent: successCount, sentAt: admin.firestore.FieldValue.serverTimestamp() });
+        sent++;
+      } catch (e) {
+        batch.update(doc.ref, { status: 'error', error: e.message });
+      }
+    }
+    await batch.commit();
+    res.json({ ok: true, sent });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
