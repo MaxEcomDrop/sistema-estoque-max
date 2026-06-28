@@ -416,6 +416,37 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .fin-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:8px}
 .fin-val{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
 .fin-sub{font-size:11px;color:var(--fa);margin-top:5px}
+/* TAREFAS PANEL */
+.tarefas-panel{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:16px 20px;margin-bottom:18px;box-shadow:var(--sh)}
+.tf-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.tf-header-title{font-size:13px;font-weight:700;color:var(--tx)}
+.tf-badge{font-size:10px;font-weight:700;background:var(--er);color:#fff;padding:2px 7px;border-radius:20px}
+.tf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tf-card{border-radius:10px;padding:14px 16px;cursor:pointer;transition:transform .12s,box-shadow .15s;border:1px solid transparent}
+.tf-card:hover{transform:translateY(-1px);box-shadow:var(--sh-md)}
+.tf-num{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:4px}
+.tf-lbl{font-size:11.5px;font-weight:500;opacity:.8}
+.tf-red{background:#fef2f2;border-color:#fecaca;color:#991b1b}.tf-red .tf-num{color:#dc2626}
+.tf-orange{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.tf-orange .tf-num{color:#ea580c}
+.tf-blue{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}.tf-blue .tf-num{color:#2563eb}
+.tf-green{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}.tf-green .tf-num{color:#059669}
+[data-theme=dark] .tf-red{background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.3);color:#fca5a5}
+[data-theme=dark] .tf-red .tf-num{color:#f87171}
+[data-theme=dark] .tf-orange{background:rgba(234,88,12,.12);border-color:rgba(234,88,12,.3);color:#fdba74}
+[data-theme=dark] .tf-orange .tf-num{color:#fb923c}
+[data-theme=dark] .tf-blue{background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.3);color:#93c5fd}
+[data-theme=dark] .tf-blue .tf-num{color:#60a5fa}
+[data-theme=dark] .tf-green{background:rgba(5,150,105,.12);border-color:rgba(5,150,105,.3);color:#6ee7b7}
+[data-theme=dark] .tf-green .tf-num{color:#34d399}
+/* PEDIDOS VIEW */
+.ped-tab-bar{display:flex;align-items:center;gap:6px;padding:14px 16px 0;border-bottom:1px solid var(--bord-l);flex-wrap:wrap}
+.pt-btn{padding:8px 18px;border:none;background:none;border-bottom:2px solid transparent;font-size:13px;font-weight:500;color:var(--mu);cursor:pointer;font-family:inherit;transition:all .12s;margin-bottom:-1px;white-space:nowrap}
+.pt-btn.on{color:var(--acc-t);border-bottom-color:var(--acc);font-weight:600}
+.pt-btn:hover:not(.on){color:var(--tx)}
+.pt-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle}
+.pt-cnt-pen{background:#fff7ed;color:#ea580c}
+.pt-cnt-ok{background:#ecfdf5;color:#059669}
+.pt-cnt-can{background:#fef2f2;color:#dc2626}
 /* MOBILE BOTTOM NAV */
 .bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:500;font-family:inherit;padding:4px 0;transition:color .1s}
@@ -553,6 +584,32 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 
     <!-- VIEW PRODUTOS -->
     <div class="view on" id="view-produtos">
+      <!-- Painel de Tarefas (aparece só quando há alertas) -->
+      <div class="tarefas-panel" id="tarefas-panel" style="display:none">
+        <div class="tf-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="tf-header-title">Atenção necessária</span>
+          <span class="tf-badge" id="tf-total-badge">0</span>
+        </div>
+        <div class="tf-grid">
+          <div class="tf-card tf-red" onclick="filterByStock(0,0)" title="Ver produtos sem estoque">
+            <div class="tf-num" id="tf-zerados">0</div>
+            <div class="tf-lbl">Zerados</div>
+          </div>
+          <div class="tf-card tf-orange" onclick="filterByStock(1,5)" title="Ver estoque crítico ≤5">
+            <div class="tf-num" id="tf-criticos">0</div>
+            <div class="tf-lbl">Críticos (≤5)</div>
+          </div>
+          <div class="tf-card tf-blue" onclick="setView('pedidos')" title="Ver pedidos pendentes">
+            <div class="tf-num" id="tf-pend-count">0</div>
+            <div class="tf-lbl">Pedidos pend.</div>
+          </div>
+          <div class="tf-card tf-green" onclick="setView('notas')" title="Ver notas fiscais">
+            <div class="tf-num" id="tf-nfe-count">—</div>
+            <div class="tf-lbl">NF-e emitidas</div>
+          </div>
+        </div>
+      </div>
       <div class="kpi-row">
         <div class="kpi">
           <div class="kpi-lbl">Total de produtos</div>
@@ -643,8 +700,14 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 
     <!-- VIEW PEDIDOS -->
     <div class="view" id="view-pedidos">
-      <div class="tcard">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Pedidos recentes</span><div class="tr"><button class="btp" onclick="loadPedidos()">Atualizar</button></div></div>
+      <div class="tcard" style="padding:0;overflow:hidden">
+        <div class="ped-tab-bar">
+          <button class="pt-btn on" onclick="setTabPedidos('all',this)">Todos <span class="pt-cnt" id="pt-cnt-all"></span></button>
+          <button class="pt-btn" onclick="setTabPedidos('pendente',this)">Pendentes <span class="pt-cnt pt-cnt-pen" id="pt-cnt-pen"></span></button>
+          <button class="pt-btn" onclick="setTabPedidos('concluido',this)">Concluídos <span class="pt-cnt pt-cnt-ok" id="pt-cnt-ok"></span></button>
+          <button class="pt-btn" onclick="setTabPedidos('cancelado',this)">Cancelados <span class="pt-cnt pt-cnt-can" id="pt-cnt-can"></span></button>
+          <button class="bts" style="margin-left:auto;margin-bottom:4px" onclick="loadPedidos()">↻ Atualizar</button>
+        </div>
         <div class="vtable" id="pedidos-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><p class="st-d">Clique em Atualizar para carregar os pedidos do Bling.</p></div></div>
       </div>
     </div>
@@ -674,8 +737,32 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
     <!-- VIEW NOTAS FISCAIS -->
     <div class="view" id="view-notas">
       <div class="tcard">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Notas Fiscais (NF-e)</span><div class="tr"><button class="btp" onclick="loadNotas()">Atualizar</button></div></div>
+        <div class="toolbar">
+          <span style="font-size:14px;font-weight:600;color:var(--tx)">Notas Fiscais (NF-e)</span>
+          <span style="font-size:12px;color:var(--mu);margin-left:6px">via Bling</span>
+          <div class="tr">
+            <button class="btp" onclick="openEmitirNFe()" title="Emitir NF-e a partir de um pedido">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              Emitir NF-e
+            </button>
+            <button class="bts" onclick="loadNotas()">↻ Atualizar</button>
+          </div>
+        </div>
         <div class="vtable" id="notas-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><p class="st-d">Clique em Atualizar para carregar as notas fiscais do Bling.</p></div></div>
+      </div>
+    </div>
+
+    <!-- MODAL EMITIR NF-e -->
+    <div class="modal-ov" id="nfe-modal">
+      <div class="mbox" style="max-width:420px">
+        <div class="m-title">Emitir NF-e</div>
+        <div class="m-desc">Informe o número do pedido de venda do Bling para gerar a nota fiscal.</div>
+        <div class="df"><label>Número / ID do Pedido *</label><input type="text" id="nfe-pedido-id" placeholder="Ex: 123456" style="letter-spacing:.5px"></div>
+        <div class="df"><label>Observação (opcional)</label><input type="text" id="nfe-obs" placeholder="Observação interna da nota"></div>
+        <div class="m-foot">
+          <button class="btp" id="nfe-emit-btn" onclick="emitirNFe()">Emitir NF-e</button>
+          <button class="bts" onclick="closeModal('nfe-modal')">Cancelar</button>
+        </div>
       </div>
     </div>
 
@@ -895,6 +982,18 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
   </button>
 </nav>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
+  authDomain:"erp-max-sistema.firebaseapp.com",
+  projectId:"erp-max-sistema",
+  storageBucket:"erp-max-sistema.firebasestorage.app",
+  messagingSenderId:"1023327647246",
+  appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
+});
+</script>
 <script>
 // ── STATE ──────────────────────────────────────────
 const S = {
@@ -1011,7 +1110,7 @@ async function loadProducts(showToast=false){
     const cats=[...new Set(S.products.map(p=>p.categoria).filter(Boolean))].sort();
     const fcat=$('f-cat');
     fcat.innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-    updateKpis();applyFilters();updateSyncTs();updateLowBadge();
+    updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
     if(showToast)toast('Produtos atualizados','ok');
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{lbDone();btn.disabled=false;ico.classList.remove('spin');}
@@ -1267,16 +1366,77 @@ function setAutoRefresh(mins){
   S.arTimer=setInterval(()=>{S.arCountdown--;if(S.arCountdown<=0){S.arCountdown=mins*60;loadProducts(false);}$('ar-cd').textContent=S.arCountdown;},1000);
 }
 
+// ── TAREFAS PANEL ────────────────────────────────
+function renderTarefas(){
+  const ps=S.products;
+  const zerados=ps.filter(p=>p.estoque<=0).length;
+  const criticos=ps.filter(p=>p.estoque>0&&p.estoque<=5).length;
+  const total=zerados+criticos;
+  const el=$('tarefas-panel');if(!el)return;
+  el.style.display=total>0?'':'none';
+  const z=$('tf-zerados'),c=$('tf-criticos'),b=$('tf-total-badge');
+  if(z)z.textContent=zerados;
+  if(c)c.textContent=criticos;
+  if(b)b.textContent=total;
+}
+function filterByStock(min,max){
+  $('f-st-min').value=min;
+  $('f-st-max').value=max;
+  applyFilters();
+}
+
 // ── SECONDARY VIEWS ──────────────────────────────
+let _pedidosCache=[];
+let _pedStatus='all';
+function setTabPedidos(status,btn){
+  _pedStatus=status;
+  document.querySelectorAll('.pt-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderPedidosTable(_pedStatus);
+}
 async function loadPedidos(){
-  const body=$('pedidos-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  const body=$('pedidos-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando pedidos…</p></div>';
   try{
     const r=await fetch('/api/pedidos'),d=await r.json();
-    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
-    const peds=d.pedidos||[];
-    if(!peds.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum pedido encontrado.</p></div>';return;}
-    body.innerHTML=`<table><thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Valor</th><th>Situação</th></tr></thead><tbody>${peds.map(p=>{const s=(p.situacao||'').toLowerCase();const cls=s.includes('atend')||s.includes('conclui')?'o-ok':s.includes('cancel')?'o-can':'o-pen';return`<tr><td><span class="sku">${p.numero||p.id}</span></td><td>${p.data?p.data.substring(0,10):'—'}</td><td>${esc(p.contato)}</td><td class="o-val">${fmt(p.valor)}</td><td class="${cls}">${esc(p.situacao)}</td></tr>`;}).join('')}</tbody></table>`;
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+    }
+    _pedidosCache=d.pedidos||[];
+    // Atualiza contadores das abas
+    const pen=_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length;
+    const ok=_pedidosCache.filter(p=>categorizePed(p.situacao)==='concluido').length;
+    const can=_pedidosCache.filter(p=>categorizePed(p.situacao)==='cancelado').length;
+    const setC=(id,n)=>{const el=$(id);if(el){el.textContent=n||'';el.style.display=n?'':'none';}};
+    setC('pt-cnt-all',_pedidosCache.length);setC('pt-cnt-pen',pen);setC('pt-cnt-ok',ok);setC('pt-cnt-can',can);
+    // Atualiza Tarefas panel
+    const tf=$('tf-pend-count');if(tf)tf.textContent=pen;
+    renderPedidosTable(_pedStatus);
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function categorizePed(s){
+  const n=String(s||'').toLowerCase();
+  if(n.includes('cancel'))return'cancelado';
+  if(n.includes('atend')||n.includes('conclui')||n.includes('entregue'))return'concluido';
+  return'pendente';
+}
+function renderPedidosTable(status){
+  const body=$('pedidos-body');
+  const list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
+  if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${status==='all'?'encontrado':status}.</p></div>`;return;}
+  const rows=list.map(p=>{
+    const cat=categorizePed(p.situacao);
+    const cls=cat==='concluido'?'o-ok':cat==='cancelado'?'o-can':'o-pen';
+    const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+    return`<tr>
+      <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
+      <td>${p.data?String(p.data).substring(0,10):'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
+      <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
+      <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
+    </tr>`;
+  }).join('');
+  body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 async function loadHistorico(){
   const body=$('historico-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
@@ -1296,6 +1456,26 @@ async function loadNotas(){
     if(!notas.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div>';return;}
     body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${notas.map(n=>{const s=(n.situacao||'').toLowerCase();const cls=s.includes('autoriza')?'nfe-ok':s.includes('cancel')?'nfe-can':'nfe-pen';return`<tr><td><span class="sku">${n.numero||n.id}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td class="${cls}">${esc(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,20)+'…':'—'}</span></td></tr>`;}).join('')}</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+
+function openEmitirNFe(){
+  $('nfe-pedido-id').value='';$('nfe-obs').value='';
+  openModal('nfe-modal');
+  setTimeout(()=>$('nfe-pedido-id').focus(),80);
+}
+async function emitirNFe(){
+  const pedidoId=($('nfe-pedido-id').value||'').trim();
+  if(!pedidoId){toast('Informe o número do pedido','wa');return;}
+  const btn=$('nfe-emit-btn');btn.disabled=true;btn.textContent='Emitindo…';
+  try{
+    const r=await fetch('/api/nfe/emitir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedidoId,obs:$('nfe-obs').value||''})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro ao emitir NF-e');
+    toast('NF-e emitida com sucesso!','ok');
+    closeModal('nfe-modal');
+    if(S.view==='notas')loadNotas();
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Emitir NF-e';}
 }
 
 function renderReport(){
@@ -1602,8 +1782,20 @@ function installApp(){
 async function askNotifPerm(){
   if(!('Notification' in window)){toast('Notificações não suportadas neste navegador','wa');return;}
   const perm=await Notification.requestPermission();
-  if(perm==='granted'){toast('Notificações ativadas!','ok');}
-  else{toast('Permissão de notificação negada','wa');}
+  if(perm!=='granted'){toast('Permissão de notificação negada','wa');return;}
+  try{
+    // FCM token — substitua VAPID_KEY pela chave gerada no Firebase Console
+    // Firebase Console → Project Settings → Cloud Messaging → Web Push Certificates → Generate key pair
+    const VAPID_KEY='COLE_SUA_VAPID_KEY_AQUI';
+    if(VAPID_KEY==='COLE_SUA_VAPID_KEY_AQUI'){toast('Notificações locais ativadas! (FCM aguardando VAPID key)','ok');return;}
+    const messaging=firebase.messaging();
+    const token=await messaging.getToken({vapidKey:VAPID_KEY});
+    if(token){
+      await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+      toast('Notificações push ativadas!','ok');
+      localStorage.setItem('fcm_token',token);
+    }
+  }catch(e){toast('Notificações locais ativadas (FCM: '+e.message+')','ok');}
 }
 function sendLocalNotif(title,body){
   if(Notification.permission==='granted'){

@@ -488,6 +488,39 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
   }
 });
 
+app.post('/api/nfe/emitir', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  const { pedidoId, obs } = req.body || {};
+  if (!pedidoId) return res.status(400).json({ error: 'pedidoId é obrigatório' });
+  try {
+    const payload = { pedido: { id: Number(pedidoId) } };
+    if (obs) payload.observacoes = obs;
+    const { data } = await axios.post('https://www.bling.com.br/Api/v3/nfe', payload, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    res.json({ ok: true, nfe: data?.data || data });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    const detail = err.response?.data?.error?.fields?.[0]?.msg
+      || err.response?.data?.error?.message
+      || err.message;
+    res.status(err.response?.status || 500).json({ error: 'Erro ao emitir NF-e', detail });
+  }
+});
+
+app.post('/api/push/subscribe', requireAuthJson, async (req, res) => {
+  const { token } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'token FCM obrigatório' });
+  // Armazena token em memória por agora (Firebase Admin SDK necessário para envio)
+  if (!global._fcmTokens) global._fcmTokens = new Set();
+  global._fcmTokens.add(token);
+  res.json({ ok: true, stored: global._fcmTokens.size });
+});
+
 // ── Histórico ────────────────────────────────────────────────────
 
 app.get('/api/historico', requireAuthJson, (req, res) => {
