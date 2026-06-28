@@ -273,7 +273,13 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   // Atualização completa via drawer editor
   if (_fullUpdate) {
     try {
-      await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, _fullUpdate, {
+      // Converte imagemUrl (campo frontend) para formato Bling
+      const payload = { ..._fullUpdate };
+      if (payload.imagemUrl !== undefined) {
+        if (payload.imagemUrl) payload.imagem = { link: payload.imagemUrl };
+        delete payload.imagemUrl;
+      }
+      await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
       if (estoque !== undefined) {
