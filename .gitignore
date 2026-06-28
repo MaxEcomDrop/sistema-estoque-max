@@ -8,6 +8,10 @@ yarn.lock
 .env.local
 .env.*.local
 
+# Firebase service account (nunca commitar chave privada)
+*-firebase-adminsdk-*.json
+firebase-service-account.json
+
 # Database
 data/estoque.db
 data/*.db

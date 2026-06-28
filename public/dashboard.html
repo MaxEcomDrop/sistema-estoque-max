@@ -1786,8 +1786,7 @@ async function askNotifPerm(){
   try{
     // FCM token — substitua VAPID_KEY pela chave gerada no Firebase Console
     // Firebase Console → Project Settings → Cloud Messaging → Web Push Certificates → Generate key pair
-    const VAPID_KEY='COLE_SUA_VAPID_KEY_AQUI';
-    if(VAPID_KEY==='COLE_SUA_VAPID_KEY_AQUI'){toast('Notificações locais ativadas! (FCM aguardando VAPID key)','ok');return;}
+    const VAPID_KEY='BAbdWtP-uqLAfqPy7LifDgR-V3SFvZeJW7SuT35yJpzfx1zqGBO7wMwch9Z-iW7Wdd3j9KdsqqPifb8BFDvYJc8';
     const messaging=firebase.messaging();
     const token=await messaging.getToken({vapidKey:VAPID_KEY});
     if(token){

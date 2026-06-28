@@ -6,6 +6,22 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+// Firebase Admin SDK (lazy init para não quebrar se env var ausente)
+let _fbAdmin = null;
+function getAdmin() {
+  if (_fbAdmin) return _fbAdmin;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return null;
+  try {
+    const admin = require('firebase-admin');
+    if (!admin.apps.length) {
+      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+    }
+    _fbAdmin = admin;
+  } catch (e) { console.error('Firebase Admin init error:', e.message); }
+  return _fbAdmin;
+}
+
 const app = express();
 
 app.use(express.json({ limit: '5mb' }));
@@ -515,10 +531,49 @@ app.post('/api/nfe/emitir', requireAuthJson, async (req, res) => {
 app.post('/api/push/subscribe', requireAuthJson, async (req, res) => {
   const { token } = req.body || {};
   if (!token) return res.status(400).json({ error: 'token FCM obrigatório' });
-  // Armazena token em memória por agora (Firebase Admin SDK necessário para envio)
-  if (!global._fcmTokens) global._fcmTokens = new Set();
-  global._fcmTokens.add(token);
-  res.json({ ok: true, stored: global._fcmTokens.size });
+  const admin = getAdmin();
+  if (!admin) {
+    // fallback: armazena em memória até Firebase estar configurado
+    if (!global._fcmTokens) global._fcmTokens = new Set();
+    global._fcmTokens.add(token);
+    return res.json({ ok: true, mode: 'memory' });
+  }
+  try {
+    await admin.firestore().collection('fcm_tokens').doc(token.slice(0, 128)).set({
+      token, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    res.json({ ok: true, mode: 'firestore' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/push/send', requireAuthJson, async (req, res) => {
+  const { title = 'Estoque Max', body = 'Nova notificação', url = '/dashboard.html' } = req.body || {};
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Firebase Admin não configurado (FIREBASE_SERVICE_ACCOUNT ausente)' });
+  try {
+    const snap = await admin.firestore().collection('fcm_tokens').get();
+    const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
+    if (!tokens.length) return res.json({ ok: true, sent: 0, msg: 'Nenhum dispositivo inscrito' });
+    const result = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      webpush: { fcmOptions: { link: url } },
+    });
+    // Remove tokens inválidos
+    const invalid = result.responses
+      .map((r, i) => (!r.success && r.error?.code === 'messaging/registration-token-not-registered') ? tokens[i] : null)
+      .filter(Boolean);
+    if (invalid.length) {
+      const batch = admin.firestore().batch();
+      invalid.forEach(t => batch.delete(admin.firestore().collection('fcm_tokens').doc(t.slice(0, 128))));
+      await batch.commit();
+    }
+    res.json({ ok: true, sent: result.successCount, failed: result.failureCount });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── Histórico ────────────────────────────────────────────────────
