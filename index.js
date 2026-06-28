@@ -221,38 +221,75 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   }
 });
 
-// Resumo financeiro (mês atual)
+// Resumo financeiro com suporte a períodos
 app.get('/api/financeiro', requireAuthJson, async (req, res) => {
   const token = req.cookies?.bling_token;
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
+    const { period = '30d', startDate, endDate } = req.query;
     const hoje = new Date();
-    const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-    const fim = hoje.toISOString().split('T')[0];
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 100, pagina: 1, dataInicial: inicio, dataFinal: fim },
-    });
-    const pedidos = Array.isArray(data?.data) ? data.data : [];
+    let inicio, fim;
+    if (period === 'today') {
+      inicio = fim = hoje.toISOString().split('T')[0];
+    } else if (period === '7d') {
+      const d = new Date(hoje); d.setDate(d.getDate() - 6);
+      inicio = d.toISOString().split('T')[0]; fim = hoje.toISOString().split('T')[0];
+    } else if (period === 'custom' && startDate && endDate) {
+      inicio = startDate; fim = endDate;
+    } else {
+      // 30d default
+      const d = new Date(hoje); d.setDate(d.getDate() - 29);
+      inicio = d.toISOString().split('T')[0]; fim = hoje.toISOString().split('T')[0];
+    }
+
+    // Busca até 300 pedidos (3 páginas)
+    let allPedidos = [];
+    for (let pg = 1; pg <= 3; pg++) {
+      const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
+      });
+      const items = Array.isArray(data?.data) ? data.data : [];
+      allPedidos = allPedidos.concat(items);
+      if (items.length < 100) break;
+    }
+
     const categorize = s => {
       const n = String(s?.nome || s?.valor || s || '').toLowerCase();
       if (n.includes('cancel')) return 'cancelado';
       if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
       return 'pendente';
     };
-    const totalBruto = pedidos.reduce((a, p) => a + (p.totalVenda || p.totalProdutos || 0), 0);
-    const concluidos = pedidos.filter(p => categorize(p.situacao) === 'concluido');
-    const cancelados = pedidos.filter(p => categorize(p.situacao) === 'cancelado');
-    const pendentes  = pedidos.filter(p => categorize(p.situacao) === 'pendente');
+
+    const concluidos = allPedidos.filter(p => categorize(p.situacao) === 'concluido');
+    const cancelados = allPedidos.filter(p => categorize(p.situacao) === 'cancelado');
+    const pendentes  = allPedidos.filter(p => categorize(p.situacao) === 'pendente');
+
+    const sum = (arr, fn) => arr.reduce((a, p) => a + (fn(p) || 0), 0);
+    const totalBruto       = sum(allPedidos, p => p.totalVenda || p.totalProdutos);
+    const receitaConcluida = sum(concluidos,  p => p.totalVenda || p.totalProdutos);
+    const totalCancelado   = sum(cancelados,  p => p.totalVenda || p.totalProdutos);
+    const totalPendente    = sum(pendentes,   p => p.totalVenda || p.totalProdutos);
+    const totalFrete       = sum(allPedidos, p => p.totalFrete || p.frete);
+    const totalDesconto    = sum(allPedidos, p => p.desconto);
+
+    // Série diária para gráfico
+    const byDay = {};
+    allPedidos.forEach(p => {
+      const day = String(p.data || p.dataPedido || '').substring(0, 10);
+      if (day) byDay[day] = (byDay[day] || 0) + (p.totalVenda || p.totalProdutos || 0);
+    });
+
     res.json({
-      mes: inicio,
-      totalBruto,
-      receitaConcluida: concluidos.reduce((a, p) => a + (p.totalVenda || p.totalProdutos || 0), 0),
-      totalPedidos: pedidos.length,
+      periodo: { inicio, fim, period },
+      totalBruto, receitaConcluida, totalCancelado, totalPendente,
+      totalFrete, totalDesconto,
+      totalPedidos: allPedidos.length,
       concluidos: concluidos.length,
       cancelados: cancelados.length,
       pendentes: pendentes.length,
-      ticketMedio: pedidos.length > 0 ? totalBruto / pedidos.length : 0,
+      ticketMedio: allPedidos.length > 0 ? totalBruto / allPedidos.length : 0,
+      byDay,
     });
   } catch (err) {
     if (err.response?.status === 401) {

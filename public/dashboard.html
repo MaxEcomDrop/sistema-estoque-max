@@ -370,20 +370,52 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .noti-x:hover{color:var(--tx)}
 @keyframes nti{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
 @keyframes nto{to{opacity:0;transform:translateX(16px)}}
-/* FINANCIAL VIEW */
-.fin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px}
-.fin-card{background:var(--surf);border:1px solid var(--bord);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
-.fin-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.fin-card.c-a::before{background:var(--acc)}.fin-card.c-g::before{background:var(--ok)}.fin-card.c-y::before{background:var(--wa)}.fin-card.c-r::before{background:var(--er)}.fin-card.c-p::before{background:#7c3aed}
+/* FINANCIAL VIEW — UpSeller style */
+.fin-period-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.fin-periods{display:flex;gap:4px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:4px}
+.fp-btn{padding:6px 16px;border:none;background:none;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);cursor:pointer;transition:all .12s;font-family:inherit;white-space:nowrap}
+.fp-btn.on{background:var(--surf);color:var(--acc-t);box-shadow:0 1px 4px rgba(0,0,0,.08);font-weight:600}
+.fp-btn:hover:not(.on){color:var(--tx)}
+.fin-custom-range{display:flex;align-items:center;gap:8px}
+.fin-custom-range input[type=date]{height:34px;padding:0 10px;border:1.5px solid var(--bord);border-radius:8px;font-size:13px;font-family:inherit;color:var(--tx);background:var(--surf);outline:none}
+.fin-custom-range input[type=date]:focus{border-color:var(--acc)}
+.fk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.fk-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s,transform .12s}
+.fk-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
+.fk-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.fk-label{font-size:12px;font-weight:600;color:var(--mu);line-height:1.3}
+.fk-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fk-ico svg{width:17px;height:17px}
+.fk-val{font-size:22px;font-weight:800;letter-spacing:-.8px;line-height:1;margin-bottom:5px;font-variant-numeric:tabular-nums}
+.fk-sub{font-size:12px;color:var(--mu)}
+.fk-blue .fk-ico{background:#eff6ff;color:#2563eb}.fk-blue .fk-val{color:#1e3a8a}
+.fk-green .fk-ico{background:#ecfdf5;color:#059669}.fk-green .fk-val{color:#065f46}
+.fk-red .fk-ico{background:#fef2f2;color:#dc2626}.fk-red .fk-val{color:#991b1b}
+.fk-orange .fk-ico{background:#fff7ed;color:#ea580c}.fk-orange .fk-val{color:#9a3412}
+.fk-indigo .fk-ico{background:#eef2ff;color:#4338ca}.fk-indigo .fk-val{color:#312e81}
+.fk-purple .fk-ico{background:#f5f3ff;color:#7c3aed}.fk-purple .fk-val{color:#4c1d95}
+.fk-teal .fk-ico{background:#f0fdfa;color:#0d9488}.fk-teal .fk-val{color:#134e4a}
+.fk-sky .fk-ico{background:#f0f9ff;color:#0284c7}.fk-sky .fk-val{color:#0c4a6e}
+[data-theme=dark] .fk-blue .fk-ico{background:rgba(37,99,235,.15);color:#93c5fd}[data-theme=dark] .fk-blue .fk-val{color:#93c5fd}
+[data-theme=dark] .fk-green .fk-ico{background:rgba(5,150,105,.15);color:#34d399}[data-theme=dark] .fk-green .fk-val{color:#34d399}
+[data-theme=dark] .fk-red .fk-ico{background:rgba(220,38,38,.15);color:#f87171}[data-theme=dark] .fk-red .fk-val{color:#f87171}
+[data-theme=dark] .fk-orange .fk-ico{background:rgba(234,88,12,.15);color:#fb923c}[data-theme=dark] .fk-orange .fk-val{color:#fb923c}
+[data-theme=dark] .fk-indigo .fk-ico{background:rgba(67,56,202,.15);color:#a5b4fc}[data-theme=dark] .fk-indigo .fk-val{color:#a5b4fc}
+[data-theme=dark] .fk-purple .fk-ico{background:rgba(124,58,237,.15);color:#c4b5fd}[data-theme=dark] .fk-purple .fk-val{color:#c4b5fd}
+[data-theme=dark] .fk-teal .fk-ico{background:rgba(13,148,136,.15);color:#2dd4bf}[data-theme=dark] .fk-teal .fk-val{color:#2dd4bf}
+[data-theme=dark] .fk-sky .fk-ico{background:rgba(2,132,199,.15);color:#38bdf8}[data-theme=dark] .fk-sky .fk-val{color:#38bdf8}
+.fk-grid-2{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.fk-sm{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px}
+.fk-sm-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fk-sm-ico svg{width:18px;height:18px}
+.fk-sm-label{font-size:11.5px;color:var(--mu);font-weight:500;margin-bottom:3px}
+.fk-sm-val{font-size:20px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--tx)}
+.fin-chart-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:20px 24px;margin-bottom:20px}
+.fin-chart-title{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:4px}
+.fin-chart-sub{font-size:12px;color:var(--mu);margin-bottom:16px}
 .fin-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:8px}
 .fin-val{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
 .fin-sub{font-size:11px;color:var(--fa);margin-top:5px}
-.fin-split{display:flex;background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;flex-wrap:wrap}
-.fin-seg{flex:1;min-width:90px;padding:14px 16px;text-align:center;border-right:1px solid var(--bord)}
-.fin-seg:last-child{border-right:none}
-.fin-sv{font-size:22px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
-.fin-sl{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:3px}
-.fin-seg.ok .fin-sv{color:var(--ok)}.fin-seg.warn .fin-sv{color:var(--wa)}.fin-seg.bad .fin-sv{color:var(--er)}
 /* MOBILE BOTTOM NAV */
 .bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:500;font-family:inherit;padding:4px 0;transition:color .1s}
@@ -404,7 +436,9 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
   .sinp{width:130px}
   .edraw{width:100vw;max-width:100vw}
   .content{padding:12px 8px 74px}
-  .fin-grid{grid-template-columns:1fr 1fr}
+  .fk-grid,.fk-grid-2{grid-template-columns:1fr 1fr}
+  .fin-period-bar{flex-direction:column;align-items:flex-start}
+  .fin-chart-wrap{padding:14px}
 }
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -478,6 +512,13 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 <!-- MAIN -->
 <div class="main">
   <div id="lbar"></div>
+  <!-- PWA install banner -->
+  <div id="pwa-install-bar" style="display:none;align-items:center;gap:12px;background:linear-gradient(90deg,#6366f1,#8b5cf6);color:#fff;padding:10px 20px;font-size:13px;font-weight:500;box-shadow:0 2px 8px rgba(99,102,241,.3)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg>
+    <span>Instale o Estoque Max como app no seu celular — acesso rápido e offline!</span>
+    <button onclick="installApp()" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.4);color:#fff;padding:5px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.35)'" onmouseout="this.style.background='rgba(255,255,255,.25)'">Instalar</button>
+    <button onclick="document.getElementById('pwa-install-bar').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;padding:4px;font-size:18px;line-height:1">✕</button>
+  </div>
 
   <header class="topbar">
     <span class="tb-title" id="tb-title">Produtos</span>
@@ -485,6 +526,9 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
     <div class="tb-right">
       <button class="bti" onclick="toggleDark()" title="Alternar modo escuro (D)">
         <svg id="dm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="bti" onclick="askNotifPerm()" title="Ativar notificações push" id="notif-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
       <button class="bti" onclick="openModal('sc-modal')" title="Atalhos de teclado (?)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"/></svg>
@@ -637,19 +681,73 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 
     <!-- VIEW FINANCEIRO -->
     <div class="view" id="view-financeiro">
-      <div class="fin-grid" id="fin-kpis">
-        <div class="fin-card c-a"><div class="fin-lbl">Receita bruta (mês)</div><div class="fin-val" id="fin-bruto">—</div><div class="fin-sub" id="fin-mes">carregando…</div></div>
-        <div class="fin-card c-g"><div class="fin-lbl">Receita concluída</div><div class="fin-val" id="fin-rec">—</div><div class="fin-sub">pedidos entregues</div></div>
-        <div class="fin-card c-y"><div class="fin-lbl">Ticket médio</div><div class="fin-val" id="fin-ticket">—</div><div class="fin-sub">por pedido</div></div>
-        <div class="fin-card c-p"><div class="fin-lbl">Total de pedidos</div><div class="fin-val" id="fin-total">—</div><div class="fin-sub">no mês corrente</div></div>
+      <!-- Period filter bar -->
+      <div class="fin-period-bar">
+        <div class="fin-periods">
+          <button class="fp-btn" data-p="today" onclick="setFinPeriod('today',this)">Hoje</button>
+          <button class="fp-btn" data-p="7d" onclick="setFinPeriod('7d',this)">7 dias</button>
+          <button class="fp-btn on" data-p="30d" onclick="setFinPeriod('30d',this)">30 dias</button>
+          <button class="fp-btn" data-p="custom" onclick="setFinPeriod('custom',this)">Personalizado</button>
+        </div>
+        <div class="fin-custom-range" id="fin-custom-range" style="display:none">
+          <input type="date" id="fin-dt-start">
+          <span style="color:var(--mu)">—</span>
+          <input type="date" id="fin-dt-end">
+          <button class="btp" onclick="loadFinanceiro()">Aplicar</button>
+        </div>
+        <button class="bts" onclick="loadFinanceiro()" style="margin-left:auto">↻ Atualizar</button>
       </div>
-      <div class="fin-split" id="fin-split">
-        <div class="fin-seg ok"><div class="fin-sv" id="fin-conc">—</div><div class="fin-sl">Concluídos</div></div>
-        <div class="fin-seg warn"><div class="fin-sv" id="fin-pend">—</div><div class="fin-sl">Pendentes</div></div>
-        <div class="fin-seg bad"><div class="fin-sv" id="fin-canc">—</div><div class="fin-sl">Cancelados</div></div>
+      <!-- Row 1: main KPIs -->
+      <div class="fk-grid" id="fin-kpis">
+        <div class="fk-card fk-blue">
+          <div class="fk-top"><span class="fk-label">Vendas totais</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div></div>
+          <div class="fk-val" id="fin-bruto">—</div>
+          <div class="fk-sub" id="fin-sub-total">— pedidos no período</div>
+        </div>
+        <div class="fk-card fk-green">
+          <div class="fk-top"><span class="fk-label">Aprovadas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
+          <div class="fk-val" id="fin-rec">—</div>
+          <div class="fk-sub" id="fin-sub-conc">— pedidos concluídos</div>
+        </div>
+        <div class="fk-card fk-red">
+          <div class="fk-top"><span class="fk-label">Canceladas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div></div>
+          <div class="fk-val" id="fin-cancelado">—</div>
+          <div class="fk-sub" id="fin-sub-canc">— pedidos cancelados</div>
+        </div>
+        <div class="fk-card fk-orange">
+          <div class="fk-top"><span class="fk-label">Pendentes</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
+          <div class="fk-val" id="fin-pend-val">—</div>
+          <div class="fk-sub" id="fin-sub-pend">— aguardando</div>
+        </div>
       </div>
+      <!-- Row 2: secondary KPIs -->
+      <div class="fk-grid-2">
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#f0f9ff;color:#0284c7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div><div class="fk-sm-label">Frete total</div><div class="fk-sm-val" id="fin-frete">—</div></div>
+        </div>
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div><div class="fk-sm-label">Ticket médio</div><div class="fk-sm-val" id="fin-ticket">—</div></div>
+        </div>
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#f0fdfa;color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+          <div><div class="fk-sm-label">Descontos</div><div class="fk-sm-val" id="fin-desconto">—</div></div>
+        </div>
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#eef2ff;color:#4338ca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+          <div><div class="fk-sm-label">Total de pedidos</div><div class="fk-sm-val" id="fin-total">—</div></div>
+        </div>
+      </div>
+      <!-- Gráfico de vendas -->
+      <div class="fin-chart-wrap">
+        <div class="fin-chart-title">Vendas por dia</div>
+        <div class="fin-chart-sub" id="fin-chart-range">Selecione um período e clique em Atualizar</div>
+        <div id="fin-chart" style="min-height:140px"></div>
+      </div>
+      <!-- Margem por produto -->
       <div class="tcard" style="margin-top:0">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(preço de venda vs custo)</span><div class="tr"><button class="btp" onclick="loadFinanceiro()">Atualizar</button></div></div>
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(venda vs custo cadastrado no Bling)</span><div class="tr"><button class="bts" onclick="loadFinanceiro()">↻ Atualizar</button></div></div>
         <div class="vtable" id="fin-margin-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para carregar os dados financeiros.</p></div></div>
       </div>
     </div>
@@ -1394,34 +1492,127 @@ async function saveCreate(){
 }
 
 // ── FINANCEIRO ────────────────────────────────────
+let finPeriod='30d';
+function setFinPeriod(p,btn){
+  finPeriod=p;
+  document.querySelectorAll('.fp-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  const cr=$('fin-custom-range');
+  if(cr)cr.style.display=p==='custom'?'flex':'none';
+  if(p!=='custom')loadFinanceiro();
+}
 async function loadFinanceiro(){
   const body=$('fin-margin-body');
   body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados financeiros…</p></div>';
-  ['fin-bruto','fin-rec','fin-ticket','fin-total','fin-conc','fin-pend','fin-canc'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
+  ['fin-bruto','fin-rec','fin-cancelado','fin-pend-val','fin-frete','fin-ticket','fin-desconto','fin-total'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
+  ['fin-sub-total','fin-sub-conc','fin-sub-canc','fin-sub-pend'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
   try{
-    const r=await fetch('/api/financeiro'),d=await r.json();
-    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
+    let url=`/api/financeiro?period=${finPeriod}`;
+    if(finPeriod==='custom'){
+      const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;
+      if(!s||!e){toast('Selecione as datas','wa');return;}
+      url+=`&startDate=${s}&endDate=${e}`;
+    }
+    const r=await fetch(url),d=await r.json();
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+    }
     if(!r.ok)throw new Error(d.error||'Erro');
+    // KPI Row 1
     $('fin-bruto').textContent=fmt(d.totalBruto);
     $('fin-rec').textContent=fmt(d.receitaConcluida);
+    $('fin-cancelado').textContent=fmt(d.totalCancelado);
+    $('fin-pend-val').textContent=fmt(d.totalPendente);
+    // KPI Row 2
+    $('fin-frete').textContent=fmt(d.totalFrete);
     $('fin-ticket').textContent=fmt(d.ticketMedio);
+    $('fin-desconto').textContent=fmt(d.totalDesconto);
     $('fin-total').textContent=fmtN(d.totalPedidos);
-    $('fin-conc').textContent=fmtN(d.concluidos);
-    $('fin-pend').textContent=fmtN(d.pendentes);
-    $('fin-canc').textContent=fmtN(d.cancelados);
-    if(d.mes){const[ano,mes]=d.mes.split('-');const mn=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];$('fin-mes').textContent=`${mn[parseInt(mes)-1]} ${ano}`;}
+    // Sub-labels
+    $('fin-sub-total').textContent=`${fmtN(d.totalPedidos)} pedidos no período`;
+    $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos concluídos`;
+    $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
+    $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
+    // Period label on chart
+    const lbl={today:'Hoje',['7d']:'Últimos 7 dias',['30d']:'Últimos 30 dias',custom:'Período personalizado'};
+    const cr=$('fin-chart-range');
+    if(cr&&d.periodo)cr.textContent=`${lbl[d.periodo.period]||''} · ${d.periodo.inicio} a ${d.periodo.fim}`;
+    // Chart
+    renderFinChart(d.byDay||{},d.periodo?.inicio,d.periodo?.fim);
     // Margem table
     const prods=S.products.filter(p=>p.precoCusto>0&&p.preco>0).sort((a,b)=>{const ma=(a.preco-a.precoCusto)/a.preco;const mb=(b.preco-b.precoCusto)/b.preco;return ma-mb;});
     if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
-    body.innerHTML=`<table><thead><tr><th>Produto</th><th class="r">Custo</th><th class="r">Venda</th><th class="r">Lucro unit.</th><th class="r">Margem</th></tr></thead><tbody>${
+    body.innerHTML=`<table><thead><tr><th>Produto</th><th class="r">Custo</th><th class="r">Preço venda</th><th class="r">Lucro unit.</th><th class="r">Margem</th></tr></thead><tbody>${
       prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
-      return`<tr><td><span class="pname" style="max-width:220px">${esc(p.nome)}</span></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r" style="font-weight:500">${fmt(lucro)}</td><td class="r"><strong style="color:var(--${c}-t)">${m}%</strong></td></tr>`;}).join('')
+      return`<tr><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
     }</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderFinChart(byDay,inicio,fim){
+  const wrap=$('fin-chart');if(!wrap)return;
+  // Build sorted day list
+  const days=[];
+  if(inicio&&fim){
+    let cur=new Date(inicio+'T12:00:00');const end=new Date(fim+'T12:00:00');
+    while(cur<=end){days.push(cur.toISOString().split('T')[0]);cur=new Date(cur.getTime()+86400000);}
+  }else{
+    days.push(...Object.keys(byDay).sort());
+  }
+  if(!days.length){wrap.innerHTML='<p style="color:var(--mu);font-size:12px;text-align:center;padding:40px 0">Nenhum dado no período</p>';return;}
+  const vals=days.map(d=>byDay[d]||0);
+  const max=Math.max(...vals,1);
+  const W=wrap.clientWidth||600,H=130,pad=40,barW=Math.max(6,Math.min(40,Math.floor((W-pad*2)/days.length)-3));
+  const xStep=(W-pad*2)/days.length;
+  const bars=days.map((day,i)=>{
+    const v=vals[i];const bh=Math.max(2,Math.round((v/max)*(H-20)));
+    const x=pad+i*xStep+xStep/2-barW/2;const y=H-bh;
+    const label=day.slice(5);
+    const showLabel=days.length<=14||(i%(Math.ceil(days.length/7))===0);
+    return `<g>
+      <rect class="fin-bar" x="${x.toFixed(1)}" y="${y}" width="${barW}" height="${bh}" rx="3" fill="var(--acc)" opacity=".8">
+        <title>${day}: ${fmt(v)}</title>
+      </rect>
+      ${showLabel?`<text x="${(x+barW/2).toFixed(1)}" y="${H+14}" text-anchor="middle" font-size="10" fill="var(--fa)">${label}</text>`:''}
+    </g>`;
+  }).join('');
+  // Y axis labels
+  const ytop=`<text x="${pad-6}" y="14" text-anchor="end" font-size="10" fill="var(--fa)">${fmtN(max)}</text>`;
+  const ymid=`<text x="${pad-6}" y="${H/2+4}" text-anchor="end" font-size="10" fill="var(--fa)">${fmtN(max/2)}</text>`;
+  wrap.innerHTML=`<svg width="${W}" height="${H+22}" viewBox="0 0 ${W} ${H+22}" style="overflow:visible">
+    <line x1="${pad}" y1="0" x2="${pad}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
+    <line x1="${pad}" y1="${H}" x2="${W-10}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
+    ${ytop}${ymid}${bars}
+  </svg>`;
 }
 
 // ── AUTH ─────────────────────────────────────────
 async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login';}
+
+// ── PWA ───────────────────────────────────────────
+let _pwaPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();_pwaPrompt=e;
+  const bar=$('pwa-install-bar');if(bar)bar.style.display='flex';
+});
+function installApp(){
+  if(!_pwaPrompt)return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(()=>{_pwaPrompt=null;const bar=$('pwa-install-bar');if(bar)bar.style.display='none';});
+}
+async function askNotifPerm(){
+  if(!('Notification' in window)){toast('Notificações não suportadas neste navegador','wa');return;}
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){toast('Notificações ativadas!','ok');}
+  else{toast('Permissão de notificação negada','wa');}
+}
+function sendLocalNotif(title,body){
+  if(Notification.permission==='granted'){
+    navigator.serviceWorker.getRegistration().then(reg=>{
+      if(reg)reg.showNotification(title,{body,icon:'/manifest.json',tag:'estoque-max',vibrate:[150,50,150]});
+      else new Notification(title,{body});
+    });
+  }
+}
 
 // ── INIT ─────────────────────────────────────────
 (function(){
@@ -1433,6 +1624,10 @@ async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.l
   setLayout(S.layout);
   loadProducts();
   setInterval(updateSyncTs,30000);
+  // Service worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
 })();
 </script>
 </body>
