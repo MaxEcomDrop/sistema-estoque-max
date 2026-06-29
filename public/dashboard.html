@@ -410,6 +410,31 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .fk-sm-ico svg{width:18px;height:18px}
 .fk-sm-label{font-size:11.5px;color:var(--mu);font-weight:500;margin-bottom:3px}
 .fk-sm-val{font-size:20px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--tx)}
+/* DRE SIMPLIFICADO */
+.dre-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:20px 24px;margin-bottom:20px;box-shadow:var(--sh)}
+.dre-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px}
+.dre-title{font-size:14px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px}
+.dre-title svg{width:16px;height:16px;color:var(--mu)}
+.dre-tag{font-size:10.5px;font-weight:600;color:var(--mu);background:var(--bg);border:1px solid var(--bord);padding:3px 9px;border-radius:20px}
+.dre-list{margin-top:12px}
+.dre-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bord-l);font-size:13.5px;gap:12px}
+.dre-row:last-child{border-bottom:none}
+.dre-lbl{color:var(--mu);display:flex;align-items:center;gap:8px}
+.dre-lbl .dre-op{width:18px;height:18px;border-radius:5px;background:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:var(--fa)}
+.dre-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dre-val.neg{color:var(--er-t)}.dre-val.pos{color:var(--ok-t)}
+.dre-row.sub{background:linear-gradient(90deg,var(--bg),transparent);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:7px}
+.dre-row.total{border-top:2px solid var(--bord);border-bottom:none;margin-top:6px;padding-top:14px}
+.dre-row.total .dre-lbl{font-size:14px;font-weight:700;color:var(--tx)}
+.dre-row.total .dre-val{font-size:19px;font-weight:800;letter-spacing:-.5px}
+.dre-margin-pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:8px}
+/* TREND BADGE */
+.fin-trend{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle}
+.fin-trend svg{width:11px;height:11px}
+.fin-trend.up{background:var(--ok-bg);color:var(--ok-t)}
+.fin-trend.down{background:var(--er-bg);color:var(--er-t)}
+.fin-trend.flat{background:var(--bg);color:var(--mu)}
+.hero-trend.up::before{content:'▲ '}.hero-trend.down::before{content:'▼ '}
 .fin-chart-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:20px 24px;margin-bottom:20px}
 .fin-chart-title{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:4px}
 .fin-chart-sub{font-size:12px;color:var(--mu);margin-bottom:16px}
@@ -1214,6 +1239,17 @@ button:focus:not(:focus-visible){outline:none}
         <div class="fin-chart-sub" id="fin-chart-range">Selecione um período e clique em Atualizar</div>
         <div id="fin-chart" style="min-height:140px"></div>
       </div>
+      <!-- DRE SIMPLIFICADO -->
+      <div class="dre-card">
+        <div class="dre-head">
+          <span class="dre-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg> Resultado do período (DRE)</span>
+          <span class="dre-tag">estimativa · custo via margem do catálogo</span>
+        </div>
+        <div class="dre-list" id="dre-list">
+          <div class="st-wrap" style="padding:20px"><p class="st-d">Clique em Atualizar para calcular o resultado.</p></div>
+        </div>
+      </div>
+
       <!-- Margem por produto -->
       <div class="tcard" style="margin-top:0">
         <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(venda vs custo cadastrado no Bling)</span><div class="tr"><button class="bts" onclick="loadFinanceiro()">↻ Atualizar</button></div></div>
@@ -1555,7 +1591,15 @@ async function loadDashboard(force=false){
     const v=d.vendas||{};
     // Faturamento
     setTxt('dash-faturamento',fmt(v.faturamento));
-    setTxt('dash-fat-sub',`${fmtN(v.concluidos||0)} venda${v.concluidos!==1?'s':''} concluída${v.concluidos!==1?'s':''}`);
+    const fsub=$('dash-fat-sub');
+    if(fsub){
+      let txt=`${fmtN(v.concluidos||0)} venda${v.concluidos!==1?'s':''} concluída${v.concluidos!==1?'s':''}`;
+      if(v.variacao!==null&&v.variacao!==undefined){
+        const cls=v.variacao>1?'up':v.variacao<-1?'down':'';
+        txt+=` · <span class="hero-trend ${cls}">${v.variacao>0?'+':''}${v.variacao.toFixed(0)}% vs anterior</span>`;
+      }
+      fsub.innerHTML=txt;
+    }
     // Lucro estimado via margem média do catálogo
     _dashFat=v.faturamento||0;
     recomputeDashLucro();
@@ -2248,6 +2292,8 @@ async function loadFinanceiro(){
     $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos concluídos`;
     $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
     $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
+    renderFinTrend(d);
+    renderDRE(d);
     // Period label on chart
     const lbl={today:'Hoje',['7d']:'Últimos 7 dias',['30d']:'Últimos 30 dias',custom:'Período personalizado'};
     const cr=$('fin-chart-range');
@@ -2262,6 +2308,42 @@ async function loadFinanceiro(){
       return`<tr><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
     }</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderFinTrend(d){
+  const c=d.comparativo;
+  const sub=$('fin-sub-total');if(!sub)return;
+  // limpa badge anterior
+  sub.querySelectorAll('.fin-trend').forEach(e=>e.remove());
+  if(!c||c.variacao===null||c.variacao===undefined)return;
+  const v=c.variacao;
+  const cls=v>1?'up':v<-1?'down':'flat';
+  const ico=v>1?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>':v<-1?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>':'';
+  const span=document.createElement('span');
+  span.className='fin-trend '+cls;
+  span.innerHTML=`${ico}${v>0?'+':''}${v.toFixed(0)}%`;
+  span.title=`Faturamento vs período anterior (${fmt(c.receitaAnterior)})`;
+  sub.appendChild(span);
+}
+function renderDRE(d){
+  const el=$('dre-list');if(!el)return;
+  const margem=avgMargem();
+  const receita=d.receitaConcluida||0;
+  const cancel=d.totalCancelado||0;
+  const pend=d.totalPendente||0;
+  const temCusto=margem>0;
+  const custo=temCusto?receita*(1-margem):0;
+  const lucro=temCusto?receita*margem:0;
+  const mPct=Math.round(margem*100);
+  const mCor=mPct<20?'var(--er-bg);color:var(--er-t)':mPct<40?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
+  const row=(op,lbl,val,cls='',extra='')=>`<div class="dre-row${cls?' '+cls:''}"><span class="dre-lbl"><span class="dre-op">${op}</span>${lbl}</span><span class="dre-val ${cls==='total'?'pos':''}">${val}${extra}</span></div>`;
+  el.innerHTML=
+    row('','Receita bruta (todos os pedidos)',fmt(d.totalBruto||0))+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos</span><span class="dre-val neg">− ${fmt(cancel)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Pendentes (ainda não recebidos)</span><span class="dre-val neg">− ${fmt(pend)}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada</span><span class="dre-val">${fmt(receita)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'− '+fmt(custo):'—'}</span></div>`+
+    `<div class="dre-row total"><span class="dre-lbl">Lucro líquido estimado</span><span class="dre-val pos">${temCusto?fmt(lucro):'—'}${temCusto?`<span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
+    (temCusto?'':`<p class="sh-note" style="margin-top:10px">Cadastre o <strong>custo</strong> dos produtos no editor para calcular o lucro real.</p>`);
 }
 function renderFinChart(byDay,inicio,fim){
   const wrap=$('fin-chart');if(!wrap)return;

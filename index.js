@@ -256,49 +256,76 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   }
 });
 
-// Resumo financeiro com suporte a períodos
+// Busca pedidos de venda num intervalo (paginado)
+async function fetchPedidos(token, inicio, fim, maxPg = 3) {
+  let all = [];
+  for (let pg = 1; pg <= maxPg; pg++) {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
+    });
+    const items = Array.isArray(data?.data) ? data.data : [];
+    all = all.concat(items);
+    if (items.length < 100) break;
+  }
+  return all;
+}
+
+const categorizePedido = s => {
+  const n = String(s?.nome || s?.valor || s || '').toLowerCase();
+  if (n.includes('cancel')) return 'cancelado';
+  if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
+  return 'pendente';
+};
+const valorPedido = p => p.totalVenda || p.totalProdutos || 0;
+
+// Calcula o intervalo imediatamente anterior, de mesma duração
+function periodoAnterior(inicio, fim) {
+  const dI = new Date(inicio + 'T12:00:00'), dF = new Date(fim + 'T12:00:00');
+  const dur = dF - dI;
+  const prevFim = new Date(dI.getTime() - 86400000);
+  const prevIni = new Date(prevFim.getTime() - dur);
+  const iso = d => d.toISOString().split('T')[0];
+  return { inicio: iso(prevIni), fim: iso(prevFim) };
+}
+
+// Resumo financeiro com suporte a períodos + comparativo
 app.get('/api/financeiro', requireAuthJson, async (req, res) => {
   const token = req.cookies?.bling_token;
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
     const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
+    const prev = periodoAnterior(inicio, fim);
 
-    // Busca até 300 pedidos (3 páginas)
-    let allPedidos = [];
-    for (let pg = 1; pg <= 3; pg++) {
-      const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
-      });
-      const items = Array.isArray(data?.data) ? data.data : [];
-      allPedidos = allPedidos.concat(items);
-      if (items.length < 100) break;
-    }
+    // Período atual (3 págs) + período anterior (2 págs) em paralelo
+    const [allPedidos, prevPedidos] = await Promise.all([
+      fetchPedidos(token, inicio, fim, 3),
+      fetchPedidos(token, prev.inicio, prev.fim, 2).catch(() => []),
+    ]);
 
-    const categorize = s => {
-      const n = String(s?.nome || s?.valor || s || '').toLowerCase();
-      if (n.includes('cancel')) return 'cancelado';
-      if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
-      return 'pendente';
-    };
-
+    const categorize = categorizePedido;
     const concluidos = allPedidos.filter(p => categorize(p.situacao) === 'concluido');
     const cancelados = allPedidos.filter(p => categorize(p.situacao) === 'cancelado');
     const pendentes  = allPedidos.filter(p => categorize(p.situacao) === 'pendente');
 
     const sum = (arr, fn) => arr.reduce((a, p) => a + (fn(p) || 0), 0);
-    const totalBruto       = sum(allPedidos, p => p.totalVenda || p.totalProdutos);
-    const receitaConcluida = sum(concluidos,  p => p.totalVenda || p.totalProdutos);
-    const totalCancelado   = sum(cancelados,  p => p.totalVenda || p.totalProdutos);
-    const totalPendente    = sum(pendentes,   p => p.totalVenda || p.totalProdutos);
+    const totalBruto       = sum(allPedidos, valorPedido);
+    const receitaConcluida = sum(concluidos,  valorPedido);
+    const totalCancelado   = sum(cancelados,  valorPedido);
+    const totalPendente    = sum(pendentes,   valorPedido);
     const totalFrete       = sum(allPedidos, p => p.totalFrete || p.frete);
     const totalDesconto    = sum(allPedidos, p => p.desconto);
+
+    // Comparativo com período anterior (faturamento concluído)
+    const prevConcluidos = prevPedidos.filter(p => categorize(p.situacao) === 'concluido');
+    const prevReceita = sum(prevConcluidos, valorPedido);
+    const variacao = prevReceita > 0 ? ((receitaConcluida - prevReceita) / prevReceita) * 100 : null;
 
     // Série diária para gráfico
     const byDay = {};
     allPedidos.forEach(p => {
       const day = String(p.data || p.dataPedido || '').substring(0, 10);
-      if (day) byDay[day] = (byDay[day] || 0) + (p.totalVenda || p.totalProdutos || 0);
+      if (day) byDay[day] = (byDay[day] || 0) + valorPedido(p);
     });
 
     res.json({
@@ -310,6 +337,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
       cancelados: cancelados.length,
       pendentes: pendentes.length,
       ticketMedio: allPedidos.length > 0 ? totalBruto / allPedidos.length : 0,
+      comparativo: { receitaAnterior: prevReceita, variacao, inicio: prev.inicio, fim: prev.fim },
       byDay,
     });
   } catch (err) {
@@ -757,23 +785,11 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
   };
 
   try {
-    // Busca pedidos do período (2 páginas) + contas em paralelo
-    const pedidosPromise = (async () => {
-      let all = [];
-      for (let pg = 1; pg <= 2; pg++) {
-        const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
-        });
-        const items = Array.isArray(data?.data) ? data.data : [];
-        all = all.concat(items);
-        if (items.length < 100) break;
-      }
-      return all;
-    })();
-
-    const [pedRes, receberRes, pagarRes] = await Promise.allSettled([
-      pedidosPromise,
+    // Pedidos do período + período anterior + contas, em paralelo
+    const prev = periodoAnterior(inicio, fim);
+    const [pedRes, prevRes, receberRes, pagarRes] = await Promise.allSettled([
+      fetchPedidos(token, inicio, fim, 2),
+      fetchPedidos(token, prev.inicio, prev.fim, 1),
       fetchContas(token, 'receber'),
       fetchContas(token, 'pagar'),
     ]);
@@ -797,6 +813,11 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     const totalBruto  = sum(allPedidos);
     const aReceberPedidos = sum(pendentes);
 
+    // Comparativo de faturamento com o período anterior
+    const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
+    const prevFat = prevPedidos.filter(p => categorize(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
+    const variacao = prevFat > 0 ? ((faturamento - prevFat) / prevFat) * 100 : null;
+
     // Série diária (vendas concluídas) p/ mini-gráfico
     const byDay = {};
     concluidos.forEach(p => {
@@ -816,6 +837,7 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
         pendentes: pendentes.length,
         cancelados: cancelados.length,
         ticketMedio: concluidos.length ? faturamento / concluidos.length : 0,
+        variacao,
         byDay,
       },
       contasReceber: { total: receber.total, count: receber.count, vencidas: receber.vencidas, vencidasValor: receber.vencidasValor || 0, ok: receber.ok, itens: receber.itens || [] },
