@@ -190,6 +190,14 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ success: true });
 });
 
+// Reconfirma a senha (para liberar áreas/ações sensíveis, estilo Shopee)
+app.post('/api/auth/verify', requireAuthJson, (req, res) => {
+  const { password } = req.body || {};
+  if (!ADMIN_PASSWORD) return res.status(500).json({ error: 'Senha não configurada no servidor.' });
+  if (safeEqual(password, ADMIN_PASSWORD)) return res.json({ ok: true });
+  return res.status(401).json({ error: 'Senha incorreta.' });
+});
+
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('system_token');
   res.clearCookie('bling_token');

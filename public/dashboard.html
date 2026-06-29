@@ -1371,6 +1371,23 @@ button:focus:not(:focus-visible){outline:none}
   </div>
 </div>
 
+<!-- CONFIRMAÇÃO DE SENHA -->
+<div class="modal" id="pw-modal" onclick="if(event.target===this)pwCancel()">
+  <div class="mbox" style="width:360px;max-width:92vw">
+    <div style="width:46px;height:46px;border-radius:13px;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div class="m-title" id="pw-title">Confirme sua senha</div>
+    <div class="m-desc" id="pw-desc">Por segurança, digite sua senha de login para continuar.</div>
+    <input type="password" id="pw-input" placeholder="Sua senha" autocomplete="current-password" style="width:100%;height:46px;padding:0 14px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none" onkeydown="if(event.key==='Enter')pwConfirm()">
+    <div id="pw-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
+    <div class="m-foot">
+      <button class="btp" id="pw-ok" onclick="pwConfirm()">Confirmar</button>
+      <button class="bts" onclick="pwCancel()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- BATCH BAR -->
 <div class="bbar" id="bbar">
   <span class="bbar-cnt" id="bbar-cnt">0 selecionados</span>
@@ -1654,7 +1671,16 @@ function renderCards(){
 // ── VIEWS ──────────────────────────────────────────
 const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push',config:'Configurações'};
 const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes','config'];
+// Gate de senha para a aba Notas Fiscais
+let _nfeUnlocked=false;
 function setView(v){
+  if(v==='notas'&&!_nfeUnlocked){
+    requireSenha(()=>{_nfeUnlocked=true;setView('notas');},{
+      force:true,title:'🔒 Notas Fiscais protegidas',
+      desc:'Digite sua senha para acessar esta área e evitar alterações indevidas.'
+    });
+    return;
+  }
   vibrate(8);
   S.view=v;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
@@ -2500,6 +2526,41 @@ function renderFinChart(byDay,inicio,fim){
     <line x1="${pad}" y1="${H}" x2="${W-10}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
     ${ytop}${ymid}${bars}
   </svg>`;
+}
+
+// ── CONFIRMAÇÃO DE SENHA (estilo Shopee) ─────────
+let _pwCallback=null,_pwCancelCb=null;
+function requireSenha(callback,opts={}){
+  if(sessionStorage.getItem('pw_ok')==='1'&&!opts.force){callback();return;}
+  _pwCallback=callback;_pwCancelCb=opts.onCancel||null;
+  $('pw-title').textContent=opts.title||'Confirme sua senha';
+  $('pw-desc').textContent=opts.desc||'Por segurança, digite sua senha de login para continuar.';
+  $('pw-input').value='';$('pw-err').style.display='none';
+  openModal('pw-modal');
+  setTimeout(()=>$('pw-input').focus(),80);
+}
+async function pwConfirm(){
+  const pw=$('pw-input').value;if(!pw)return;
+  const btn=$('pw-ok');btn.disabled=true;btn.textContent='Verificando…';
+  try{
+    const r=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    if(r.ok){
+      sessionStorage.setItem('pw_ok','1');
+      closeModal('pw-modal');
+      const cb=_pwCallback;_pwCallback=null;_pwCancelCb=null;
+      if(cb)cb();
+    }else{
+      const d=await r.json().catch(()=>({}));
+      $('pw-err').textContent=d.error||'Senha incorreta.';$('pw-err').style.display='block';
+      $('pw-input').select();vibrate(40);
+    }
+  }catch(e){$('pw-err').textContent='Erro de conexão.';$('pw-err').style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Confirmar';}
+}
+function pwCancel(){
+  closeModal('pw-modal');
+  const c=_pwCancelCb;_pwCallback=null;_pwCancelCb=null;
+  if(c)c();
 }
 
 // ── CLIENTES (CRM) ───────────────────────────────
