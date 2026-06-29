@@ -150,7 +150,7 @@ tbody tr.dup-row td:nth-child(3){border-left:2px solid var(--wa)}
 tbody td{padding:14px 14px;font-size:13.5px;color:var(--tx);vertical-align:middle}
 tbody td.r{text-align:right}
 .grp-row td{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--mu);background:var(--bg);padding:8px 14px;border-bottom:1px solid var(--bord-l)}
-input[type=checkbox]{width:15px;height:15px;border:1.5px solid var(--bord);border-radius:4px;appearance:none;cursor:pointer;background:var(--surf);transition:all .1s;position:relative;vertical-align:middle;flex-shrink:0}
+input[type=checkbox]{width:18px;height:18px;border:1.5px solid var(--bord);border-radius:4px;appearance:none;cursor:pointer;background:var(--surf);transition:all .1s;position:relative;vertical-align:middle;flex-shrink:0}
 input[type=checkbox]:checked{background:var(--acc);border-color:var(--acc)}
 input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1px;width:5px;height:8px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(40deg)}
 /* THUMBNAILS — card produto */
@@ -481,28 +481,68 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .nh-body{font-size:12px;color:var(--mu);margin-top:2px}
 .nh-meta{font-size:11px;color:var(--fa);margin-top:4px;display:flex;align-items:center;gap:8px}
 /* MOBILE BOTTOM NAV */
-.bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around}
-.bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:500;font-family:inherit;padding:4px 0;transition:color .1s}
-.bnav-item.on{color:var(--acc)}.bnav-item svg{width:20px;height:20px}
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;height:calc(60px + env(safe-area-inset-bottom,0px));background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -1px 0 var(--bord),0 -4px 20px rgba(0,0,0,.05)}
+.bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:600;font-family:inherit;padding:6px 2px 4px;transition:color .15s;min-width:0;position:relative;-webkit-tap-highlight-color:transparent}
+.bnav-item.on{color:var(--acc)}
+.bnav-item.on::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2.5px;background:var(--acc);border-radius:0 0 3px 3px}
+.bnav-item svg{width:22px;height:22px;flex-shrink:0}
+.bnav-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 2px;display:block}
+/* MAIS MENU */
+.mais-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.mais-ov.open{opacity:1;pointer-events:all}
+.mais-menu{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-radius:20px 20px 0 0;z-index:900;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);border-top:1px solid var(--bord);padding-bottom:max(20px,env(safe-area-inset-bottom,20px))}
+.mais-menu.open{transform:translateY(0)}
+.mais-handle{width:40px;height:4px;background:var(--bord);border-radius:2px;margin:12px auto 6px}
+.mais-title{font-size:11px;font-weight:700;color:var(--fa);padding:4px 20px 10px;text-transform:uppercase;letter-spacing:.8px}
+.mais-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px 16px}
+.mais-item{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;border-radius:16px;background:var(--bg);border:1px solid var(--bord-l);font-size:12px;font-weight:600;color:var(--tx);cursor:pointer;font-family:inherit;transition:all .12s;-webkit-tap-highlight-color:transparent;text-align:center;line-height:1.3}
+.mais-item:active{transform:scale(.95);background:var(--acc-bg)}
+.mais-item svg{width:26px;height:26px;color:var(--mu)}
+.mais-sep{height:1px;background:var(--bord-l);margin:0 16px 12px}
+.mais-actions{padding:0 16px;display:flex;flex-direction:column;gap:8px}
+.mais-row-item{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;background:var(--bg);border:1px solid var(--bord-l);font-size:14px;font-weight:500;color:var(--tx);cursor:pointer;font-family:inherit;transition:background .12s;-webkit-tap-highlight-color:transparent;text-align:left;width:100%}
+.mais-row-item:active{background:var(--acc-bg)}
+.mais-row-item.danger{color:var(--er-t)}
+.mais-row-item svg{width:20px;height:20px;color:var(--mu);flex-shrink:0}
+.mais-row-item.danger svg{color:var(--er-t)}
 /* RESPONSIVE */
 @media(max-width:900px){
   .kpi-row{grid-template-columns:1fr 1fr}
   .sb,.col-btn{display:none!important}
   .main{margin-left:0!important}
   .bnav{display:flex}
-  .content{padding-bottom:74px}
-  #noti-stack{bottom:72px}
-  .bbar{bottom:68px}
-  .undo{bottom:68px}
+  .content{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  #noti-stack{bottom:calc(76px + env(safe-area-inset-bottom,0px));right:12px;max-width:calc(100vw - 24px)}
+  .bbar{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  .undo{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  .topbar{padding:0 14px;gap:6px}
+  .sync-ts{display:none}
+  .tb-hide-mobile{display:none!important}
+  .toolbar{flex-wrap:wrap;gap:6px;padding:10px 12px}
+  .sw{flex:1;min-width:0}
+  .sinp{width:100%!important;min-width:0}
+  .sinp:focus{width:100%!important}
+  .toolbar .dvv{display:none}
+  .layout-toggle{display:none}
+  .tr{gap:4px}
+  .tr .bts{display:none}
 }
 @media(max-width:600px){
-  .kpi-row{grid-template-columns:1fr}
-  .sinp{width:130px}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .kpi-val{font-size:24px;letter-spacing:-1px}
   .edraw{width:100vw;max-width:100vw}
-  .content{padding:12px 8px 74px}
+  .content{padding:12px 8px calc(76px + env(safe-area-inset-bottom,0px))}
   .fk-grid,.fk-grid-2{grid-template-columns:1fr 1fr}
   .fin-period-bar{flex-direction:column;align-items:flex-start}
   .fin-chart-wrap{padding:14px}
+  .tf-grid{grid-template-columns:1fr 1fr}
+  .tb-title{font-size:13px}
+  .btp{padding:0 10px;font-size:12px}
+  .topbar{padding:0 10px;gap:4px}
+}
+@media(max-width:380px){
+  .bnav-item span{font-size:9px}
+  .bnav-item svg{width:20px;height:20px}
 }
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -595,13 +635,13 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
       <button class="bti" onclick="toggleDark()" title="Alternar modo escuro (D)">
         <svg id="dm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       </button>
-      <button class="bti" onclick="askNotifPerm()" title="Ativar notificações push" id="notif-btn">
+      <button class="bti tb-hide-mobile" onclick="askNotifPerm()" title="Ativar notificações push" id="notif-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button class="bti" onclick="openModal('sc-modal')" title="Atalhos de teclado (?)">
+      <button class="bti tb-hide-mobile" onclick="openModal('sc-modal')" title="Atalhos de teclado (?)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"/></svg>
       </button>
-      <button class="bti" id="ar-btn" onclick="cycleAutoRefresh()" title="Auto-refresh (desativado)">
+      <button class="bti tb-hide-mobile" id="ar-btn" onclick="cycleAutoRefresh()" title="Auto-refresh (desativado)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"/></svg>
       </button>
       <button class="btp" id="sync-btn" onclick="sync()">
@@ -1080,24 +1120,57 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 <!-- MOBILE BOTTOM NAV -->
 <nav class="bnav" id="bnav">
   <button class="bnav-item on" id="bn-produtos" onclick="setView('produtos')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg>Produtos
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg><span>Produtos</span>
   </button>
   <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Pedidos
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Pedidos</span>
   </button>
   <button class="bnav-item" id="bn-financeiro" onclick="setView('financeiro')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Financeiro
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Financeiro</span>
   </button>
   <button class="bnav-item" id="bn-relatorio" onclick="setView('relatorio')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatório
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Relatório</span>
   </button>
-  <button class="bnav-item" id="bn-notas" onclick="setView('notas')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>NF-e
-  </button>
-  <button class="bnav-item" id="bn-notificacoes" onclick="setView('notificacoes')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Push
+  <button class="bnav-item" id="bn-mais" onclick="toggleMaisMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>Mais</span>
   </button>
 </nav>
+
+<!-- MAIS MENU (bottom sheet) -->
+<div class="mais-ov" id="mais-ov" onclick="closeMaisMenu()"></div>
+<div class="mais-menu" id="mais-menu">
+  <div class="mais-handle"></div>
+  <div class="mais-title">Mais opções</div>
+  <div class="mais-grid">
+    <button class="mais-item" onclick="setView('historico')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Histórico</span>
+    </button>
+    <button class="mais-item" onclick="setView('notas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>NF-e</span>
+    </button>
+    <button class="mais-item" onclick="setView('notificacoes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span>Push</span>
+    </button>
+  </div>
+  <div class="mais-sep"></div>
+  <div class="mais-actions">
+    <button class="mais-row-item" onclick="toggleDark();closeMaisMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      Alternar modo escuro
+    </button>
+    <button class="mais-row-item" onclick="window.location.href='/'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
+      Reconectar Bling
+    </button>
+    <button class="mais-row-item danger" onclick="logout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair da conta
+    </button>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
@@ -1192,6 +1265,7 @@ function renderCards(){
 
 // ── VIEWS ──────────────────────────────────────────
 const VIEWS={produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push'};
+const MAIS_VIEWS=['notas','historico','notificacoes'];
 function setView(v){
   S.view=v;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
@@ -1199,7 +1273,8 @@ function setView(v){
   document.querySelectorAll('.bnav-item').forEach(el=>el.classList.remove('on'));
   $('view-'+v)?.classList.add('on');
   $('ni-'+v)?.classList.add('on');
-  $('bn-'+v)?.classList.add('on');
+  if(MAIS_VIEWS.includes(v))$('bn-mais')?.classList.add('on');
+  else $('bn-'+v)?.classList.add('on');
   $('tb-title').textContent=VIEWS[v]||v;
   if(v==='relatorio')renderReport();
   if(v==='notas')loadNotas();
@@ -1207,6 +1282,21 @@ function setView(v){
   if(v==='historico')loadHistorico();
   if(v==='financeiro')loadFinanceiro();
   if(v==='notificacoes')loadNotificacoes();
+  closeMaisMenu();
+}
+
+// ── MAIS MENU ────────────────────────────────────
+function toggleMaisMenu(){
+  const ov=$('mais-ov'),menu=$('mais-menu'),btn=$('bn-mais');
+  if(!ov||!menu)return;
+  const isOpen=menu.classList.contains('open');
+  if(isOpen){closeMaisMenu();}
+  else{ov.classList.add('open');menu.classList.add('open');btn?.classList.add('on');}
+}
+function closeMaisMenu(){
+  $('mais-ov')?.classList.remove('open');
+  $('mais-menu')?.classList.remove('open');
+  if(!MAIS_VIEWS.includes(S.view))$('bn-mais')?.classList.remove('on');
 }
 
 // ── LOAD ──────────────────────────────────────────
@@ -2026,7 +2116,19 @@ async function cancelNotif(id){
   setInterval(updateSyncTs,30000);
   // Service worker
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    navigator.serviceWorker.register('/sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){
+            toast('Nova versão disponível — recarregue para atualizar','info');
+          }
+        });
+      });
+    }).catch(()=>{});
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='SW_UPDATED')toast('App atualizado!','ok');
+    });
   }
 })();
 </script>

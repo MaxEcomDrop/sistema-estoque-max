@@ -1,4 +1,4 @@
-// Estoque Max — Service Worker v2 + Firebase Messaging
+// Estoque Max — Service Worker v3 + Firebase Messaging
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
@@ -22,30 +22,49 @@ messaging.onBackgroundMessage(payload => {
 });
 
 // Cache
-const CACHE = 'em-v2';
+const CACHE = 'em-v3';
 const SHELL = ['/login.html', '/dashboard.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
-});
-self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-    .then(() => self.clients.claim())
+    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
   );
 });
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => {
+        // Notify all clients that a new version is available
+        return self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+      })
+  );
+});
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+  // Always fetch API calls from network
   if (url.pathname.startsWith('/api/')) {
-    e.respondWith(fetch(e.request).catch(() =>
-      new Response(JSON.stringify({ error: 'Offline' }), { status: 503, headers: { 'Content-Type': 'application/json' } })
-    ));
+    e.respondWith(
+      fetch(e.request).catch(() =>
+        new Response(JSON.stringify({ error: 'Offline — verifique sua conexão' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
+    );
     return;
   }
+  // For app shell: network first, fallback to cache
   e.respondWith(
     fetch(e.request).then(res => {
       if (res.ok && e.request.method === 'GET') {
-        caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
       }
       return res;
     }).catch(() => caches.match(e.request))
@@ -59,7 +78,10 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
       for (const c of clients) {
-        if (c.url.includes(self.location.origin) && 'focus' in c) { c.navigate(url); return c.focus(); }
+        if (c.url.includes(self.location.origin) && 'focus' in c) {
+          c.navigate(url);
+          return c.focus();
+        }
       }
       return self.clients.openWindow(url);
     })
