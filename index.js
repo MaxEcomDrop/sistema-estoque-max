@@ -534,11 +534,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
+      const { motivo } = req.body;
       changeLog.push({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'estoque',
         valor_anterior: valor_anterior || '—',
-        valor_novo: `${Number(estoque)} un.`,
+        valor_novo: `${Number(estoque)} un.${motivo ? ' — ' + motivo : ''}`,
         timestamp: new Date().toISOString(),
       });
     }
@@ -547,6 +548,61 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     console.error('[Update]', err.response?.data || err.message);
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
     sendErrorResponse(res, 500, 'Erro ao atualizar produto', detail);
+  }
+});
+
+app.delete('/api/produtos/:id', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  const { id } = req.params;
+  const nomeProduto = req.body?.nome_produto || `#${id}`;
+  try {
+    await axios.delete(`https://www.bling.com.br/Api/v3/produtos/${id}`, { headers: blingHeaders(token) });
+    changeLog.push({
+      id: changeLog.length + 1, produto_id: id,
+      produto_nome: nomeProduto, campo: 'exclusão',
+      valor_anterior: 'produto ativo', valor_novo: 'excluído',
+      timestamp: new Date().toISOString(),
+    });
+    res.json({ success: true });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+    sendErrorResponse(res, 500, 'Erro ao excluir produto', detail);
+  }
+});
+
+app.post('/api/produtos/:id/duplicar', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  const { id } = req.params;
+  try {
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${id}`, { headers: blingHeaders(token) });
+    const prod = data?.data || {};
+    const payload = { ...prod };
+    delete payload.id;
+    payload.nome = `${prod.nome || 'Produto'} (cópia)`;
+    payload.codigo = prod.codigo ? `${prod.codigo}-COPIA${Date.now().toString().slice(-5)}` : undefined;
+    const { data: created } = await axios.post('https://www.bling.com.br/Api/v3/produtos', payload, { headers: blingHeaders(token) });
+    changeLog.push({
+      id: changeLog.length + 1, produto_id: created?.data?.id || '—',
+      produto_nome: payload.nome, campo: 'duplicação',
+      valor_anterior: `origem #${id}`, valor_novo: 'produto criado',
+      timestamp: new Date().toISOString(),
+    });
+    res.json({ success: true, id: created?.data?.id });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+    sendErrorResponse(res, 500, 'Erro ao duplicar produto', detail);
   }
 });
 
@@ -602,12 +658,19 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 50, pagina: 1 },
-    });
+    const { inicio, fim } = req.query;
+    let raw;
+    if (inicio && fim) {
+      raw = await fetchPedidos(token, inicio, fim, 5);
+    } else {
+      const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: 1 },
+      });
+      raw = Array.isArray(data?.data) ? data.data : [];
+    }
 
-    const pedidos = (Array.isArray(data?.data) ? data.data : []).map(p => ({
+    const pedidos = raw.map(p => ({
       id:        p.id,
       numero:    p.numero,
       data:      p.data,
@@ -623,6 +686,45 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, 500, 'Erro ao buscar pedidos', err.message);
+  }
+});
+
+app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  try {
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${req.params.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const p = data?.data || data || {};
+    const itens = (Array.isArray(p.itens) ? p.itens : []).map(it => ({
+      codigo:    it.codigo || it.produto?.codigo || '',
+      descricao: it.descricao || it.produto?.nome || 'Item',
+      qtd:       Number(it.quantidade) || 0,
+      valor:     Number(it.valor) || 0,
+      total:     (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
+    }));
+
+    res.json({
+      id:          p.id,
+      numero:      p.numero,
+      data:        p.data,
+      situacao:    String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
+      contato:     p.contato?.nome || '—',
+      contatoDoc:  p.contato?.numeroDocumento || '',
+      contatoTel:  p.contato?.celular || p.contato?.telefone || '',
+      observacoes: p.observacoes || p.observacoesInternas || '',
+      total:       p.totalProdutos || p.totalVenda || p.total || 0,
+      frete:       p.transporte?.frete || 0,
+      itens,
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar detalhe do pedido', err.message);
   }
 });
 
@@ -653,6 +755,25 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, 500, 'Erro ao buscar NF-e', err.message);
+  }
+});
+
+app.get('/api/nfe/:id/danfe', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/nfe/${req.params.id}/danfe`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const link = data?.data?.link || data?.link;
+    if (!link) return res.status(404).json({ error: 'Link da DANFE não disponível' });
+    res.json({ link });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, err.response?.status || 500, 'Erro ao buscar DANFE', err.message);
   }
 });
 

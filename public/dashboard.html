@@ -130,6 +130,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .pchips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
 .pchip{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--surf);border:1px solid var(--bord);color:var(--mu);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .1s}
 .pchip:hover{border-color:var(--acc);color:var(--acc-t)}
+.pchip.on{background:var(--acc-bg);border-color:var(--acc);color:var(--acc-t)}
 .pdx{color:var(--fa);font-size:13px;line-height:1}
 .pdx:hover{color:var(--er)}
 
@@ -362,6 +363,8 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .df-margin strong{font-weight:700}
 .edraw-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);padding:8px 0 10px;margin-top:4px;border-top:1px solid var(--bord-l)}
 .edraw-img{width:100%;max-height:130px;object-fit:contain;border-radius:8px;margin-bottom:14px;border:1px solid var(--bord);background:var(--bord-l);display:block}
+.edraw-actions{display:flex;gap:8px;padding:10px 18px;border-bottom:1px solid var(--bord-l);flex-wrap:wrap;flex-shrink:0}
+.edraw-actions .bts{flex:1;justify-content:center}
 /* NOTIFICATION STACK */
 #noti-stack{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:360px}
 .noti{width:100%;padding:11px 13px;border-radius:10px;background:var(--surf);border:1px solid var(--bord);box-shadow:0 4px 20px rgba(0,0,0,.13);display:flex;align-items:flex-start;gap:9px;animation:nti .22s cubic-bezier(.34,1.56,.64,1) both;font-size:13px;color:var(--tx);line-height:1.4;pointer-events:all}
@@ -1064,7 +1067,29 @@ button:focus:not(:focus-visible){outline:none}
           <button class="pt-btn" onclick="setTabPedidos('cancelado',this)">Cancelados <span class="pt-cnt pt-cnt-can" id="pt-cnt-can"></span></button>
           <button class="bts" style="margin-left:auto;margin-bottom:4px" onclick="loadPedidos()">↻ Atualizar</button>
         </div>
+        <div class="toolbar" style="border-top:1px solid var(--bord-l)">
+          <div class="sw">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="sinp" id="ped-search" type="search" placeholder="Buscar nº do pedido ou cliente…" oninput="renderPedidosTable(_pedStatus)" autocomplete="off">
+          </div>
+          <div class="dvv"></div>
+          <input type="date" id="ped-data-ini" title="Data inicial" style="height:34px;border:1px solid var(--bord);border-radius:9px;padding:0 10px;font-size:12.5px;font-family:inherit;background:var(--surf);color:var(--tx)">
+          <span style="color:var(--fa);font-size:12px">até</span>
+          <input type="date" id="ped-data-fim" title="Data final" style="height:34px;border:1px solid var(--bord);border-radius:9px;padding:0 10px;font-size:12.5px;font-family:inherit;background:var(--surf);color:var(--tx)">
+          <button class="bts" onclick="loadPedidosPeriodo()">Filtrar período</button>
+          <div class="tr">
+            <button class="bts" onclick="exportPedidosCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
+          </div>
+        </div>
         <div class="vtable" id="pedidos-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><p class="st-d">Clique em Atualizar para carregar os pedidos do Bling.</p></div></div>
+      </div>
+    </div>
+
+    <!-- MODAL DETALHE DO PEDIDO -->
+    <div class="modal" id="ped-modal" onclick="if(event.target===this)closeModal('ped-modal')">
+      <div class="mbox" style="width:480px;max-width:95vw">
+        <div id="ped-detalhe"></div>
+        <div class="m-foot"><button class="bts" onclick="closeModal('ped-modal')">Fechar</button></div>
       </div>
     </div>
 
@@ -1103,6 +1128,14 @@ button:focus:not(:focus-visible){outline:none}
             </button>
             <button class="bts" onclick="loadNotas()">↻ Atualizar</button>
           </div>
+        </div>
+        <div class="toolbar" style="border-top:1px solid var(--bord-l)">
+          <div class="sw">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="sinp" id="nfe-search" type="search" placeholder="Buscar nº, cliente ou chave…" oninput="renderNotas()" autocomplete="off">
+          </div>
+          <div class="dvv"></div>
+          <select id="nfe-f-status" onchange="renderNotas()"><option value="">Todas situações</option><option value="ok">Autorizadas</option><option value="pen">Pendentes</option><option value="can">Canceladas</option></select>
         </div>
         <div class="vtable" id="notas-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><p class="st-d">Clique em Atualizar para carregar as notas fiscais do Bling.</p></div></div>
       </div>
@@ -1317,7 +1350,15 @@ button:focus:not(:focus-visible){outline:none}
           <select id="cli-uf" onchange="renderClientes()"><option value="">Todas UF</option></select>
           <select id="cli-tipo" onchange="renderClientes()"><option value="">PF e PJ</option><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></select>
           <select id="cli-sort" onchange="renderClientes()"><option value="gasto">Maior gasto</option><option value="pedidos">Mais pedidos</option><option value="recente">Compra recente</option><option value="nome">Nome A-Z</option></select>
-          <div class="tr"><button class="bts" onclick="loadClientes(true)">↻ Atualizar</button></div>
+          <div class="tr">
+            <button class="bts" onclick="exportClientesCSV()" title="Exportar lista filtrada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
+            <button class="bts" onclick="loadClientes(true)">↻ Atualizar</button>
+          </div>
+        </div>
+        <div class="frow" style="padding:0 16px 12px">
+          <div class="pchips">
+            <span class="pchip" id="cli-chip-semcompra" onclick="toggleSemCompra()">Sem compras (90d)</span>
+          </div>
         </div>
         <div class="vtable" id="clientes-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div><p class="st-d">Clique em Atualizar para carregar seus clientes do Bling.</p></div></div>
       </div>
@@ -1466,12 +1507,43 @@ button:focus:not(:focus-visible){outline:none}
     <span class="edraw-title" id="edraw-title">Editar produto</span>
     <button class="edraw-x" onclick="closeEditor()">×</button>
   </div>
+  <div class="edraw-actions" id="edraw-actions">
+    <button class="bts" onclick="openMovimento()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Movimento</button>
+    <button class="bts" onclick="duplicarProdutoAtual()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplicar</button>
+    <button class="bts" style="color:var(--er-t);border-color:var(--er-t)" onclick="excluirProdutoAtual()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Excluir</button>
+  </div>
   <div class="edraw-bd" id="edraw-bd">
     <div class="st-wrap"><p class="st-d">Carregando…</p></div>
   </div>
   <div class="edraw-ft">
     <button class="btp" id="edraw-save" onclick="saveEditorFull()" style="flex:1">Salvar alterações</button>
     <button class="bts" onclick="closeEditor()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MOVIMENTO DE ESTOQUE MODAL -->
+<div class="modal" id="mov-modal" onclick="if(event.target===this)closeModal('mov-modal')">
+  <div class="mbox" style="width:380px;max-width:92vw">
+    <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:16px">Movimento de estoque</div>
+    <div id="mov-prod-info" style="font-size:12px;color:var(--mu);margin-bottom:14px"></div>
+    <div class="df"><label>Tipo de movimento</label>
+      <select id="mov-tipo" onchange="updateMovPreview()">
+        <option value="entrada">Entrada (adicionar)</option>
+        <option value="saida">Saída (retirar)</option>
+        <option value="ajuste">Ajuste (definir total)</option>
+      </select>
+    </div>
+    <div class="df"><label>Quantidade</label>
+      <input type="number" id="mov-qtd" min="0" step="1" placeholder="0" oninput="updateMovPreview()">
+    </div>
+    <div id="mov-preview" style="font-size:12px;color:var(--mu);margin:-6px 0 14px;padding:8px 10px;background:var(--bg);border-radius:7px;display:none"></div>
+    <div class="df"><label>Motivo</label>
+      <input type="text" id="mov-motivo" placeholder="Ex: reposição, perda, avaria, devolução…">
+    </div>
+    <div class="m-foot">
+      <button class="btp" onclick="confirmMovimento()">Confirmar</button>
+      <button class="bts" onclick="closeModal('mov-modal')">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -2119,14 +2191,22 @@ function setTabPedidos(status,btn){
   if(btn)btn.classList.add('on');
   renderPedidosTable(_pedStatus);
 }
-async function loadPedidos(){
+async function loadPedidos(){return loadPedidosUrl('/api/pedidos');}
+function loadPedidosPeriodo(){
+  const ini=$('ped-data-ini').value,fim=$('ped-data-fim').value;
+  if(!ini||!fim){toast('Informe data inicial e final','wa');return;}
+  if(ini>fim){toast('Data inicial deve ser anterior à final','wa');return;}
+  loadPedidosUrl(`/api/pedidos?inicio=${ini}&fim=${fim}`);
+}
+async function loadPedidosUrl(url){
   const body=$('pedidos-body');
   body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando pedidos…</p></div>';
   try{
-    const r=await fetch('/api/pedidos'),d=await r.json();
+    const r=await fetch(url),d=await r.json();
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
       body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
     }
+    if(!r.ok)throw new Error(d.error||'Erro ao carregar pedidos');
     _pedidosCache=d.pedidos||[];
     // Atualiza contadores das abas
     const pen=_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length;
@@ -2147,21 +2227,57 @@ function categorizePed(s){
 }
 function renderPedidosTable(status){
   const body=$('pedidos-body');
-  const list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
-  if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${status==='all'?'encontrado':status}.</p></div>`;return;}
+  let list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
+  const q=($('ped-search')?.value||'').toLowerCase().trim();
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato}`.toLowerCase().includes(q));
+  if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${q?'encontrado para "'+esc(q)+'"':status==='all'?'encontrado':status}.</p></div>`;return;}
   const rows=list.map(p=>{
     const cat=categorizePed(p.situacao);
     const cls=cat==='concluido'?'o-ok':cat==='cancelado'?'o-can':'o-pen';
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
-    return`<tr>
+    return`<tr style="cursor:pointer" onclick="openPedidoDetalhe('${esc(String(p.id))}')">
       <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
-      <td>${p.data?String(p.data).substring(0,10):'—'}</td>
+      <td>${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
       <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
       <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+async function openPedidoDetalhe(id){
+  $('ped-detalhe').innerHTML='<div class="st-wrap"><p class="st-d">Carregando pedido…</p></div>';
+  openModal('ped-modal');
+  try{
+    const r=await fetch(`/api/pedidos/${id}`),p=await r.json();
+    if(!r.ok)throw new Error(p.error||'Erro ao carregar pedido');
+    const cat=categorizePed(p.situacao);
+    const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+    const itensRows=(p.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}</td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    $('ped-detalhe').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
+        <div style="min-width:0"><div style="font-size:16px;font-weight:700">Pedido #${esc(String(p.numero||p.id))}</div><div style="font-size:12px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}${p.contatoDoc?' · '+esc(p.contatoDoc):''}</div></div>
+        <span class="sb2 ${sb}" style="flex-shrink:0">${esc(p.situacao)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Data</div><div style="font-size:14px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Total</div><div style="font-size:14px;font-weight:700;color:var(--ok-t)">${fmt(p.total)}</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS</div>
+      <div style="max-height:240px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      ${p.observacoes?`<div style="margin-top:12px;font-size:12px;color:var(--mu);background:var(--bg);border-radius:8px;padding:10px"><strong>Obs:</strong> ${esc(p.observacoes)}</div>`:''}
+    `;
+  }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function exportPedidosCSV(){
+  let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);
+  const q=($('ped-search')?.value||'').toLowerCase().trim();
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato}`.toLowerCase().includes(q));
+  if(!list.length){toast('Nenhum pedido para exportar','err');return;}
+  const cols=['numero','data','contato','valor','situacao'];
+  const csv=[cols.join(','),...list.map(p=>cols.map(c=>{const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`pedidos_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast(`${list.length} pedido${list.length!==1?'s':''} exportado${list.length!==1?'s':''}`,'ok');
 }
 async function loadHistorico(){
   const body=$('historico-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
@@ -2172,15 +2288,46 @@ async function loadHistorico(){
     body.innerHTML=`<table><thead><tr><th>Produto</th><th>Campo</th><th>Antes</th><th>Depois</th><th>Quando</th></tr></thead><tbody>${hist.map(h=>`<tr><td>${esc(h.produto_nome)}</td><td><span class="h-campo">${esc(h.campo)}</span></td><td class="h-from">${esc(h.valor_anterior)}</td><td class="h-to">${esc(h.valor_novo)}</td><td style="color:var(--fa);font-size:12px">${new Date(h.timestamp).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
+let _notasCache=[];
 async function loadNotas(){
   const body=$('notas-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
   try{
     const r=await fetch('/api/notas-fiscais'),d=await r.json();
     if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
-    const notas=d.notas||[];
-    if(!notas.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div>';return;}
-    body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${notas.map(n=>{const s=(n.situacao||'').toLowerCase();const cls=s.includes('autoriza')?'nfe-ok':s.includes('cancel')?'nfe-can':'nfe-pen';return`<tr><td><span class="sku">${n.numero||n.id}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td class="${cls}">${esc(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,20)+'…':'—'}</span></td></tr>`;}).join('')}</tbody></table>`;
+    if(!r.ok)throw new Error(d.error||'Erro ao carregar notas');
+    _notasCache=d.notas||[];
+    renderNotas();
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function notaSitClass(situacao){
+  const s=(situacao||'').toLowerCase();
+  if(s.includes('cancel'))return'can';
+  if(s.includes('autoriza'))return'ok';
+  return'pen';
+}
+function renderNotas(){
+  const body=$('notas-body');
+  if(!_notasCache.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div>';return;}
+  const q=($('nfe-search')?.value||'').toLowerCase().trim();
+  const fStatus=$('nfe-f-status')?.value||'';
+  let list=_notasCache.filter(n=>{
+    if(fStatus&&notaSitClass(n.situacao)!==fStatus)return false;
+    if(q&&!`${n.numero} ${n.contato} ${n.chave}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhuma nota encontrada${q?' para "'+esc(q)+'"':''}.</p></div>`;return;}
+  body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th><th style="width:90px"></th></tr></thead><tbody>${list.map(n=>{
+    const sc=notaSitClass(n.situacao);
+    const sb=sc==='ok'?'s-ok':sc==='can'?'s-out':'s-lo';
+    return`<tr><td><span class="sku">${esc(String(n.numero||n.id))}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td><span class="sb2 ${sb}">${esc(n.situacao)}</span></td><td><span class="nfe-key">${n.chave?n.chave.substring(0,18)+'…':'—'}</span></td><td>${sc==='ok'?`<button class="bts" style="height:26px;padding:0 8px;font-size:11px" onclick="abrirDanfe('${esc(String(n.id))}')">DANFE</button>`:''}</td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+async function abrirDanfe(id){
+  try{
+    const r=await fetch(`/api/nfe/${id}/danfe`),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'DANFE não disponível');
+    window.open(d.link,'_blank');
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 
 function openEmitirNFe(){
@@ -2363,6 +2510,94 @@ async function saveEditorFull(){
     toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent='Salvar alterações';}
+}
+
+// ── PRODUTO: EXCLUIR / DUPLICAR / MOVIMENTO ──────
+function openMovimento(){
+  if(!editorId||!editorProduct)return;
+  const curEst=typeof editorProduct.estoque==='object'?(editorProduct.estoque?.saldoVirtualTotal||0):(editorProduct.estoque||0);
+  const p=S.products.find(x=>x.id===editorId);
+  const est=p?p.estoque:curEst;
+  $('mov-prod-info').textContent=`${editorProduct.nome||'Produto'} · Estoque atual: ${fmtN(est)} un.`;
+  $('mov-tipo').value='entrada';
+  $('mov-qtd').value='';
+  $('mov-motivo').value='';
+  $('mov-preview').style.display='none';
+  openModal('mov-modal');
+  setTimeout(()=>$('mov-qtd').focus(),80);
+}
+function updateMovPreview(){
+  const tipo=$('mov-tipo').value,qtd=parseFloat($('mov-qtd').value)||0;
+  const p=S.products.find(x=>x.id===editorId);
+  const est=p?p.estoque:0;
+  const prev=$('mov-preview');
+  if(!qtd){prev.style.display='none';return;}
+  let novoEst;
+  if(tipo==='entrada')novoEst=est+qtd;
+  else if(tipo==='saida')novoEst=Math.max(0,est-qtd);
+  else novoEst=qtd;
+  prev.style.display='';
+  prev.textContent=`Resultado: ${fmtN(est)} → ${fmtN(novoEst)} un.`;
+}
+async function confirmMovimento(){
+  if(!editorId)return;
+  const tipo=$('mov-tipo').value,qtd=parseFloat($('mov-qtd').value),motivo=$('mov-motivo').value.trim();
+  if(!qtd||qtd<=0){toast('Informe uma quantidade válida','err');return;}
+  const p=S.products.find(x=>x.id===editorId);
+  const est=p?p.estoque:0;
+  let novoEst;
+  if(tipo==='entrada')novoEst=est+qtd;
+  else if(tipo==='saida')novoEst=Math.max(0,est-qtd);
+  else novoEst=qtd;
+  const tipoLabel=tipo==='entrada'?'Entrada':tipo==='saida'?'Saída':'Ajuste';
+  const motivoFull=motivo?`${tipoLabel}: ${motivo}`:tipoLabel;
+  const btn=$('mov-modal').querySelector('.btp');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      estoque:novoEst,nome_produto:editorProduct?.nome||`#${editorId}`,
+      valor_anterior:`${fmtN(est)} un.`,motivo:motivoFull
+    })});
+    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+    if(p){p.estoque=novoEst;}
+    const edEst=$('ed-estoque');if(edEst)edEst.value=novoEst;
+    closeModal('mov-modal');
+    toast(`Estoque atualizado: ${fmtN(est)} → ${fmtN(novoEst)} un.`,'ok');
+    updateKpis();updateLowBadge();applyFilters();
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Confirmar';}
+}
+async function duplicarProdutoAtual(){
+  if(!editorId)return;
+  requireSenha(async()=>{
+    const btn=document.querySelector('#edraw-actions button:nth-child(2)');
+    if(btn){btn.disabled=true;btn.textContent='Duplicando…';}
+    try{
+      const r=await fetch(`/api/produtos/${editorId}/duplicar`,{method:'POST',headers:{'Content-Type':'application/json'}});
+      if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+      toast('Produto duplicado com sucesso','ok');
+      closeEditor();
+      await loadProducts(false);
+    }catch(e){toast('Erro: '+e.message,'err');}
+    finally{if(btn){btn.disabled=false;btn.textContent='Duplicar';}}
+  },{title:'Confirmar duplicação',desc:'Digite sua senha para duplicar este produto no Bling.'});
+}
+async function excluirProdutoAtual(){
+  if(!editorId)return;
+  const nome=editorProduct?.nome||`#${editorId}`;
+  requireSenha(async()=>{
+    if(!confirm(`Excluir "${nome}" permanentemente no Bling?\n\nEsta ação não pode ser desfeita.`))return;
+    const btn=document.querySelector('#edraw-actions .bts:last-child');
+    if(btn){btn.disabled=true;btn.textContent='Excluindo…';}
+    try{
+      const r=await fetch(`/api/produtos/${editorId}`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome_produto:nome})});
+      if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+      S.products=S.products.filter(p=>p.id!==editorId);
+      closeEditor();
+      toast(`"${nome}" excluído`,'ok');
+      updateKpis();updateLowBadge();applyFilters();
+    }catch(e){toast('Erro: '+e.message,'err');}
+    finally{if(btn){btn.disabled=false;btn.textContent='Excluir';}}
+  },{title:'Confirmar exclusão',desc:`Atenção: isso apagará "${nome}" permanentemente do seu Bling.`,force:true});
 }
 
 // ── CRIAR PRODUTO ─────────────────────────────────
@@ -2566,6 +2801,8 @@ function pwCancel(){
 // ── CLIENTES (CRM) ───────────────────────────────
 let _clientesCache=[];
 let _clientesLoaded=false;
+let _cliSemCompra=false;
+function toggleSemCompra(){_cliSemCompra=!_cliSemCompra;$('cli-chip-semcompra').classList.toggle('on',_cliSemCompra);renderClientes();}
 async function loadClientes(force=false){
   if(_clientesLoaded&&!force){renderClientes();return;}
   const body=$('clientes-body');
@@ -2589,6 +2826,7 @@ function renderClientes(){
   let list=_clientesCache.filter(c=>{
     if(uf&&c.uf!==uf)return false;
     if(tipo&&c.tipo!==tipo)return false;
+    if(_cliSemCompra&&c.totalGasto>0)return false;
     if(q&&!`${c.nome} ${c.documento} ${c.municipio}`.toLowerCase().includes(q))return false;
     return true;
   });
@@ -2620,6 +2858,9 @@ function renderClientes(){
 function openClienteFicha(id){
   const c=_clientesCache.find(x=>String(x.id)===String(id));if(!c)return;
   const linha=(lbl,val)=>val?`<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--bord-l);font-size:13px"><span style="color:var(--mu)">${lbl}</span><span style="font-weight:500;color:var(--tx);text-align:right;word-break:break-word">${esc(val)}</span></div>`:'';
+  const linhaLink=(lbl,val,href)=>val?`<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--bord-l);font-size:13px"><span style="color:var(--mu)">${lbl}</span><a href="${href}" target="_blank" rel="noopener" style="font-weight:500;color:var(--acc-t);text-align:right;word-break:break-word;text-decoration:none">${esc(val)}</a></div>`:'';
+  const digits=(c.telefone||'').replace(/\D/g,'');
+  const waDigits=digits?(digits.length<=11?'55'+digits:digits):'';
   $('cli-ficha').innerHTML=`
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:48px;height:48px;border-radius:50%;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">${esc((c.nome||'?').charAt(0).toUpperCase())}</div>
@@ -2629,9 +2870,26 @@ function openClienteFicha(id){
       <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Total gasto (90d)</div><div style="font-size:18px;font-weight:800;color:var(--ok-t)">${fmt(c.totalGasto)}</div></div>
       <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Pedidos</div><div style="font-size:18px;font-weight:800;color:var(--tx)">${fmtN(c.numPedidos||0)}</div></div>
     </div>
-    ${linha('E-mail',c.email)}${linha('Telefone',c.telefone)}${linha('Cidade',c.municipio?c.municipio+(c.uf?'/'+c.uf:''):'')}${linha('Último pedido',c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'')}
+    ${linhaLink('E-mail',c.email,'mailto:'+encodeURIComponent(c.email))}${linhaLink('Telefone',c.telefone,'https://wa.me/'+waDigits)}${linha('Cidade',c.municipio?c.municipio+(c.uf?'/'+c.uf:''):'')}${linha('Último pedido',c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'')}
+    ${c.telefone?`<div style="margin-top:14px"><a href="https://wa.me/${waDigits}" target="_blank" rel="noopener" class="bts" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:#22c55e;color:#fff;border-color:#22c55e">💬 Chamar no WhatsApp</a></div>`:''}
   `;
   openModal('cli-modal');
+}
+function exportClientesCSV(){
+  const q=($('cli-search')?.value||'').toLowerCase().trim();
+  const uf=$('cli-uf')?.value,tipo=$('cli-tipo')?.value;
+  let list=_clientesCache.filter(c=>{
+    if(uf&&c.uf!==uf)return false;
+    if(tipo&&c.tipo!==tipo)return false;
+    if(_cliSemCompra&&c.totalGasto>0)return false;
+    if(q&&!`${c.nome} ${c.documento} ${c.municipio}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(!list.length){toast('Nenhum cliente para exportar','err');return;}
+  const cols=['nome','documento','email','telefone','municipio','uf','totalGasto','numPedidos','ultimoPedido'];
+  const csv=[cols.join(','),...list.map(c=>cols.map(k=>{const v=c[k];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`clientes_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast(`${list.length} cliente${list.length!==1?'s':''} exportado${list.length!==1?'s':''}`,'ok');
 }
 
 // ── AUTH ─────────────────────────────────────────
