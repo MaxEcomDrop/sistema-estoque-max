@@ -51,6 +51,9 @@ app.use(cookieParser());
 app.use(cors());
 
 // ── Carregar Variáveis de Ambiente Seguramente ───────────────────────
+// Validar variáveis de ambiente ANTES de carregar qualquer rota
+validateEnvironment();
+
 const BLING_CLIENT_ID     = process.env.BLING_CLIENT_ID;
 const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET;
 const BLING_REDIRECT_URI  = process.env.BLING_REDIRECT_URI;
@@ -920,9 +923,6 @@ app.use((err, req, res, next) => {
 // ── Start ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
-  // Validar variáveis de ambiente antes de iniciar
-  validateEnvironment();
-  
   app.listen(process.env.PORT || 3000, () => {
     console.log(`✅ Servidor iniciado em http://localhost:${process.env.PORT || 3000}`);
     console.log(`📝 Ambiente: ${NODE_ENV}`);
