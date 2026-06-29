@@ -1083,7 +1083,7 @@ button:focus:not(:focus-visible){outline:none}
     </div>
 
     <!-- MODAL EMITIR NF-e -->
-    <div class="modal-ov" id="nfe-modal">
+    <div class="modal" id="nfe-modal" onclick="if(event.target===this)closeModal('nfe-modal')">
       <div class="mbox" style="max-width:420px">
         <div class="m-title">Emitir NF-e</div>
         <div class="m-desc">Informe o número do pedido de venda do Bling para gerar a nota fiscal.</div>
@@ -1810,7 +1810,7 @@ function editCell(span,field,id,current,nomeProd){
       body[field]=val;
       const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){const d=await r.json();toast(d.error||'Erro ao salvar','err');restore();return;}
-      if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();showUndo(`${field==='preco'?'Preço':'Estoque'} atualizado`);p[field]=val;}
+      if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();showUndo(`${field==='preco'?'Preço':'Estoque'} salvo no Bling ✓`);p[field]=val;}
       restore();
       const row=document.querySelector(`tr[data-id="${id}"]`);
       if(row){row.classList.add('flash');setTimeout(()=>row.classList.remove('flash'),500);}
