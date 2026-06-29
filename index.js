@@ -6,6 +6,25 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+// ── Validação de Variáveis de Ambiente ───────────────────────────────
+function validateEnvironment() {
+  const required = [
+    'BLING_CLIENT_ID',
+    'BLING_CLIENT_SECRET',
+    'BLING_REDIRECT_URI',
+    'ADMIN_EMAIL',
+    'ADMIN_PASSWORD',
+    'JWT_SECRET'
+  ];
+  
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error('❌ Variáveis de ambiente obrigatórias não configuradas:', missing.join(', '));
+    console.error('   Configure-as em um arquivo .env ou nas variáveis de ambiente do seu servidor.');
+    process.exit(1);
+  }
+}
+
 // Firebase Admin SDK (lazy init para não quebrar se env var ausente)
 let _fbAdmin = null;
 function getAdmin() {
@@ -18,7 +37,9 @@ function getAdmin() {
       admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
     }
     _fbAdmin = admin;
-  } catch (e) { console.error('Firebase Admin init error:', e.message); }
+  } catch (e) { 
+    console.error('⚠️  Firebase Admin init error:', e.message); 
+  }
   return _fbAdmin;
 }
 
@@ -29,14 +50,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors());
 
-const BLING_CLIENT_ID     = process.env.BLING_CLIENT_ID     || '56f15479eddae7460b8028e56f2d5f8a64970fe0';
-const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET || 'de5d5bc2fa78c1b151392e81aae3ab2377bad770724dce3e13c0ec454674';
-const BLING_REDIRECT_URI  = process.env.BLING_REDIRECT_URI  || 'https://sistema-estoque-max.vercel.app/api/webhook/bling';
-const ADMIN_EMAIL         = process.env.ADMIN_EMAIL         || '';
-const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD      || '';
-const JWT_SECRET          = process.env.JWT_SECRET          || 'estoque_max_jwt_2026_xK9#mP';
+// ── Carregar Variáveis de Ambiente Seguramente ───────────────────────
+// Validar variáveis de ambiente ANTES de carregar qualquer rota
+validateEnvironment();
+
+const BLING_CLIENT_ID     = process.env.BLING_CLIENT_ID;
+const BLING_CLIENT_SECRET = process.env.BLING_CLIENT_SECRET;
+const BLING_REDIRECT_URI  = process.env.BLING_REDIRECT_URI;
+const ADMIN_EMAIL         = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
+const JWT_SECRET          = process.env.JWT_SECRET;
+const NODE_ENV            = process.env.NODE_ENV || 'development';
 
 // In-memory change log (resets on cold start)
+// TODO: Persistir em banco de dados em produção
 const changeLog = [];
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
@@ -53,7 +80,7 @@ async function getDepositoId(token) {
   return _depositoId;
 }
 
-// ── Auth helpers ─────────────────────────────────────────────────
+// ── Auth helpers ─────────────────────────────────────────────────────
 
 function safeEqual(a, b) {
   try {
@@ -142,6 +169,23 @@ async function ensureBlingToken(req, res) {
   }
 }
 
+// ── Error Response Helper ────────────────────────────────────────────
+function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
+  const response = { error: errorMessage };
+  
+  // Apenas incluir detalhes em desenvolvimento
+  if (NODE_ENV === 'development' && detail) {
+    response.detail = detail;
+  }
+  
+  // Registrar erro completo em log interno
+  if (detail) {
+    console.error(`[${new Date().toISOString()}] Error:`, detail);
+  }
+  
+  res.status(statusCode).json(response);
+}
+
 // Resolve intervalo de datas a partir do período (today | 7d | 30d | custom)
 function resolvePeriodo(period, startDate, endDate) {
   const hoje = new Date();
@@ -161,31 +205,37 @@ function resolvePeriodo(period, startDate, endDate) {
   return { inicio, fim, period: period || '30d' };
 }
 
-// ── Páginas ──────────────────────────────────────────────────────
+// ── Páginas ──────────────────────────────────────────────────────────
 
 app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
 app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
-app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length }));
+app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
 app.use(express.static('public', { index: false }));
 
-// ── Login ────────────────────────────────────────────────────────
+// ── Login ────────────────────────────────────────────────────────────
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body || {};
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD)
-    return res.status(500).json({ error: 'Configure ADMIN_EMAIL e ADMIN_PASSWORD no Vercel.' });
-  if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD))
-    return res.status(401).json({ error: 'Email ou senha incorretos.' });
+  
+  if (!email || !password) {
+    return sendErrorResponse(res, 400, 'Email e senha são obrigatórios');
+  }
+  
+  if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
+    return sendErrorResponse(res, 401, 'Email ou senha incorretos');
+  }
 
   const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
   res.cookie('system_token', token, {
-    httpOnly: true, secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', maxAge: 7 * 24 * 3600 * 1000,
+    httpOnly: true, 
+    secure: NODE_ENV === 'production',
+    sameSite: 'lax', 
+    maxAge: 7 * 24 * 3600 * 1000,
   });
   res.json({ success: true });
 });
@@ -205,7 +255,7 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── OAuth Bling ──────────────────────────────────────────────────
+// ── OAuth Bling ──────────────────────────────────────────────────────
 
 app.get('/api/auth/url', requireAuthJson, (req, res) => {
   const params = new URLSearchParams({
@@ -239,7 +289,7 @@ app.get('/api/webhook/bling', async (req, res) => {
   }
 });
 
-// ── Produtos ─────────────────────────────────────────────────────
+// ── Produtos ─────────────────────────────────────────────────────────
 
 app.get('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
@@ -285,7 +335,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       res.clearCookie('bling_token');
       return res.status(401).json({ error: 'Token Bling expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
-    res.status(500).json({ error: 'Erro ao buscar produtos', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar produtos', err.message);
   }
 });
 
@@ -300,7 +350,7 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
     res.json(data?.data || {});
   } catch (err) {
     if (err.response?.status === 404) return res.status(404).json({ error: 'Produto não encontrado' });
-    res.status(500).json({ error: 'Erro ao buscar produto', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar produto', err.message);
   }
 });
 
@@ -322,7 +372,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
     res.json(criado);
   } catch (err) {
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
-    res.status(500).json({ error: 'Erro ao criar produto', detail });
+    sendErrorResponse(res, 500, 'Erro ao criar produto', detail);
   }
 });
 
@@ -415,7 +465,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
       res.clearCookie('bling_token');
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
-    res.status(500).json({ error: 'Erro ao buscar dados financeiros', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar dados financeiros', err.message);
   }
 });
 
@@ -454,7 +504,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       return res.json({ success: true });
     } catch (err) {
       const detail = err.response?.data?.error?.message || err.response?.data || err.message;
-      return res.status(500).json({ error: 'Erro ao salvar produto', detail });
+      return sendErrorResponse(res, 500, 'Erro ao salvar produto', detail);
     }
   }
 
@@ -497,7 +547,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   } catch (err) {
     console.error('[Update]', err.response?.data || err.message);
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
-    res.status(500).json({ error: 'Erro ao atualizar produto', detail });
+    sendErrorResponse(res, 500, 'Erro ao atualizar produto', detail);
   }
 });
 
@@ -546,7 +596,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
   res.json({ success, errors, total: produtos.length });
 });
 
-// ── Pedidos ──────────────────────────────────────────────────────
+// ── Pedidos ──────────────────────────────────────────────────────────
 
 app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
@@ -573,11 +623,11 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       res.clearCookie('bling_token');
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
-    res.status(500).json({ error: 'Erro ao buscar pedidos', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar pedidos', err.message);
   }
 });
 
-// ── Notas Fiscais ─────────────────────────────────────────────────
+// ── Notas Fiscais ─────────────────────────────────────────────────────
 
 app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
@@ -603,7 +653,7 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
       res.clearCookie('bling_token');
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
-    res.status(500).json({ error: 'Erro ao buscar NF-e', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar NF-e', err.message);
   }
 });
 
@@ -627,7 +677,7 @@ app.post('/api/nfe/emitir', requireAuthJson, async (req, res) => {
     const detail = err.response?.data?.error?.fields?.[0]?.msg
       || err.response?.data?.error?.message
       || err.message;
-    res.status(err.response?.status || 500).json({ error: 'Erro ao emitir NF-e', detail });
+    sendErrorResponse(res, err.response?.status || 500, 'Erro ao emitir NF-e', detail);
   }
 });
 
@@ -636,10 +686,7 @@ app.post('/api/push/subscribe', requireAuthJson, async (req, res) => {
   if (!token) return res.status(400).json({ error: 'token FCM obrigatório' });
   const admin = getAdmin();
   if (!admin) {
-    // fallback: armazena em memória até Firebase estar configurado
-    if (!global._fcmTokens) global._fcmTokens = new Set();
-    global._fcmTokens.add(token);
-    return res.json({ ok: true, mode: 'memory' });
+    return res.status(503).json({ error: 'Firebase não configurado. Configure FIREBASE_SERVICE_ACCOUNT.' });
   }
   try {
     await admin.firestore().collection('fcm_tokens').doc(token.slice(0, 128)).set({
@@ -647,7 +694,7 @@ app.post('/api/push/subscribe', requireAuthJson, async (req, res) => {
     });
     res.json({ ok: true, mode: 'firestore' });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendErrorResponse(res, 500, 'Erro ao registrar token FCM', e.message);
   }
 });
 
@@ -683,11 +730,11 @@ app.post('/api/push/send', requireAuthJson, async (req, res) => {
     await Promise.all(ops);
     res.json({ ok: true, sent: result.successCount, failed: result.failureCount });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendErrorResponse(res, 500, 'Erro ao enviar notificações', e.message);
   }
 });
 
-// ── Notificações Push ────────────────────────────────────────────
+// ── Notificações Push ────────────────────────────────────────────────
 
 app.get('/api/notif/history', requireAuthJson, async (req, res) => {
   const admin = getAdmin();
@@ -714,7 +761,7 @@ app.get('/api/notif/history', requireAuthJson, async (req, res) => {
     });
     res.json({ history, subscribers: tokSnap.size });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar histórico de notificações', e.message);
   }
 });
 
@@ -733,7 +780,7 @@ app.post('/api/notif/schedule', requireAuthJson, async (req, res) => {
     });
     res.json({ ok: true, id: ref.id });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendErrorResponse(res, 500, 'Erro ao agendar notificação', e.message);
   }
 });
 
@@ -744,7 +791,7 @@ app.delete('/api/notif/schedule/:id', requireAuthJson, async (req, res) => {
     await admin.firestore().collection('notif_history').doc(req.params.id).delete();
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendErrorResponse(res, 500, 'Erro ao deletar notificação agendada', e.message);
   }
 });
 
@@ -914,7 +961,7 @@ app.get('/api/cron/push', async (req, res) => {
     await batch.commit();
     res.json({ ok: true, sent });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendErrorResponse(res, 500, 'Erro no cron de notificações', e.message);
   }
 });
 
@@ -971,7 +1018,7 @@ app.get('/api/contas/:tipo', requireAuthJson, async (req, res) => {
   res.json(data);
 });
 
-// ── Dashboard consolidado (primeira aba) ──────────────────────────
+// ── Dashboard consolidado (primeira aba) ──────────────────────────────
 
 app.get('/api/dashboard', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
@@ -1050,7 +1097,7 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
       res.clearCookie('bling_token');
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
-    res.status(500).json({ error: 'Erro ao montar dashboard', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao montar dashboard', err.message);
   }
 });
 
@@ -1131,7 +1178,7 @@ app.get('/api/historico', requireAuthJson, (req, res) => {
   res.json({ history: changeLog.slice().reverse().slice(0, 300) });
 });
 
-// ── Webhook (Bling notificações) ──────────────────────────────────
+// ── Webhook (Bling notificações) ──────────────────────────────────────
 
 app.post('/api/webhook/bling', async (req, res) => {
   res.json({ received: true }); // responde rápido (Bling espera 200)
@@ -1155,14 +1202,24 @@ app.post('/api/webhook/bling', async (req, res) => {
   } catch (e) { console.error('[webhook bling]', e.message); }
 });
 
-// ── 404 ──────────────────────────────────────────────────────────
+// ── 404 ──────────────────────────────────────────────────────────────
 
 app.use((req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
 
-// ── Start ─────────────────────────────────────────────────────────
+// ── Error Handler ────────────────────────────────────────────────────
+
+app.use((err, req, res, next) => {
+  console.error('[Unhandled Error]', err);
+  sendErrorResponse(res, 500, 'Erro interno do servidor', NODE_ENV === 'development' ? err.message : undefined);
+});
+
+// ── Start ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
-  app.listen(process.env.PORT || 3000, () => console.log('✅  http://localhost:3000'));
+  app.listen(process.env.PORT || 3000, () => {
+    console.log(`✅ Servidor iniciado em http://localhost:${process.env.PORT || 3000}`);
+    console.log(`📝 Ambiente: ${NODE_ENV}`);
+  });
 }
 
 module.exports = app;
