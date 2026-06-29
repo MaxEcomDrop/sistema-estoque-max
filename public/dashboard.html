@@ -114,6 +114,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .sinp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.12);background:var(--surf);width:280px}
 .sinp::placeholder{color:var(--fa)}
 .dvv{width:1px;height:20px;background:var(--bord);flex-shrink:0;margin:0 2px}
+.toolbar select{height:36px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;cursor:pointer;transition:border-color .15s}
+.toolbar select:focus{border-color:var(--acc)}
 .tr{margin-left:auto;display:flex;align-items:center;gap:6px}
 .fa-cnt{font-size:10px;font-weight:700;background:var(--acc);color:#fff;border-radius:10px;padding:1px 5px;margin-left:2px}
 
@@ -726,7 +728,7 @@ button:focus:not(:focus-visible){outline:none}
     <span class="nav-sec">Menu</span>
     <button class="ni on" id="ni-inicio" onclick="setView('inicio')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span class="ni-label">Início</span>
+      <span class="ni-label">Meu Negócio</span>
     </button>
     <button class="ni" id="ni-produtos" onclick="setView('produtos')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg>
@@ -1279,6 +1281,37 @@ button:focus:not(:focus-visible){outline:none}
       </div>
     </div>
 
+    <!-- VIEW CLIENTES (CRM) -->
+    <div class="view" id="view-clientes">
+      <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><div class="kpi-lbl">Total de clientes</div><div class="kpi-val" id="cli-total">—</div><div class="kpi-sub" id="cli-total-sub">cadastrados no Bling</div></div>
+        <div class="kpi"><div class="kpi-lbl">Ticket médio/cliente</div><div class="kpi-val" id="cli-ticket" style="font-size:22px">—</div><div class="kpi-sub">gasto médio (90 dias)</div></div>
+        <div class="kpi"><div class="kpi-lbl">Melhor cliente</div><div class="kpi-val" id="cli-top" style="font-size:15px">—</div><div class="kpi-sub" id="cli-top-sub">maior valor gasto</div></div>
+      </div>
+      <div class="tcard">
+        <div class="toolbar">
+          <div class="sw">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="sinp" id="cli-search" type="search" placeholder="Buscar nome, documento, cidade…" oninput="renderClientes()" autocomplete="off">
+          </div>
+          <div class="dvv"></div>
+          <select id="cli-uf" onchange="renderClientes()"><option value="">Todas UF</option></select>
+          <select id="cli-tipo" onchange="renderClientes()"><option value="">PF e PJ</option><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></select>
+          <select id="cli-sort" onchange="renderClientes()"><option value="gasto">Maior gasto</option><option value="pedidos">Mais pedidos</option><option value="recente">Compra recente</option><option value="nome">Nome A-Z</option></select>
+          <div class="tr"><button class="bts" onclick="loadClientes(true)">↻ Atualizar</button></div>
+        </div>
+        <div class="vtable" id="clientes-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div><p class="st-d">Clique em Atualizar para carregar seus clientes do Bling.</p></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FICHA DO CLIENTE -->
+<div class="modal" id="cli-modal" onclick="if(event.target===this)closeModal('cli-modal')">
+  <div class="mbox" style="width:440px;max-width:95vw">
+    <div id="cli-ficha"></div>
+    <div class="m-foot"><button class="bts" onclick="closeModal('cli-modal')">Fechar</button></div>
   </div>
 </div>
 
@@ -1406,7 +1439,7 @@ button:focus:not(:focus-visible){outline:none}
 <!-- MOBILE BOTTOM NAV -->
 <nav class="bnav" id="bnav">
   <button class="bnav-item on" id="bn-inicio" onclick="setView('inicio')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Início</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Negócio</span>
   </button>
   <button class="bnav-item" id="bn-produtos" onclick="setView('produtos')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg><span>Produtos</span>
@@ -1428,6 +1461,10 @@ button:focus:not(:focus-visible){outline:none}
   <div class="mais-handle"></div>
   <div class="mais-title">Mais opções</div>
   <div class="mais-grid">
+    <button class="mais-item" onclick="setView('clientes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      <span>Clientes</span>
+    </button>
     <button class="mais-item" onclick="setView('relatorio')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>Relatório</span>
@@ -1555,8 +1592,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Início',produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push'};
-const MAIS_VIEWS=['relatorio','notas','historico','notificacoes'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes'];
 function setView(v){
   vibrate(8);
   S.view=v;
@@ -1569,6 +1606,7 @@ function setView(v){
   else $('bn-'+v)?.classList.add('on');
   $('tb-title').textContent=VIEWS[v]||v;
   if(v==='inicio')loadDashboard();
+  if(v==='clientes')loadClientes();
   if(v==='relatorio')renderReport();
   if(v==='notas')loadNotas();
   if(v==='pedidos')loadPedidos();
@@ -2402,6 +2440,77 @@ function renderFinChart(byDay,inicio,fim){
     <line x1="${pad}" y1="${H}" x2="${W-10}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
     ${ytop}${ymid}${bars}
   </svg>`;
+}
+
+// ── CLIENTES (CRM) ───────────────────────────────
+let _clientesCache=[];
+let _clientesLoaded=false;
+async function loadClientes(force=false){
+  if(_clientesLoaded&&!force){renderClientes();return;}
+  const body=$('clientes-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando clientes…</p></div>';
+  try{
+    const r=await fetch('/api/clientes'),d=await r.json();
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+    }
+    if(!r.ok)throw new Error(d.error||'Erro');
+    _clientesCache=d.clientes||[];_clientesLoaded=true;
+    const ufs=[...new Set(_clientesCache.map(c=>c.uf).filter(Boolean))].sort();
+    $('cli-uf').innerHTML='<option value="">Todas UF</option>'+ufs.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
+    renderClientes();
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderClientes(){
+  if(!$('cli-search'))return;
+  const q=($('cli-search').value||'').toLowerCase().trim();
+  const uf=$('cli-uf').value,tipo=$('cli-tipo').value,sort=$('cli-sort').value;
+  let list=_clientesCache.filter(c=>{
+    if(uf&&c.uf!==uf)return false;
+    if(tipo&&c.tipo!==tipo)return false;
+    if(q&&!`${c.nome} ${c.documento} ${c.municipio}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(sort==='nome')list.sort((a,b)=>a.nome.localeCompare(b.nome));
+  else if(sort==='pedidos')list.sort((a,b)=>b.numPedidos-a.numPedidos);
+  else if(sort==='recente')list.sort((a,b)=>(b.ultimoPedido||'').localeCompare(a.ultimoPedido||''));
+  else list.sort((a,b)=>b.totalGasto-a.totalGasto);
+  $('cli-total').textContent=fmtN(_clientesCache.length);
+  const compradores=_clientesCache.filter(c=>c.totalGasto>0);
+  $('cli-ticket').textContent=fmt(compradores.length?compradores.reduce((a,c)=>a+c.totalGasto,0)/compradores.length:0);
+  const top=[..._clientesCache].sort((a,b)=>b.totalGasto-a.totalGasto)[0];
+  $('cli-top').textContent=top&&top.totalGasto>0?top.nome.substring(0,22):'—';
+  $('cli-top-sub').textContent=top&&top.totalGasto>0?fmt(top.totalGasto):'sem compras (90d)';
+  const body=$('clientes-body');
+  if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum cliente encontrado.</p></div>';return;}
+  const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+  const isRank=sort==='gasto'&&!q&&!uf&&!tipo;
+  body.innerHTML=`<table><thead><tr><th style="width:40px">#</th><th>Cliente</th><th>Cidade/UF</th><th class="r">Pedidos</th><th class="r">Total gasto</th><th>Último</th></tr></thead><tbody>${
+    list.map((c,i)=>`<tr style="cursor:pointer" onclick="openClienteFicha('${esc(String(c.id))}')">
+      <td>${isRank&&medal(i)?`<span style="font-size:16px">${medal(i)}</span>`:`<span style="color:var(--fa)">${i+1}</span>`}</td>
+      <td><div class="pinfo"><span class="pname">${esc(c.nome)}</span><span class="pname-sub">${esc(c.documento||c.tipo||'—')}</span></div></td>
+      <td>${c.municipio?esc(c.municipio)+(c.uf?'/'+esc(c.uf):''):'—'}</td>
+      <td class="r">${c.numPedidos||0}</td>
+      <td class="r pcell" style="font-weight:600">${fmt(c.totalGasto)}</td>
+      <td style="color:var(--mu);font-size:12px">${c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'—'}</td>
+    </tr>`).join('')
+  }</tbody></table>`;
+}
+function openClienteFicha(id){
+  const c=_clientesCache.find(x=>String(x.id)===String(id));if(!c)return;
+  const linha=(lbl,val)=>val?`<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--bord-l);font-size:13px"><span style="color:var(--mu)">${lbl}</span><span style="font-weight:500;color:var(--tx);text-align:right;word-break:break-word">${esc(val)}</span></div>`:'';
+  $('cli-ficha').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">${esc((c.nome||'?').charAt(0).toUpperCase())}</div>
+      <div style="min-width:0"><div style="font-size:16px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.nome)}</div><div style="font-size:12px;color:var(--mu)">${esc(c.tipo||'Cliente')}${c.documento?' · '+esc(c.documento):''}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Total gasto (90d)</div><div style="font-size:18px;font-weight:800;color:var(--ok-t)">${fmt(c.totalGasto)}</div></div>
+      <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Pedidos</div><div style="font-size:18px;font-weight:800;color:var(--tx)">${fmtN(c.numPedidos||0)}</div></div>
+    </div>
+    ${linha('E-mail',c.email)}${linha('Telefone',c.telefone)}${linha('Cidade',c.municipio?c.municipio+(c.uf?'/'+c.uf:''):'')}${linha('Último pedido',c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'')}
+  `;
+  openModal('cli-modal');
 }
 
 // ── AUTH ─────────────────────────────────────────

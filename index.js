@@ -1046,6 +1046,77 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
   }
 });
 
+// ── Clientes (CRM) ────────────────────────────────────────────────
+
+app.get('/api/clientes', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    // Busca contatos (até 3 páginas) e pedidos dos últimos 90 dias para cruzar
+    const hoje = new Date();
+    const ini = new Date(hoje); ini.setDate(ini.getDate() - 90);
+    const iso = d => d.toISOString().split('T')[0];
+
+    const contatosPromise = (async () => {
+      let all = [];
+      for (let pg = 1; pg <= 3; pg++) {
+        const { data } = await axios.get('https://www.bling.com.br/Api/v3/contatos', {
+          headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
+        });
+        const items = Array.isArray(data?.data) ? data.data : [];
+        all = all.concat(items);
+        if (items.length < 100) break;
+      }
+      return all;
+    })();
+
+    const [contatos, pedidos] = await Promise.all([
+      contatosPromise,
+      fetchPedidos(token, iso(ini), iso(hoje), 3).catch(() => []),
+    ]);
+
+    // Agrega gasto/pedidos por contato
+    const agg = {};
+    pedidos.forEach(p => {
+      const key = p.contato?.id || p.contato?.nome;
+      if (!key) return;
+      if (!agg[key]) agg[key] = { gasto: 0, pedidos: 0, ultimo: '' };
+      agg[key].gasto += valorPedido(p);
+      agg[key].pedidos += 1;
+      const d = String(p.data || '').substring(0, 10);
+      if (d > agg[key].ultimo) agg[key].ultimo = d;
+    });
+
+    const clientes = contatos.map(c => {
+      const a = agg[c.id] || agg[c.nome] || { gasto: 0, pedidos: 0, ultimo: '' };
+      const end = c.endereco?.geral || c.endereco || {};
+      return {
+        id: c.id,
+        nome: c.nome || 'Sem nome',
+        documento: c.numeroDocumento || '',
+        email: c.email || '',
+        telefone: c.celular || c.telefone || c.fone || '',
+        municipio: end.municipio || end.cidade || '',
+        uf: end.uf || end.estado || '',
+        tipo: c.tipo === 'J' ? 'PJ' : c.tipo === 'F' ? 'PF' : (c.tipo || ''),
+        totalGasto: a.gasto,
+        numPedidos: a.pedidos,
+        ultimoPedido: a.ultimo,
+      };
+    });
+    // Ordena por valor gasto (ranking)
+    clientes.sort((x, y) => y.totalGasto - x.totalGasto);
+
+    res.json({ total: clientes.length, clientes });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    res.status(500).json({ error: 'Erro ao buscar clientes', detail: err.message });
+  }
+});
+
 // ── Histórico ────────────────────────────────────────────────────
 
 app.get('/api/historico', requireAuthJson, (req, res) => {
