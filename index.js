@@ -127,7 +127,7 @@ async function refreshBlingToken(refreshToken) {
 // Retorna um access_token válido. Se o atual expirou (cookie some junto),
 // renova automaticamente usando o refresh_token (válido por 30 dias).
 async function ensureBlingToken(req, res) {
-  const token = await ensureBlingToken(req, res);
+  const token = req.cookies?.bling_token;
   if (token) return token;
   const refresh = req.cookies?.bling_refresh;
   if (!refresh) return null;
