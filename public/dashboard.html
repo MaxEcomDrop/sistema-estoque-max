@@ -1407,8 +1407,8 @@ function renderTable(){
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
       <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></div></td>
       <td><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
-      <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}'">${fmt(p.preco)}${arr}${editIco}</span></td>
-      <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}'">${fmtN(p.estoque)} un.${editIco}</span></td>
+      <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmt(p.preco)}${arr}${editIco}</span></td>
+      <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmtN(p.estoque)} un.${editIco}</span></td>
       <td>${statusBadge(p.estoque)}</td>
     </tr>`;
   });
