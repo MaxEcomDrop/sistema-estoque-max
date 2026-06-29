@@ -85,7 +85,34 @@ function setBlingCookies(res, data) {
   res.cookie('bling_token', data.access_token, { ...BLING_COOKIE_OPTS, maxAge: (data.expires_in || 3600) * 1000 });
   if (data.refresh_token) {
     res.cookie('bling_refresh', data.refresh_token, { ...BLING_COOKIE_OPTS, maxAge: 30 * 24 * 3600 * 1000 });
+    // Persiste o refresh para os crons usarem (fire-and-forget)
+    saveBlingRefresh(data.refresh_token);
   }
+}
+
+// Guarda o refresh_token do Bling no Firestore para os crons (server-side)
+async function saveBlingRefresh(refreshToken) {
+  const admin = getAdmin();
+  if (!admin || !refreshToken) return;
+  try {
+    await admin.firestore().collection('bling_auth').doc('tokens').set({
+      refreshToken, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) { console.error('[saveBlingRefresh]', e.message); }
+}
+
+// Gera um access_token válido a partir do refresh salvo (usado pelos crons)
+async function getCronBlingToken() {
+  const admin = getAdmin();
+  if (!admin) return null;
+  try {
+    const doc = await admin.firestore().collection('bling_auth').doc('tokens').get();
+    const refresh = doc.exists ? doc.data().refreshToken : null;
+    if (!refresh) return null;
+    const data = await refreshBlingToken(refresh);
+    if (data.refresh_token) await saveBlingRefresh(data.refresh_token);
+    return data.access_token;
+  } catch (e) { console.error('[getCronBlingToken]', e.message); return null; }
 }
 
 async function refreshBlingToken(refreshToken) {
@@ -713,6 +740,138 @@ app.delete('/api/notif/schedule/:id', requireAuthJson, async (req, res) => {
   }
 });
 
+// ── Notificações automáticas (resumos por horário + alertas) ─────
+
+// Envia push para todos os inscritos e registra no histórico
+async function pushParaTodos(admin, { title, body, url = '/dashboard.html', tipo = 'auto' }) {
+  const snap = await admin.firestore().collection('fcm_tokens').get();
+  const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
+  let sent = 0;
+  if (tokens.length) {
+    const result = await admin.messaging().sendEachForMulticast({
+      tokens, notification: { title, body }, webpush: { fcmOptions: { link: url } },
+    });
+    sent = result.successCount;
+    const invalid = result.responses
+      .map((r, i) => (!r.success && r.error?.code === 'messaging/registration-token-not-registered') ? tokens[i] : null)
+      .filter(Boolean);
+    if (invalid.length) {
+      const batch = admin.firestore().batch();
+      invalid.forEach(t => batch.delete(admin.firestore().collection('fcm_tokens').doc(t.slice(0, 128))));
+      await batch.commit();
+    }
+  }
+  await admin.firestore().collection('notif_history').add({
+    title, body, url, tipo, status: 'sent', sent,
+    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return sent;
+}
+
+// Busca produtos do Bling p/ margem média e alertas de estoque
+async function fetchResumoProdutos(token, maxPg = 3) {
+  let all = [];
+  for (let pg = 1; pg <= maxPg; pg++) {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
+      headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
+    });
+    const items = Array.isArray(data?.data) ? data.data : [];
+    all = all.concat(items);
+    if (items.length < 100) break;
+  }
+  const prods = all.map(p => ({
+    preco: typeof p.preco === 'number' ? p.preco : 0,
+    custo: typeof p.precoCusto === 'number' ? p.precoCusto : 0,
+    estoque: typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
+  }));
+  const comCusto = prods.filter(p => p.preco > 0 && p.custo > 0);
+  const margem = comCusto.length ? comCusto.reduce((a, p) => a + (p.preco - p.custo) / p.preco, 0) / comCusto.length : 0;
+  return {
+    margem,
+    zerados: prods.filter(p => p.estoque <= 0).length,
+    criticos: prods.filter(p => p.estoque > 0 && p.estoque <= 5).length,
+  };
+}
+
+function horaBR() { return (new Date().getUTCHours() - 3 + 24) % 24; }
+function slotAtual() {
+  const h = horaBR();
+  if (h < 11) return 'manha';
+  if (h < 14) return 'almoco';
+  if (h < 18) return 'tarde';
+  return 'jantar';
+}
+function checkCronSecret(req) {
+  if (!process.env.CRON_SECRET) return true; // sem secret configurado, libera (uso interno)
+  return req.headers['x-cron-secret'] === process.env.CRON_SECRET || req.query.secret === process.env.CRON_SECRET;
+}
+function montaResumo(slot, { fat, lucro, nv, zerados, brl, temMargem }) {
+  const lucroTxt = temMargem ? ` · lucro estimado ${brl(lucro)}` : '';
+  const semVenda = nv === 0;
+  if (slot === 'manha') return {
+    title: '☀️ Bom dia! Resumo de ontem',
+    body: semVenda ? 'Ontem não houve vendas concluídas. Bora pra cima hoje! 💪'
+      : `Ontem: ${nv} venda(s), ${brl(fat)} faturado${lucroTxt}. Vamos superar hoje! 🚀`,
+  };
+  if (slot === 'almoco') return {
+    title: '🍽️ Parcial do almoço',
+    body: semVenda ? 'Ainda sem vendas hoje. Que tal aquecer as ofertas? 📣'
+      : `Hoje até agora: ${nv} venda(s), ${brl(fat)}${lucroTxt}.`,
+  };
+  if (slot === 'tarde') return {
+    title: '☕ Resumo da tarde',
+    body: semVenda ? 'Tarde sem vendas até agora. Hora de divulgar! 📲'
+      : `Parcial de hoje: ${nv} venda(s), ${brl(fat)}${lucroTxt}.${zerados ? ` ⚠️ ${zerados} zerado(s).` : ''}`,
+  };
+  return {
+    title: '🌙 Fechamento do dia',
+    body: semVenda ? 'Dia sem vendas concluídas. Amanhã viramos o jogo! 🌅'
+      : `Hoje: ${nv} venda(s), ${brl(fat)} faturado${lucroTxt}. Bom descanso! 🌙`,
+  };
+}
+
+// Cron: resumo de lucro/vendas por horário
+app.get('/api/cron/resumo', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  const admin = getAdmin();
+  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  const token = await getCronBlingToken();
+  if (!token) return res.json({ ok: true, skipped: 'Bling não conectado (sem refresh salvo)' });
+  const slot = req.query.slot || slotAtual();
+  try {
+    const ref = new Date();
+    if (slot === 'manha') ref.setDate(ref.getDate() - 1);
+    const dia = ref.toISOString().split('T')[0];
+    const [pedidos, prod] = await Promise.all([
+      fetchPedidos(token, dia, dia, 2),
+      fetchResumoProdutos(token, 3).catch(() => ({ margem: 0, zerados: 0, criticos: 0 })),
+    ]);
+    const concl = pedidos.filter(p => categorizePedido(p.situacao) === 'concluido');
+    const fat = concl.reduce((a, p) => a + valorPedido(p), 0);
+    const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const { title, body } = montaResumo(slot, { fat, lucro: fat * prod.margem, nv: concl.length, zerados: prod.zerados, brl, temMargem: prod.margem > 0 });
+    const sent = await pushParaTodos(admin, { title, body, tipo: 'resumo' });
+    res.json({ ok: true, slot, sent, fat, nv: concl.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Cron: alerta de estoque zerado/crítico
+app.get('/api/cron/estoque', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  const admin = getAdmin();
+  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  const token = await getCronBlingToken();
+  if (!token) return res.json({ ok: true, skipped: 'Bling não conectado' });
+  try {
+    const prod = await fetchResumoProdutos(token, 5);
+    if (!prod.zerados && !prod.criticos) return res.json({ ok: true, sent: 0, msg: 'sem alertas' });
+    const body = `${prod.zerados} produto(s) zerado(s)` + (prod.criticos ? ` e ${prod.criticos} crítico(s) (≤5)` : '') + '. Toque para repor.';
+    const sent = await pushParaTodos(admin, { title: '⚠️ Alerta de estoque', body, tipo: 'estoque' });
+    res.json({ ok: true, sent, zerados: prod.zerados, criticos: prod.criticos });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
 app.get('/api/cron/push', async (req, res) => {
   const admin = getAdmin();
@@ -895,7 +1054,27 @@ app.get('/api/historico', requireAuthJson, (req, res) => {
 
 // ── Webhook (Bling notificações) ──────────────────────────────────
 
-app.post('/api/webhook/bling', (req, res) => res.json({ received: true }));
+app.post('/api/webhook/bling', async (req, res) => {
+  res.json({ received: true }); // responde rápido (Bling espera 200)
+  try {
+    const admin = getAdmin();
+    if (!admin) return;
+    const evt = req.body || {};
+    const tipo = String(evt.event || evt.tipo || evt.type || evt.data?.tipo || '').toLowerCase();
+    let title, body;
+    if (tipo.includes('order') || tipo.includes('pedido') || tipo.includes('venda')) {
+      title = '🛒 Novo pedido!';
+      body = 'Um novo pedido foi registrado no Bling. Toque para ver.';
+    } else if (tipo.includes('nf') || tipo.includes('nota')) {
+      const erro = tipo.includes('rejei') || tipo.includes('erro') || tipo.includes('deneg');
+      title = erro ? '❌ Nota fiscal com erro' : '🧾 Nota fiscal atualizada';
+      body = erro ? 'Uma NF-e foi rejeitada/denegada. Verifique no sistema.' : 'O status de uma NF-e mudou no Bling.';
+    } else {
+      return; // evento não mapeado — não notifica (evita spam)
+    }
+    await pushParaTodos(admin, { title, body, url: '/dashboard.html', tipo: 'evento' });
+  } catch (e) { console.error('[webhook bling]', e.message); }
+});
 
 // ── 404 ──────────────────────────────────────────────────────────
 

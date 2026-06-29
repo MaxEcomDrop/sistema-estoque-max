@@ -1,0 +1,30 @@
+name: Notificações automáticas
+
+# Dispara os resumos por horário (lucro/vendas) e o alerta de estoque.
+# Horários em UTC (Brasília = UTC-3). O endpoint detecta o "slot" pela hora.
+on:
+  schedule:
+    - cron: '0 11 * * *'   # 08:00 BR — resumo da manhã (de ontem)
+    - cron: '0 12 * * *'   # 09:00 BR — alerta de estoque
+    - cron: '0 15 * * *'   # 12:00 BR — parcial do almoço
+    - cron: '0 18 * * *'   # 15:00 BR — resumo da tarde
+    - cron: '0 23 * * *'   # 20:00 BR — fechamento do dia
+  workflow_dispatch:        # permite disparar manualmente para testar
+
+jobs:
+  notificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar notificação
+        env:
+          BASE_URL: https://sistema-estoque-max.vercel.app
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" = "12" ]; then
+            ENDPOINT="estoque"
+          else
+            ENDPOINT="resumo"
+          fi
+          echo "Hora UTC=$HOUR → chamando /api/cron/$ENDPOINT"
+          curl -fsS -H "x-cron-secret: $CRON_SECRET" "$BASE_URL/api/cron/$ENDPOINT" && echo "" || echo "Falha na chamada"

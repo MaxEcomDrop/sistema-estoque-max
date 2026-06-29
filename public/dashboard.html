@@ -587,6 +587,11 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .dash-kpis .dk-card:nth-child(3){animation-delay:.12s}.dash-kpis .dk-card:nth-child(4){animation-delay:.16s}
 .hero-luc{animation-delay:.08s}
 
+/* AUTO NOTIFICATIONS */
+.auto-noti{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--bord-l);border-radius:10px}
+.an-h{font-size:13px;font-weight:800;color:var(--acc-t);font-variant-numeric:tabular-nums;flex-shrink:0;min-width:42px}
+.an-t{font-size:12px;color:var(--tx);line-height:1.3}
+
 /* MOBILE BOTTOM NAV */
 .bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;height:calc(60px + env(safe-area-inset-bottom,0px));background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -1px 0 var(--bord),0 -4px 20px rgba(0,0,0,.05)}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:600;font-family:inherit;padding:6px 2px 4px;transition:color .15s;min-width:0;position:relative;-webkit-tap-highlight-color:transparent}
@@ -1098,6 +1103,23 @@ button:focus:not(:focus-visible){outline:none}
 
     <!-- VIEW NOTIFICAÇÕES -->
     <div class="view" id="view-notificacoes">
+      <!-- AUTOMÁTICAS -->
+      <div class="tcard" style="padding:18px 20px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px;display:flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Notificações automáticas
+          <span style="font-size:10px;font-weight:700;background:var(--ok-bg);color:var(--ok-t);padding:2px 9px;border-radius:20px;margin-left:2px">ENVIADAS PELO SISTEMA</span>
+        </div>
+        <p style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Disparadas todos os dias automaticamente — você não precisa fazer nada.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+          <div class="auto-noti"><span class="an-h">08:00</span><span class="an-t">☀️ Resumo de ontem (vendas + lucro)</span></div>
+          <div class="auto-noti"><span class="an-h">09:00</span><span class="an-t">⚠️ Alerta de estoque zerado/crítico</span></div>
+          <div class="auto-noti"><span class="an-h">12:00</span><span class="an-t">🍽️ Parcial do almoço</span></div>
+          <div class="auto-noti"><span class="an-h">15:00</span><span class="an-t">☕ Resumo da tarde</span></div>
+          <div class="auto-noti"><span class="an-h">20:00</span><span class="an-t">🌙 Fechamento do dia (lucro/prejuízo)</span></div>
+        </div>
+        <p style="font-size:11px;color:var(--fa);margin-top:12px">Eventos como pedido novo e nota com erro também notificam em tempo real. Requer Firebase e Bling conectados.</p>
+      </div>
       <div class="notif-grid">
         <!-- COMPOSITOR -->
         <div class="tcard notif-composer">
