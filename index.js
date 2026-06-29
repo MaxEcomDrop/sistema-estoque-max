@@ -105,6 +105,70 @@ function blingHeaders(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+// ── Bling token: renovação automática via refresh_token ──────────
+const BLING_COOKIE_OPTS = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
+
+function setBlingCookies(res, data) {
+  res.cookie('bling_token', data.access_token, { ...BLING_COOKIE_OPTS, maxAge: (data.expires_in || 3600) * 1000 });
+  if (data.refresh_token) {
+    res.cookie('bling_refresh', data.refresh_token, { ...BLING_COOKIE_OPTS, maxAge: 30 * 24 * 3600 * 1000 });
+    // Persiste o refresh para os crons usarem (fire-and-forget)
+    saveBlingRefresh(data.refresh_token);
+  }
+}
+
+// Guarda o refresh_token do Bling no Firestore para os crons (server-side)
+async function saveBlingRefresh(refreshToken) {
+  const admin = getAdmin();
+  if (!admin || !refreshToken) return;
+  try {
+    await admin.firestore().collection('bling_auth').doc('tokens').set({
+      refreshToken, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) { console.error('[saveBlingRefresh]', e.message); }
+}
+
+// Gera um access_token válido a partir do refresh salvo (usado pelos crons)
+async function getCronBlingToken() {
+  const admin = getAdmin();
+  if (!admin) return null;
+  try {
+    const doc = await admin.firestore().collection('bling_auth').doc('tokens').get();
+    const refresh = doc.exists ? doc.data().refreshToken : null;
+    if (!refresh) return null;
+    const data = await refreshBlingToken(refresh);
+    if (data.refresh_token) await saveBlingRefresh(data.refresh_token);
+    return data.access_token;
+  } catch (e) { console.error('[getCronBlingToken]', e.message); return null; }
+}
+
+async function refreshBlingToken(refreshToken) {
+  const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
+  const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken });
+  const { data } = await axios.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
+    headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+  return data;
+}
+
+// Retorna um access_token válido. Se o atual expirou (cookie some junto),
+// renova automaticamente usando o refresh_token (válido por 30 dias).
+async function ensureBlingToken(req, res) {
+  const token = req.cookies?.bling_token;
+  if (token) return token;
+  const refresh = req.cookies?.bling_refresh;
+  if (!refresh) return null;
+  try {
+    const data = await refreshBlingToken(refresh);
+    setBlingCookies(res, data);
+    return data.access_token;
+  } catch (e) {
+    console.error('[Bling refresh]', e.response?.data || e.message);
+    res.clearCookie('bling_refresh');
+    return null;
+  }
+}
+
 // ── Error Response Helper ────────────────────────────────────────────
 function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
   const response = { error: errorMessage };
@@ -176,6 +240,14 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ success: true });
 });
 
+// Reconfirma a senha (para liberar áreas/ações sensíveis, estilo Shopee)
+app.post('/api/auth/verify', requireAuthJson, (req, res) => {
+  const { password } = req.body || {};
+  if (!ADMIN_PASSWORD) return res.status(500).json({ error: 'Senha não configurada no servidor.' });
+  if (safeEqual(password, ADMIN_PASSWORD)) return res.json({ ok: true });
+  return res.status(401).json({ error: 'Senha incorreta.' });
+});
+
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('system_token');
   res.clearCookie('bling_token');
@@ -208,9 +280,7 @@ app.get('/api/webhook/bling', async (req, res) => {
       headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 
-    const opts = { httpOnly: true, secure: NODE_ENV === 'production', sameSite: 'lax' };
-    res.cookie('bling_token', data.access_token, { ...opts, maxAge: (data.expires_in || 3600) * 1000 });
-    if (data.refresh_token) res.cookie('bling_refresh', data.refresh_token, { ...opts, maxAge: 30 * 24 * 3600 * 1000 });
+    setBlingCookies(res, data);
 
     res.redirect('/dashboard.html');
   } catch (err) {
@@ -222,7 +292,7 @@ app.get('/api/webhook/bling', async (req, res) => {
 // ── Produtos ─────────────────────────────────────────────────────────
 
 app.get('/api/produtos', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
@@ -271,7 +341,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
 
 // Busca produto completo (para editor)
 app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
     const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${req.params.id}`, {
@@ -286,7 +356,7 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
 
 // Criar produto novo
 app.post('/api/produtos', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
     const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
@@ -341,7 +411,7 @@ function periodoAnterior(inicio, fim) {
 
 // Resumo financeiro com suporte a períodos + comparativo
 app.get('/api/financeiro', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
     const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
@@ -400,7 +470,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
 });
 
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
 
   const { id } = req.params;
@@ -483,7 +553,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
 
 // Importação em lote via CSV
 app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
 
   const { produtos } = req.body || {};
@@ -529,7 +599,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
 // ── Pedidos ──────────────────────────────────────────────────────────
 
 app.get('/api/pedidos', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
@@ -560,7 +630,7 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
 // ── Notas Fiscais ─────────────────────────────────────────────────────
 
 app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
     const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfe', {
@@ -588,7 +658,7 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
 });
 
 app.post('/api/nfe/emitir', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   const { pedidoId, obs } = req.body || {};
   if (!pedidoId) return res.status(400).json({ error: 'pedidoId é obrigatório' });
@@ -725,6 +795,138 @@ app.delete('/api/notif/schedule/:id', requireAuthJson, async (req, res) => {
   }
 });
 
+// ── Notificações automáticas (resumos por horário + alertas) ─────
+
+// Envia push para todos os inscritos e registra no histórico
+async function pushParaTodos(admin, { title, body, url = '/dashboard.html', tipo = 'auto' }) {
+  const snap = await admin.firestore().collection('fcm_tokens').get();
+  const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
+  let sent = 0;
+  if (tokens.length) {
+    const result = await admin.messaging().sendEachForMulticast({
+      tokens, notification: { title, body }, webpush: { fcmOptions: { link: url } },
+    });
+    sent = result.successCount;
+    const invalid = result.responses
+      .map((r, i) => (!r.success && r.error?.code === 'messaging/registration-token-not-registered') ? tokens[i] : null)
+      .filter(Boolean);
+    if (invalid.length) {
+      const batch = admin.firestore().batch();
+      invalid.forEach(t => batch.delete(admin.firestore().collection('fcm_tokens').doc(t.slice(0, 128))));
+      await batch.commit();
+    }
+  }
+  await admin.firestore().collection('notif_history').add({
+    title, body, url, tipo, status: 'sent', sent,
+    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return sent;
+}
+
+// Busca produtos do Bling p/ margem média e alertas de estoque
+async function fetchResumoProdutos(token, maxPg = 3) {
+  let all = [];
+  for (let pg = 1; pg <= maxPg; pg++) {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
+      headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
+    });
+    const items = Array.isArray(data?.data) ? data.data : [];
+    all = all.concat(items);
+    if (items.length < 100) break;
+  }
+  const prods = all.map(p => ({
+    preco: typeof p.preco === 'number' ? p.preco : 0,
+    custo: typeof p.precoCusto === 'number' ? p.precoCusto : 0,
+    estoque: typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
+  }));
+  const comCusto = prods.filter(p => p.preco > 0 && p.custo > 0);
+  const margem = comCusto.length ? comCusto.reduce((a, p) => a + (p.preco - p.custo) / p.preco, 0) / comCusto.length : 0;
+  return {
+    margem,
+    zerados: prods.filter(p => p.estoque <= 0).length,
+    criticos: prods.filter(p => p.estoque > 0 && p.estoque <= 5).length,
+  };
+}
+
+function horaBR() { return (new Date().getUTCHours() - 3 + 24) % 24; }
+function slotAtual() {
+  const h = horaBR();
+  if (h < 11) return 'manha';
+  if (h < 14) return 'almoco';
+  if (h < 18) return 'tarde';
+  return 'jantar';
+}
+function checkCronSecret(req) {
+  if (!process.env.CRON_SECRET) return true; // sem secret configurado, libera (uso interno)
+  return req.headers['x-cron-secret'] === process.env.CRON_SECRET || req.query.secret === process.env.CRON_SECRET;
+}
+function montaResumo(slot, { fat, lucro, nv, zerados, brl, temMargem }) {
+  const lucroTxt = temMargem ? ` · lucro estimado ${brl(lucro)}` : '';
+  const semVenda = nv === 0;
+  if (slot === 'manha') return {
+    title: '☀️ Bom dia! Resumo de ontem',
+    body: semVenda ? 'Ontem não houve vendas concluídas. Bora pra cima hoje! 💪'
+      : `Ontem: ${nv} venda(s), ${brl(fat)} faturado${lucroTxt}. Vamos superar hoje! 🚀`,
+  };
+  if (slot === 'almoco') return {
+    title: '🍽️ Parcial do almoço',
+    body: semVenda ? 'Ainda sem vendas hoje. Que tal aquecer as ofertas? 📣'
+      : `Hoje até agora: ${nv} venda(s), ${brl(fat)}${lucroTxt}.`,
+  };
+  if (slot === 'tarde') return {
+    title: '☕ Resumo da tarde',
+    body: semVenda ? 'Tarde sem vendas até agora. Hora de divulgar! 📲'
+      : `Parcial de hoje: ${nv} venda(s), ${brl(fat)}${lucroTxt}.${zerados ? ` ⚠️ ${zerados} zerado(s).` : ''}`,
+  };
+  return {
+    title: '🌙 Fechamento do dia',
+    body: semVenda ? 'Dia sem vendas concluídas. Amanhã viramos o jogo! 🌅'
+      : `Hoje: ${nv} venda(s), ${brl(fat)} faturado${lucroTxt}. Bom descanso! 🌙`,
+  };
+}
+
+// Cron: resumo de lucro/vendas por horário
+app.get('/api/cron/resumo', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  const admin = getAdmin();
+  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  const token = await getCronBlingToken();
+  if (!token) return res.json({ ok: true, skipped: 'Bling não conectado (sem refresh salvo)' });
+  const slot = req.query.slot || slotAtual();
+  try {
+    const ref = new Date();
+    if (slot === 'manha') ref.setDate(ref.getDate() - 1);
+    const dia = ref.toISOString().split('T')[0];
+    const [pedidos, prod] = await Promise.all([
+      fetchPedidos(token, dia, dia, 2),
+      fetchResumoProdutos(token, 3).catch(() => ({ margem: 0, zerados: 0, criticos: 0 })),
+    ]);
+    const concl = pedidos.filter(p => categorizePedido(p.situacao) === 'concluido');
+    const fat = concl.reduce((a, p) => a + valorPedido(p), 0);
+    const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const { title, body } = montaResumo(slot, { fat, lucro: fat * prod.margem, nv: concl.length, zerados: prod.zerados, brl, temMargem: prod.margem > 0 });
+    const sent = await pushParaTodos(admin, { title, body, tipo: 'resumo' });
+    res.json({ ok: true, slot, sent, fat, nv: concl.length });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Cron: alerta de estoque zerado/crítico
+app.get('/api/cron/estoque', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  const admin = getAdmin();
+  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  const token = await getCronBlingToken();
+  if (!token) return res.json({ ok: true, skipped: 'Bling não conectado' });
+  try {
+    const prod = await fetchResumoProdutos(token, 5);
+    if (!prod.zerados && !prod.criticos) return res.json({ ok: true, sent: 0, msg: 'sem alertas' });
+    const body = `${prod.zerados} produto(s) zerado(s)` + (prod.criticos ? ` e ${prod.criticos} crítico(s) (≤5)` : '') + '. Toque para repor.';
+    const sent = await pushParaTodos(admin, { title: '⚠️ Alerta de estoque', body, tipo: 'estoque' });
+    res.json({ ok: true, sent, zerados: prod.zerados, criticos: prod.criticos });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
 app.get('/api/cron/push', async (req, res) => {
   const admin = getAdmin();
@@ -809,7 +1011,7 @@ async function fetchContas(token, tipo) {
 }
 
 app.get('/api/contas/:tipo', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   const tipo = req.params.tipo === 'pagar' ? 'pagar' : 'receber';
   const data = await fetchContas(token, tipo);
@@ -819,7 +1021,7 @@ app.get('/api/contas/:tipo', requireAuthJson, async (req, res) => {
 // ── Dashboard consolidado (primeira aba) ──────────────────────────────
 
 app.get('/api/dashboard', requireAuthJson, async (req, res) => {
-  const token = req.cookies?.bling_token;
+  const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
@@ -899,7 +1101,78 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
   }
 });
 
-// ── Histórico ────────────────────────────────────────────────────────
+// ── Clientes (CRM) ────────────────────────────────────────────────
+
+app.get('/api/clientes', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    // Busca contatos (até 3 páginas) e pedidos dos últimos 90 dias para cruzar
+    const hoje = new Date();
+    const ini = new Date(hoje); ini.setDate(ini.getDate() - 90);
+    const iso = d => d.toISOString().split('T')[0];
+
+    const contatosPromise = (async () => {
+      let all = [];
+      for (let pg = 1; pg <= 3; pg++) {
+        const { data } = await axios.get('https://www.bling.com.br/Api/v3/contatos', {
+          headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
+        });
+        const items = Array.isArray(data?.data) ? data.data : [];
+        all = all.concat(items);
+        if (items.length < 100) break;
+      }
+      return all;
+    })();
+
+    const [contatos, pedidos] = await Promise.all([
+      contatosPromise,
+      fetchPedidos(token, iso(ini), iso(hoje), 3).catch(() => []),
+    ]);
+
+    // Agrega gasto/pedidos por contato
+    const agg = {};
+    pedidos.forEach(p => {
+      const key = p.contato?.id || p.contato?.nome;
+      if (!key) return;
+      if (!agg[key]) agg[key] = { gasto: 0, pedidos: 0, ultimo: '' };
+      agg[key].gasto += valorPedido(p);
+      agg[key].pedidos += 1;
+      const d = String(p.data || '').substring(0, 10);
+      if (d > agg[key].ultimo) agg[key].ultimo = d;
+    });
+
+    const clientes = contatos.map(c => {
+      const a = agg[c.id] || agg[c.nome] || { gasto: 0, pedidos: 0, ultimo: '' };
+      const end = c.endereco?.geral || c.endereco || {};
+      return {
+        id: c.id,
+        nome: c.nome || 'Sem nome',
+        documento: c.numeroDocumento || '',
+        email: c.email || '',
+        telefone: c.celular || c.telefone || c.fone || '',
+        municipio: end.municipio || end.cidade || '',
+        uf: end.uf || end.estado || '',
+        tipo: c.tipo === 'J' ? 'PJ' : c.tipo === 'F' ? 'PF' : (c.tipo || ''),
+        totalGasto: a.gasto,
+        numPedidos: a.pedidos,
+        ultimoPedido: a.ultimo,
+      };
+    });
+    // Ordena por valor gasto (ranking)
+    clientes.sort((x, y) => y.totalGasto - x.totalGasto);
+
+    res.json({ total: clientes.length, clientes });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    res.status(500).json({ error: 'Erro ao buscar clientes', detail: err.message });
+  }
+});
+
+// ── Histórico ────────────────────────────────────────────────────
 
 app.get('/api/historico', requireAuthJson, (req, res) => {
   res.json({ history: changeLog.slice().reverse().slice(0, 300) });
@@ -907,7 +1180,27 @@ app.get('/api/historico', requireAuthJson, (req, res) => {
 
 // ── Webhook (Bling notificações) ──────────────────────────────────────
 
-app.post('/api/webhook/bling', (req, res) => res.json({ received: true }));
+app.post('/api/webhook/bling', async (req, res) => {
+  res.json({ received: true }); // responde rápido (Bling espera 200)
+  try {
+    const admin = getAdmin();
+    if (!admin) return;
+    const evt = req.body || {};
+    const tipo = String(evt.event || evt.tipo || evt.type || evt.data?.tipo || '').toLowerCase();
+    let title, body;
+    if (tipo.includes('order') || tipo.includes('pedido') || tipo.includes('venda')) {
+      title = '🛒 Novo pedido!';
+      body = 'Um novo pedido foi registrado no Bling. Toque para ver.';
+    } else if (tipo.includes('nf') || tipo.includes('nota')) {
+      const erro = tipo.includes('rejei') || tipo.includes('erro') || tipo.includes('deneg');
+      title = erro ? '❌ Nota fiscal com erro' : '🧾 Nota fiscal atualizada';
+      body = erro ? 'Uma NF-e foi rejeitada/denegada. Verifique no sistema.' : 'O status de uma NF-e mudou no Bling.';
+    } else {
+      return; // evento não mapeado — não notifica (evita spam)
+    }
+    await pushParaTodos(admin, { title, body, url: '/dashboard.html', tipo: 'evento' });
+  } catch (e) { console.error('[webhook bling]', e.message); }
+});
 
 // ── 404 ──────────────────────────────────────────────────────────────
 
