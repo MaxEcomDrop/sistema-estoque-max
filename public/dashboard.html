@@ -648,6 +648,40 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .pcard-img{position:relative}
 .pcard:hover .pcard-edit{opacity:1}
 .pcard-edit svg{width:12px;height:12px;color:var(--acc)}
+
+/* ════ POLISH / EFEITOS ════ */
+html{scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+/* Transição suave ao trocar de view */
+.view.on{animation:viewIn .3s cubic-bezier(.22,1,.36,1)}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* Feedback de toque universal nos botões */
+.btp,.bts,.bti,.qs-btn,.fp-btn,.dp-btn,.pt-btn,.lt-btn,.mais-item,.bnav-item,.da-card,.dk-card,.kpi,.fk-card,.tf-card{-webkit-tap-highlight-color:transparent}
+.btp:active,.bts:active,.bti:active{transform:scale(.96)}
+/* Acessibilidade — foco visível por teclado */
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+button:focus:not(:focus-visible){outline:none}
+/* Backdrop blur nos overlays */
+.modal,.bdrop,.edraw-ov{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.mbox,.sheet{animation:popIn .25s cubic-bezier(.22,1,.36,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+/* Skeleton shimmer p/ loading */
+.skel{position:relative;overflow:hidden;background:var(--bord-l);border-radius:8px}
+.skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:shimmer 1.3s infinite}
+[data-theme=dark] .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+@keyframes shimmer{100%{transform:translateX(100%)}}
+.skel-row{height:14px;margin:10px 16px;border-radius:6px}
+.skel-row.w60{width:60%}.skel-row.w40{width:40%}.skel-row.w80{width:80%}
+/* Botões primários com brilho sutil ao hover */
+.btp{position:relative;overflow:hidden}
+.btp::before{content:'';position:absolute;top:0;left:-75%;width:50%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-20deg);transition:left .5s}
+.btp:hover::before{left:125%}
+/* Respeita preferência de movimento reduzido */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+/* Scroll momentum no iOS */
+.conta-body,.qbody,.edraw-bd,.twrap,.sb-nav,.mbox{-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body>
@@ -1416,6 +1450,7 @@ function toast(msg,type=''){
   setTimeout(()=>dismissNoti(id),4500);
 }
 function dismissNoti(id){const el=$(id);if(!el)return;el.classList.add('out');setTimeout(()=>el?.remove(),200);}
+function vibrate(ms=10){try{if(navigator.vibrate)navigator.vibrate(ms);}catch{}}
 function lbStart(){$('lbar').className='go';}
 function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.className='',300);}
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
@@ -1465,6 +1500,7 @@ function renderCards(){
 const VIEWS={inicio:'Início',produtos:'Produtos',pedidos:'Pedidos',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push'};
 const MAIS_VIEWS=['relatorio','notas','historico','notificacoes'];
 function setView(v){
+  vibrate(8);
   S.view=v;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
@@ -1576,6 +1612,7 @@ function renderContasList(elId,conta,tipo){
 
 // ── MAIS MENU ────────────────────────────────────
 function toggleMaisMenu(){
+  vibrate(8);
   const ov=$('mais-ov'),menu=$('mais-menu'),btn=$('bn-mais');
   if(!ov||!menu)return;
   const isOpen=menu.classList.contains('open');
