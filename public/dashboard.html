@@ -1110,8 +1110,12 @@ button:focus:not(:focus-visible){outline:none}
         <div class="rep-card"><div class="rep-lbl">Preço médio</div><div class="rep-val" id="rep-ticket" style="font-size:16px">—</div></div>
       </div>
       <div class="rep-tcard tcard">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Produtos sem estoque</span><span style="font-size:12px;color:var(--mu);margin-left:4px">(ordenado por preço)</span></div>
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Produtos sem estoque</span><span style="font-size:12px;color:var(--mu);margin-left:4px">(ordenado por preço)</span><div class="tr"><button class="bts" onclick="exportRelatorioCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV</button></div></div>
         <div class="vtable" id="rep-body"></div>
+      </div>
+      <div class="rep-tcard tcard" style="margin-top:14px">
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Top 10 mais valiosos</span><span style="font-size:12px;color:var(--mu);margin-left:4px">(maior valor em estoque)</span></div>
+        <div class="vtable" id="rep-top-body"></div>
       </div>
     </div>
 
@@ -1326,6 +1330,11 @@ button:focus:not(:focus-visible){outline:none}
         </div>
       </div>
 
+      <!-- Curva ABC -->
+      <div class="tcard" style="margin-top:0">
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Curva ABC</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(concentração de valor em estoque)</span></div>
+        <div class="vtable" id="fin-abc-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para calcular a curva ABC.</p></div></div>
+      </div>
       <!-- Margem por produto -->
       <div class="tcard" style="margin-top:0">
         <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(venda vs custo cadastrado no Bling)</span><div class="tr"><button class="bts" onclick="loadFinanceiro()">↻ Atualizar</button></div></div>
@@ -2354,12 +2363,42 @@ function renderReport(){
   const ps=S.products;
   $('rep-parado').textContent=fmtN(ps.filter(p=>p.estoque===0).length);
   $('rep-crit').textContent=fmtN(ps.filter(p=>p.estoque>0&&p.estoque<=3).length);
-  $('rep-imob').textContent=fmt(ps.filter(p=>p.estoque===0).reduce((a,p)=>a+p.preco,0));
+  $('rep-imob').textContent=fmt(ps.reduce((a,p)=>a+(p.preco*p.estoque),0));
   $('rep-ticket').textContent=ps.length?fmt(ps.reduce((a,p)=>a+p.preco,0)/ps.length):'—';
   const zero=ps.filter(p=>p.estoque===0).sort((a,b)=>b.preco-a.preco);
   const body=$('rep-body');
-  if(!zero.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto zerado.</p></div>';return;}
-  body.innerHTML=`<table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th style="text-align:right">Preço</th></tr></thead><tbody>${zero.slice(0,100).map(p=>`<tr><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('')}</tbody></table>`;
+  if(!zero.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto zerado.</p></div>';}
+  else{body.innerHTML=`<table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th style="text-align:right">Preço</th></tr></thead><tbody>${zero.slice(0,100).map(p=>`<tr><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('')}</tbody></table>`;}
+  // Top 10 mais valiosos em estoque
+  const topBody=$('rep-top-body');
+  if(topBody){
+    const top=ps.filter(p=>p.estoque>0&&p.preco>0).sort((a,b)=>(b.preco*b.estoque)-(a.preco*a.estoque)).slice(0,10);
+    if(!top.length){topBody.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos primeiro.</p></div>';}
+    else{topBody.innerHTML=`<table><thead><tr><th>#</th><th>Produto</th><th class="r">Qtd</th><th class="r">Preço</th><th class="r">Valor total</th></tr></thead><tbody>${top.map((p,i)=>`<tr><td style="font-weight:700;color:var(--acc-t)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmtN(p.estoque)} un.</td><td class="r">${fmt(p.preco)}</td><td class="r pcell" style="font-weight:700">${fmt(p.preco*p.estoque)}</td></tr>`).join('')}</tbody></table>`;}
+  }
+}
+function exportRelatorioCSV(){
+  const ps=S.products;
+  if(!ps.length){toast('Carregue os produtos primeiro','err');return;}
+  const cols=['codigo','nome','categoria','preco','precoCusto','estoque','situacao'];
+  const csv=[cols.join(','),...ps.map(p=>cols.map(k=>{const v=p[k];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`relatorio_estoque_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast(`${ps.length} produtos exportados`,'ok');
+}
+function renderCurvaABC(){
+  const el=$('fin-abc-body');if(!el)return;
+  const ps=S.products.filter(p=>p.preco>0&&p.estoque>0).sort((a,b)=>(b.preco*b.estoque)-(a.preco*a.estoque));
+  if(!ps.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
+  const total=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
+  let cum=0;
+  const rows=ps.map((p,i)=>{
+    const val=p.preco*p.estoque;cum+=val;const pct=(cum/total)*100;
+    const cls=pct<=80?'ok':pct<=95?'lo':'out';
+    const label=pct<=80?'A':pct<=95?'B':'C';
+    return`<tr><td style="font-weight:700;color:var(--mu)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(val)}</td><td class="r" style="color:var(--mu)">${((val/total)*100).toFixed(1)}%</td><td class="r">${(cum/total*100).toFixed(1)}%</td><td><span class="sb2 s-${cls}">${label}</span></td></tr>`;
+  });
+  const countA=ps.filter((_,i)=>{let c=0;for(let j=0;j<=i;j++)c+=ps[j].preco*ps[j].estoque;return(c/total)*100<=80;}).length;
+  el.innerHTML=`<div style="display:flex;gap:20px;padding:14px 16px;border-bottom:1px solid var(--bord-l);font-size:12px"><span>🟢 Classe A: <strong>${countA} itens</strong> = 80% do valor</span><span>🟡 Classe B: 80–95%</span><span>🔴 Classe C: 95–100%</span></div><table><thead><tr><th>#</th><th>Produto</th><th class="r">Valor total</th><th class="r">% individual</th><th class="r">% acumulado</th><th>Classe</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 
 // ── MODALS ───────────────────────────────────────
@@ -2681,6 +2720,7 @@ async function loadFinanceiro(){
     if(cr&&d.periodo)cr.textContent=`${lbl[d.periodo.period]||''} · ${d.periodo.inicio} a ${d.periodo.fim}`;
     // Chart
     renderFinChart(d.byDay||{},d.periodo?.inicio,d.periodo?.fim);
+    renderCurvaABC();
     // Margem table
     const prods=S.products.filter(p=>p.precoCusto>0&&p.preco>0).sort((a,b)=>{const ma=(a.preco-a.precoCusto)/a.preco;const mb=(b.preco-b.precoCusto)/b.preco;return ma-mb;});
     if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
