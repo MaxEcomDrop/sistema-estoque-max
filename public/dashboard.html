@@ -14,7 +14,7 @@
 <style>
 :root{
   --sw:240px;--scw:60px;--th:56px;
-  --bg:#f1f5f9;--surf:#ffffff;--bord:#e2e8f0;--bord-l:#f1f5f9;
+  --bg:#eef1fb;--surf:#ffffff;--bord:#e2e8f0;--bord-l:#eef1f8;
   --acc:#6366f1;--acc-h:#4f46e5;--acc-bg:#eef2ff;--acc-t:#4f46e5;
   --sb:#0f172a;--sb-bord:rgba(255,255,255,.06);
   --tx:#0f172a;--mu:#64748b;--fa:#94a3b8;
@@ -74,19 +74,19 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .sb.col~.main{margin-left:var(--scw)}
 
 /* TOPBAR */
-.topbar{height:var(--th);background:var(--surf);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;box-shadow:0 1px 0 var(--bord)}
+.topbar{height:var(--th);background:linear-gradient(90deg,var(--surf),var(--acc-bg) 180%);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;box-shadow:0 1px 0 var(--bord)}
 .tb-title{font-size:15px;font-weight:700;color:var(--tx);letter-spacing:-.3px}
 .sync-ts{font-size:11px;color:var(--fa);white-space:nowrap}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.bti{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--bord);border-radius:8px;cursor:pointer;color:var(--mu);transition:all .15s;flex-shrink:0}
+.bti{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--bord);border-radius:11px;cursor:pointer;color:var(--mu);transition:all .15s;flex-shrink:0}
 .bti:hover{background:var(--acc-bg);border-color:var(--acc);color:var(--acc-t)}
 .bti svg{width:15px;height:15px}
-.btp{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:0 1px 4px rgba(99,102,241,.3)}
+.btp{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;background:var(--acc);color:#fff;border:none;border-radius:11px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:0 1px 4px rgba(99,102,241,.3)}
 .btp:hover{background:var(--acc-h);box-shadow:0 4px 12px rgba(99,102,241,.4);transform:translateY(-1px)}
 .btp:active{transform:none;box-shadow:none}
 .btp:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
 .btp svg{width:14px;height:14px}
-.bts{display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;background:var(--surf);color:var(--tx);border:1px solid var(--bord);border-radius:8px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap}
+.bts{display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;background:var(--surf);color:var(--tx);border:1px solid var(--bord);border-radius:11px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap}
 .bts:hover{background:var(--bg);border-color:var(--mu)}.bts svg{width:14px;height:14px}
 
 /* CONTENT */
@@ -588,6 +588,25 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .dash-kpis .dk-card:nth-child(1){animation-delay:.04s}.dash-kpis .dk-card:nth-child(2){animation-delay:.08s}
 .dash-kpis .dk-card:nth-child(3){animation-delay:.12s}.dash-kpis .dk-card:nth-child(4){animation-delay:.16s}
 .hero-luc{animation-delay:.08s}
+
+/* CONFIGURAÇÕES */
+.cfg-card{background:var(--surf);border:1px solid var(--bord);border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:var(--sh)}
+.cfg-title{font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.cfg-desc{font-size:12.5px;color:var(--mu);margin-bottom:14px}
+.cfg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--bord-l);font-size:13.5px}
+.cfg-row:last-child{border-bottom:none}
+.cfg-row-lbl{color:var(--mu)}
+.cfg-row-val{font-weight:600;color:var(--tx)}
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.theme-opt{background:var(--bg);border:2px solid var(--bord);border-radius:14px;padding:12px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:9px;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.theme-opt:hover{border-color:var(--acc)}
+.theme-opt.on{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.16)}
+.theme-prev{width:100%;height:44px;border-radius:9px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--bord)}
+.theme-prev span{flex:1;display:block}
+.tp-light{background:#fff}.tp-light span:first-child{background:#6366f1;flex:0 0 13px}.tp-light span:last-child{background:#f1f5f9}
+.tp-dark{background:#0b1120}.tp-dark span:first-child{background:#6366f1;flex:0 0 13px}.tp-dark span:last-child{background:#141e31}
+.tp-system{background:linear-gradient(135deg,#fff 49%,#0b1120 51%)}
+.theme-lbl{font-size:12.5px;font-weight:600;color:var(--tx)}
 
 /* AUTO NOTIFICATIONS */
 .auto-noti{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--bord-l);border-radius:10px}
@@ -1304,6 +1323,43 @@ button:focus:not(:focus-visible){outline:none}
       </div>
     </div>
 
+    <!-- VIEW CONFIGURAÇÕES -->
+    <div class="view" id="view-config">
+      <div class="cfg-card">
+        <div class="cfg-title">Aparência</div>
+        <div class="cfg-desc">Escolha o tema do aplicativo.</div>
+        <div class="theme-grid">
+          <button class="theme-opt" data-theme="light" onclick="setTheme('light')">
+            <div class="theme-prev tp-light"><span></span><span></span></div>
+            <span class="theme-lbl">Claro</span>
+          </button>
+          <button class="theme-opt" data-theme="dark" onclick="setTheme('dark')">
+            <div class="theme-prev tp-dark"><span></span><span></span></div>
+            <span class="theme-lbl">Escuro</span>
+          </button>
+          <button class="theme-opt" data-theme="system" onclick="setTheme('system')">
+            <div class="theme-prev tp-system"></div>
+            <span class="theme-lbl">Sistema</span>
+          </button>
+        </div>
+      </div>
+      <div class="cfg-card">
+        <div class="cfg-title">Notificações</div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Push neste dispositivo</span><button class="btp" onclick="askNotifPerm()">Ativar</button></div>
+        <div class="cfg-desc" style="margin-top:10px;margin-bottom:0">Resumos automáticos de lucro são enviados nos horários configurados (manhã, almoço, tarde e noite).</div>
+      </div>
+      <div class="cfg-card">
+        <div class="cfg-title">Conta &amp; Integração</div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Integração Bling</span><button class="bts" onclick="window.location.href='/'">Reconectar</button></div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Sessão</span><button class="bts" onclick="logout()" style="color:var(--er-t)">Sair da conta</button></div>
+      </div>
+      <div class="cfg-card">
+        <div class="cfg-title">Sobre</div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Sistema</span><span class="cfg-row-val">Estoque Max</span></div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Integrado a</span><span class="cfg-row-val">Bling ERP</span></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1484,9 +1540,9 @@ button:focus:not(:focus-visible){outline:none}
   </div>
   <div class="mais-sep"></div>
   <div class="mais-actions">
-    <button class="mais-row-item" onclick="toggleDark();closeMaisMenu()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      Alternar modo escuro
+    <button class="mais-row-item" onclick="setView('config')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configurações
     </button>
     <button class="mais-row-item" onclick="window.location.href='/'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
@@ -1521,7 +1577,7 @@ const S = {
   lastSync:null, autoRefresh:parseInt(localStorage.getItem('ar')||'0'),
   arTimer:null, arCountdown:0,
   layout:localStorage.getItem('layout')||'list',
-  dark:localStorage.getItem('dm')==='1',
+  theme:localStorage.getItem('theme')||(localStorage.getItem('dm')==='1'?'dark':'light'),
   collapsed:localStorage.getItem('sc')==='1',
   presets:JSON.parse(localStorage.getItem('presets')||'[]'),
   undoStack:[], undoTimeout:null, importData:[],
@@ -1551,8 +1607,12 @@ function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.classNam
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
 
 // ── THEME/SIDEBAR ──────────────────────────────────
-function applyTheme(){document.documentElement.setAttribute('data-theme',S.dark?'dark':'light');}
-function toggleDark(){S.dark=!S.dark;localStorage.setItem('dm',S.dark?'1':'0');applyTheme();}
+function effectiveDark(){return S.theme==='dark'||(S.theme==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches);}
+function applyTheme(){document.documentElement.setAttribute('data-theme',effectiveDark()?'dark':'light');updateThemeButtons();}
+function setTheme(t){S.theme=t;localStorage.setItem('theme',t);applyTheme();}
+function toggleDark(){setTheme(effectiveDark()?'light':'dark');}
+function updateThemeButtons(){document.querySelectorAll('.theme-opt').forEach(b=>b.classList.toggle('on',b.dataset.theme===S.theme));}
+if(window.matchMedia){try{window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(S.theme==='system')applyTheme();});}catch(e){}}
 function toggleSidebar(){S.collapsed=!S.collapsed;localStorage.setItem('sc',S.collapsed?'1':'0');$('sidebar').classList.toggle('col',S.collapsed);}
 
 // ── LAYOUT ─────────────────────────────────────────
@@ -1592,8 +1652,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push'};
-const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push',config:'Configurações'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes','config'];
 function setView(v){
   vibrate(8);
   S.view=v;
