@@ -19,9 +19,8 @@ function validateEnvironment() {
   
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
-    console.error('❌ Variáveis de ambiente obrigatórias não configuradas:', missing.join(', '));
-    console.error('   Configure-as em um arquivo .env ou nas variáveis de ambiente do seu servidor.');
-    process.exit(1);
+    console.warn('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
+    console.warn('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
   }
 }
 
