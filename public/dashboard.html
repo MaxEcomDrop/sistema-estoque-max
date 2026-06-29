@@ -781,6 +781,10 @@ button:focus:not(:focus-visible){outline:none}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       <span class="ni-label">Financeiro</span>
     </button>
+    <button class="ni" id="ni-integracoes" onclick="setView('integracoes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><path d="M13 17a3 3 0 0 0 3 3h2a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3z"/></svg>
+      <span class="ni-label">Integrações</span>
+    </button>
     <button class="ni" onclick="window.location.href='/'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
       <span class="ni-label">Reconectar Bling</span>
@@ -1374,6 +1378,35 @@ button:focus:not(:focus-visible){outline:none}
     </div>
 
     <!-- VIEW CONFIGURAÇÕES -->
+    <!-- VIEW INTEGRAÇÕES -->
+    <div class="view" id="view-integracoes">
+      <!-- Status do Bling -->
+      <div class="cfg-card">
+        <div class="cfg-title">Canais ativos</div>
+        <div class="cfg-desc">Status das integrações conectadas ao sistema.</div>
+        <div class="cfg-row">
+          <span style="display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#eef2ff;color:#4f46e5;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">B</span>
+            <span style="font-weight:600;color:var(--tx)">Bling ERP</span>
+          </span>
+          <span class="sb2 s-ok" id="bling-status-badge">Conectado</span>
+        </div>
+      </div>
+      <!-- Taxas de Marketplace -->
+      <div class="cfg-card">
+        <div class="cfg-title">Custos por marketplace</div>
+        <div class="cfg-desc">Configure a comissão e taxa fixa de cada canal para calcular o lucro real por plataforma. Dados salvos localmente no seu navegador.</div>
+        <div id="int-canais"></div>
+        <button class="btp" onclick="saveIntegracoes()" style="width:100%;margin-top:14px;justify-content:center">Salvar configurações</button>
+      </div>
+      <!-- Lucro estimado por canal -->
+      <div class="cfg-card" id="int-lucro-card" style="display:none">
+        <div class="cfg-title">Lucro estimado por canal</div>
+        <div class="cfg-desc">Baseado na margem média dos produtos com custo cadastrado no Bling.</div>
+        <div id="int-lucro-body"></div>
+      </div>
+    </div>
+
     <div class="view" id="view-config">
       <div class="cfg-card">
         <div class="cfg-title">Aparência</div>
@@ -1638,6 +1671,10 @@ button:focus:not(:focus-visible){outline:none}
   </div>
   <div class="mais-sep"></div>
   <div class="mais-actions">
+    <button class="mais-item" onclick="setView('integracoes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><path d="M13 17a3 3 0 0 0 3 3h2a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3z"/></svg>
+      <span>Integrações</span>
+    </button>
     <button class="mais-row-item" onclick="setView('config')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Configurações
@@ -1750,8 +1787,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push',config:'Configurações'};
-const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes','config'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push',integracoes:'Integrações',config:'Configurações'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes','integracoes','config'];
 // Gate de senha para a aba Notas Fiscais
 let _nfeUnlocked=false;
 function setView(v){
@@ -1780,6 +1817,7 @@ function setView(v){
   if(v==='historico')loadHistorico();
   if(v==='financeiro')loadFinanceiro();
   if(v==='notificacoes')loadNotificacoes();
+  if(v==='integracoes')loadIntegracoes();
   closeMaisMenu();
 }
 
@@ -1894,6 +1932,90 @@ function closeMaisMenu(){
   $('mais-ov')?.classList.remove('open');
   $('mais-menu')?.classList.remove('open');
   if(!MAIS_VIEWS.includes(S.view))$('bn-mais')?.classList.remove('on');
+}
+
+// ── INTEGRAÇÕES ───────────────────────────────────
+const INT_CANAIS=[
+  {id:'ml',nome:'Mercado Livre',cor:'#ffe600',tc:'#333',comissao:14,fixo:6},
+  {id:'shopee',nome:'Shopee',cor:'#ee4d2d',tc:'#fff',comissao:13,fixo:0},
+  {id:'amazon',nome:'Amazon Brasil',cor:'#ff9900',tc:'#333',comissao:12,fixo:0},
+  {id:'magalu',nome:'Magazine Luiza',cor:'#0086ff',tc:'#fff',comissao:11,fixo:0},
+  {id:'americanas',nome:'Americanas',cor:'#e30613',tc:'#fff',comissao:12,fixo:0},
+  {id:'ifood',nome:'iFood Shop',cor:'#ea1d2c',tc:'#fff',comissao:12,fixo:0},
+  {id:'custom',nome:'Canal próprio',cor:'#6366f1',tc:'#fff',comissao:0,fixo:0},
+];
+function loadIntegracoes(){
+  const saved=JSON.parse(localStorage.getItem('em_integracoes')||'{}');
+  const wrap=$('int-canais');if(!wrap)return;
+  wrap.innerHTML=INT_CANAIS.map(c=>{
+    const cfg=saved[c.id]||{};
+    const com=cfg.comissao!=null?cfg.comissao:c.comissao;
+    const fix=cfg.fixo!=null?cfg.fixo:c.fixo;
+    const ativo=cfg.ativo!=null?cfg.ativo:false;
+    return`<div class="cfg-row" style="flex-wrap:wrap;gap:10px 16px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:160px">
+        <input type="checkbox" id="int-ativo-${c.id}" ${ativo?'checked':''} onchange="updateLucroCanais()">
+        <span style="display:flex;align-items:center;gap:8px">
+          <span style="width:28px;height:28px;border-radius:7px;background:${c.cor};color:${c.tc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${c.nome.split(' ').map(w=>w[0]).join('').slice(0,2)}</span>
+          <span style="font-weight:600;color:var(--tx)">${esc(c.nome)}</span>
+        </span>
+      </label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--mu)">
+          <label for="int-com-${c.id}" style="white-space:nowrap">Comissão</label>
+          <input type="number" id="int-com-${c.id}" value="${com}" min="0" max="100" step="0.1" style="width:60px;height:30px;padding:0 6px;background:var(--bg);border:1.5px solid var(--bord);border-radius:7px;font-size:12px;font-family:inherit;color:var(--tx);outline:none" oninput="updateLucroCanais()">
+          <span>%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--mu)">
+          <label for="int-fix-${c.id}" style="white-space:nowrap">Taxa fixa</label>
+          <span>R$</span>
+          <input type="number" id="int-fix-${c.id}" value="${fix}" min="0" step="0.01" style="width:60px;height:30px;padding:0 6px;background:var(--bg);border:1.5px solid var(--bord);border-radius:7px;font-size:12px;font-family:inherit;color:var(--tx);outline:none" oninput="updateLucroCanais()">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  updateLucroCanais();
+}
+function saveIntegracoes(){
+  const data={};
+  INT_CANAIS.forEach(c=>{
+    const ativo=$('int-ativo-'+c.id)?.checked||false;
+    const comissao=parseFloat($('int-com-'+c.id)?.value)||0;
+    const fixo=parseFloat($('int-fix-'+c.id)?.value)||0;
+    data[c.id]={ativo,comissao,fixo};
+  });
+  localStorage.setItem('em_integracoes',JSON.stringify(data));
+  toast('Configurações salvas','ok');
+  updateLucroCanais();
+}
+function updateLucroCanais(){
+  const card=$('int-lucro-card'),body=$('int-lucro-body');
+  if(!card||!body)return;
+  const margem=avgMargem();
+  if(margem===0){card.style.display='none';return;}
+  const mPct=Math.round(margem*100);
+  const rows=INT_CANAIS.map(c=>{
+    if(!$('int-ativo-'+c.id)?.checked)return'';
+    const com=parseFloat($('int-com-'+c.id)?.value)||0;
+    const fix=parseFloat($('int-fix-'+c.id)?.value)||0;
+    const avgPreco=S.products.filter(p=>p.preco>0).reduce((a,p)=>a+p.preco,0)/(S.products.filter(p=>p.preco>0).length||1);
+    const taxaFixaPct=avgPreco>0?(fix/avgPreco)*100:0;
+    const netPct=Math.round(mPct-com-taxaFixaPct);
+    const cor=netPct>=20?'ok':netPct>=5?'lo':'out';
+    return`<div class="cfg-row">
+      <span style="display:flex;align-items:center;gap:8px">
+        <span style="width:22px;height:22px;border-radius:5px;background:${c.cor};color:${c.tc};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:800">${c.nome.split(' ').map(w=>w[0]).join('').slice(0,2)}</span>
+        ${esc(c.nome)}
+      </span>
+      <span style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--mu)">${mPct}% − ${com.toFixed(1)}%${fix>0?` − R$${fix.toFixed(2)}`:''}  =</span>
+        <span class="sb2 s-${cor}" style="font-size:13px;font-weight:700">${netPct}%</span>
+      </span>
+    </div>`;
+  }).filter(Boolean).join('');
+  if(!rows){card.style.display='none';return;}
+  card.style.display='';
+  body.innerHTML=`<div class="cfg-row"><span class="cfg-row-lbl">Margem média (Bling)</span><span class="sb2 s-ok">${mPct}%</span></div>${rows}`;
 }
 
 // ── LOAD ──────────────────────────────────────────
