@@ -78,6 +78,25 @@ function blingHeaders(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+// Resolve intervalo de datas a partir do período (today | 7d | 30d | custom)
+function resolvePeriodo(period, startDate, endDate) {
+  const hoje = new Date();
+  const iso = d => d.toISOString().split('T')[0];
+  let inicio, fim;
+  if (period === 'today') {
+    inicio = fim = iso(hoje);
+  } else if (period === '7d') {
+    const d = new Date(hoje); d.setDate(d.getDate() - 6);
+    inicio = iso(d); fim = iso(hoje);
+  } else if (period === 'custom' && startDate && endDate) {
+    inicio = startDate; fim = endDate;
+  } else {
+    const d = new Date(hoje); d.setDate(d.getDate() - 29);
+    inicio = iso(d); fim = iso(hoje);
+  }
+  return { inicio, fim, period: period || '30d' };
+}
+
 // ── Páginas ──────────────────────────────────────────────────────
 
 app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
@@ -242,21 +261,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
   const token = req.cookies?.bling_token;
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
-    const { period = '30d', startDate, endDate } = req.query;
-    const hoje = new Date();
-    let inicio, fim;
-    if (period === 'today') {
-      inicio = fim = hoje.toISOString().split('T')[0];
-    } else if (period === '7d') {
-      const d = new Date(hoje); d.setDate(d.getDate() - 6);
-      inicio = d.toISOString().split('T')[0]; fim = hoje.toISOString().split('T')[0];
-    } else if (period === 'custom' && startDate && endDate) {
-      inicio = startDate; fim = endDate;
-    } else {
-      // 30d default
-      const d = new Date(hoje); d.setDate(d.getDate() - 29);
-      inicio = d.toISOString().split('T')[0]; fim = hoje.toISOString().split('T')[0];
-    }
+    const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
 
     // Busca até 300 pedidos (3 páginas)
     let allPedidos = [];
@@ -680,6 +685,148 @@ app.get('/api/cron/push', async (req, res) => {
     res.json({ ok: true, sent });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Contas a pagar / receber ──────────────────────────────────────
+
+// Normaliza situação de conta Bling (1=aberto, 2=recebido/pago, 3=parcial, 4=cancelado/baixado)
+function contaEmAberto(situacao) {
+  const n = String(situacao?.valor ?? situacao?.nome ?? situacao ?? '').toLowerCase();
+  if (n === '1' || n.includes('aberto') || n.includes('pendente')) return true;
+  if (n === '3' || n.includes('parcial')) return true;
+  return false;
+}
+
+async function fetchContas(token, tipo) {
+  // tipo: 'receber' | 'pagar'
+  let all = [];
+  try {
+    for (let pg = 1; pg <= 3; pg++) {
+      const { data } = await axios.get(`https://www.bling.com.br/Api/v3/contas/${tipo}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: pg },
+      });
+      const items = Array.isArray(data?.data) ? data.data : [];
+      all = all.concat(items);
+      if (items.length < 100) break;
+    }
+  } catch (e) {
+    return { ok: false, total: 0, count: 0, vencidas: 0, vencidasValor: 0, itens: [], erro: e.response?.status || e.message };
+  }
+  const hoje = new Date().toISOString().split('T')[0];
+  let total = 0, count = 0, vencidas = 0, vencidasValor = 0;
+  const itens = [];
+  for (const c of all) {
+    if (!contaEmAberto(c.situacao)) continue;
+    const valor = Number(c.valor || c.saldo || 0);
+    const venc = String(c.vencimento || c.dataVencimento || '').substring(0, 10);
+    total += valor; count++;
+    const isVencida = venc && venc < hoje;
+    if (isVencida) { vencidas++; vencidasValor += valor; }
+    itens.push({
+      id: c.id, valor, vencimento: venc, vencida: isVencida,
+      contato: c.contato?.nome || c.historico || '—',
+    });
+  }
+  itens.sort((a, b) => (a.vencimento || '9999').localeCompare(b.vencimento || '9999'));
+  return { ok: true, total, count, vencidas, vencidasValor, itens: itens.slice(0, 30) };
+}
+
+app.get('/api/contas/:tipo', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  const tipo = req.params.tipo === 'pagar' ? 'pagar' : 'receber';
+  const data = await fetchContas(token, tipo);
+  res.json(data);
+});
+
+// ── Dashboard consolidado (primeira aba) ──────────────────────────
+
+app.get('/api/dashboard', requireAuthJson, async (req, res) => {
+  const token = req.cookies?.bling_token;
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
+
+  const categorize = s => {
+    const n = String(s?.nome || s?.valor || s || '').toLowerCase();
+    if (n.includes('cancel')) return 'cancelado';
+    if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
+    return 'pendente';
+  };
+
+  try {
+    // Busca pedidos do período (2 páginas) + contas em paralelo
+    const pedidosPromise = (async () => {
+      let all = [];
+      for (let pg = 1; pg <= 2; pg++) {
+        const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
+        });
+        const items = Array.isArray(data?.data) ? data.data : [];
+        all = all.concat(items);
+        if (items.length < 100) break;
+      }
+      return all;
+    })();
+
+    const [pedRes, receberRes, pagarRes] = await Promise.allSettled([
+      pedidosPromise,
+      fetchContas(token, 'receber'),
+      fetchContas(token, 'pagar'),
+    ]);
+
+    if (pedRes.status === 'rejected') {
+      if (pedRes.reason?.response?.status === 401) {
+        res.clearCookie('bling_token');
+        return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+      }
+      throw pedRes.reason;
+    }
+
+    const allPedidos = pedRes.value || [];
+    const valorOf = p => p.totalVenda || p.totalProdutos || 0;
+    const concluidos = allPedidos.filter(p => categorize(p.situacao) === 'concluido');
+    const pendentes  = allPedidos.filter(p => categorize(p.situacao) === 'pendente');
+    const cancelados = allPedidos.filter(p => categorize(p.situacao) === 'cancelado');
+    const sum = (arr) => arr.reduce((a, p) => a + valorOf(p), 0);
+
+    const faturamento = sum(concluidos);
+    const totalBruto  = sum(allPedidos);
+    const aReceberPedidos = sum(pendentes);
+
+    // Série diária (vendas concluídas) p/ mini-gráfico
+    const byDay = {};
+    concluidos.forEach(p => {
+      const day = String(p.data || p.dataPedido || '').substring(0, 10);
+      if (day) byDay[day] = (byDay[day] || 0) + valorOf(p);
+    });
+
+    const receber = receberRes.status === 'fulfilled' ? receberRes.value : { ok: false, total: 0, count: 0, vencidas: 0 };
+    const pagar   = pagarRes.status === 'fulfilled' ? pagarRes.value : { ok: false, total: 0, count: 0, vencidas: 0 };
+
+    res.json({
+      periodo: { inicio, fim, period },
+      vendas: {
+        faturamento, totalBruto, aReceberPedidos,
+        totalPedidos: allPedidos.length,
+        concluidos: concluidos.length,
+        pendentes: pendentes.length,
+        cancelados: cancelados.length,
+        ticketMedio: concluidos.length ? faturamento / concluidos.length : 0,
+        byDay,
+      },
+      contasReceber: { total: receber.total, count: receber.count, vencidas: receber.vencidas, vencidasValor: receber.vencidasValor || 0, ok: receber.ok, itens: receber.itens || [] },
+      contasPagar:   { total: pagar.total,   count: pagar.count,   vencidas: pagar.vencidas,   vencidasValor: pagar.vencidasValor || 0,   ok: pagar.ok,   itens: pagar.itens || [] },
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    res.status(500).json({ error: 'Erro ao montar dashboard', detail: err.message });
   }
 });
 
