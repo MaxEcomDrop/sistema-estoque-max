@@ -3398,13 +3398,13 @@ function renderReport(){
   const zero=ps.filter(p=>p.estoque===0).sort((a,b)=>b.preco-a.preco);
   const body=$('rep-body');
   if(!zero.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto zerado.</p></div>';}
-  else{body.innerHTML=`<table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th style="text-align:right">Preço</th></tr></thead><tbody>${zero.slice(0,100).map(p=>`<tr><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('')}</tbody></table>`;}
+  else{body.innerHTML=`<table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th style="text-align:right">Preço</th></tr></thead><tbody>${zero.slice(0,100).map(p=>`<tr style="cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto"><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('')}</tbody></table>`;}
   // Top 10 mais valiosos em estoque
   const topBody=$('rep-top-body');
   if(topBody){
     const top=ps.filter(p=>p.estoque>0&&p.preco>0).sort((a,b)=>(b.preco*b.estoque)-(a.preco*a.estoque)).slice(0,10);
     if(!top.length){topBody.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos primeiro.</p></div>';}
-    else{topBody.innerHTML=`<table><thead><tr><th>#</th><th>Produto</th><th class="r">Qtd</th><th class="r">Preço</th><th class="r">Valor total</th></tr></thead><tbody>${top.map((p,i)=>`<tr><td style="font-weight:700;color:var(--acc-t)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmtN(p.estoque)} un.</td><td class="r">${fmt(p.preco)}</td><td class="r pcell" style="font-weight:700">${fmt(p.preco*p.estoque)}</td></tr>`).join('')}</tbody></table>`;}
+    else{topBody.innerHTML=`<table><thead><tr><th>#</th><th>Produto</th><th class="r">Qtd</th><th class="r">Preço</th><th class="r">Valor total</th></tr></thead><tbody>${top.map((p,i)=>`<tr style="cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto"><td style="font-weight:700;color:var(--acc-t)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmtN(p.estoque)} un.</td><td class="r">${fmt(p.preco)}</td><td class="r pcell" style="font-weight:700">${fmt(p.preco*p.estoque)}</td></tr>`).join('')}</tbody></table>`;}
   }
 }
 function exportRelatorioCSV(){
