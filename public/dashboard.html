@@ -743,6 +743,16 @@ button:focus:not(:focus-visible){outline:none}
 .t-compact .thumb{width:28px;height:28px;border-radius:6px}
 .t-compact .pname-sub{display:none}
 .t-compact thead th{padding:7px 10px}
+/* Meta de vendas */
+.meta-bar-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:16px 20px;box-shadow:var(--sh);display:none}
+.meta-bar-wrap.vis{display:block}
+.meta-bar-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.meta-bar-lbl{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.meta-bar-pct{font-size:13px;font-weight:700;color:var(--acc)}
+.meta-bar-track{height:10px;border-radius:6px;background:var(--bord-l);overflow:hidden;margin-bottom:8px}
+.meta-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--acc),#8b5cf6);transition:width .6s cubic-bezier(.22,1,.36,1)}
+.meta-bar-fill.done{background:linear-gradient(90deg,var(--ok),#10b981)}
+.meta-bar-sub{font-size:11.5px;color:var(--mu)}
 /* Row actions bottom sheet */
 .ras-btn{display:flex;align-items:center;gap:14px;width:100%;padding:13px 6px;background:none;border:none;border-radius:12px;font-size:14px;font-weight:500;color:var(--tx);cursor:pointer;font-family:inherit;transition:background .1s;text-align:left}
 .ras-btn:active{background:var(--bg)}
@@ -889,6 +899,16 @@ button:focus:not(:focus-visible){outline:none}
         </div>
       </div>
 
+      <!-- META DE VENDAS -->
+      <div class="meta-bar-wrap" id="meta-bar-wrap">
+        <div class="meta-bar-hd">
+          <span class="meta-bar-lbl">Meta mensal de faturamento</span>
+          <span class="meta-bar-pct" id="meta-bar-pct">0%</span>
+        </div>
+        <div class="meta-bar-track"><div class="meta-bar-fill" id="meta-bar-fill" style="width:0%"></div></div>
+        <div class="meta-bar-sub" id="meta-bar-sub"></div>
+      </div>
+
       <!-- KPIs -->
       <div class="dash-kpis">
         <div class="dk-card dk-blue" onclick="setView('pedidos')">
@@ -923,8 +943,8 @@ button:focus:not(:focus-visible){outline:none}
         <div class="da-card da-red" onclick="setView('produtos');setTimeout(()=>filterByStock(0,0),50)">
           <div class="da-num" id="dash-zerados">—</div><div class="da-lbl">Produtos zerados</div>
         </div>
-        <div class="da-card da-orange" onclick="setView('produtos');setTimeout(()=>filterByStock(1,5),50)">
-          <div class="da-num" id="dash-criticos">—</div><div class="da-lbl">Estoque crítico (≤5)</div>
+        <div class="da-card da-orange" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin),50)">
+          <div class="da-num" id="dash-criticos">—</div><div class="da-lbl" id="dash-criticos-lbl">Estoque crítico (≤5)</div>
         </div>
         <div class="da-card da-blue" onclick="setView('pedidos')">
           <div class="da-num" id="dash-pendentes">—</div><div class="da-lbl">Pedidos pendentes</div>
@@ -976,9 +996,9 @@ button:focus:not(:focus-visible){outline:none}
             <div class="tf-num" id="tf-zerados">0</div>
             <div class="tf-lbl">Zerados</div>
           </div>
-          <div class="tf-card tf-orange" onclick="filterByStock(1,5)" title="Ver estoque crítico ≤5">
+          <div class="tf-card tf-orange" onclick="filterByStock(1,S.estoqueMin)" title="Ver estoque crítico">
             <div class="tf-num" id="tf-criticos">0</div>
-            <div class="tf-lbl">Críticos (≤5)</div>
+            <div class="tf-lbl" id="tf-criticos-lbl">Críticos (≤5)</div>
           </div>
           <div class="tf-card tf-blue" onclick="setView('pedidos')" title="Ver pedidos pendentes">
             <div class="tf-num" id="tf-pend-count">0</div>
@@ -1465,6 +1485,15 @@ button:focus:not(:focus-visible){outline:none}
         </div>
       </div>
       <div class="cfg-card">
+        <div class="cfg-title">Metas</div>
+        <div class="cfg-desc">Acompanhe o progresso do faturamento do mês em relação à sua meta no Dashboard.</div>
+        <div class="cfg-row" style="gap:12px">
+          <span class="cfg-row-lbl">Meta mensal (R$)</span>
+          <input type="number" id="cfg-meta-fat" min="0" step="100" placeholder="Ex: 10000" style="width:130px;height:34px;padding:0 10px;background:var(--bg);border:1px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);outline:none" oninput="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--bord)'">
+          <button class="btp" onclick="saveMetaFat()">Salvar</button>
+        </div>
+      </div>
+      <div class="cfg-card">
         <div class="cfg-title">Conta &amp; Integração</div>
         <div class="cfg-row"><span class="cfg-row-lbl">Integração Bling</span><button class="bts" onclick="window.location.href='/'">Reconectar</button></div>
         <div class="cfg-row"><span class="cfg-row-lbl">Sessão</span><button class="bts" onclick="logout()" style="color:var(--er-t)">Sair da conta</button></div>
@@ -1795,6 +1824,7 @@ const S = {
   undoStack:[], undoTimeout:null, importData:[],
   estoqueMin:Math.max(0,parseInt(localStorage.getItem('em_min')||'5')),
   compact:localStorage.getItem('compact')==='1',
+  metaFat:parseFloat(localStorage.getItem('em_meta')||'0'),
 };
 
 // ── UTILS ──────────────────────────────────────────
@@ -1978,12 +2008,15 @@ function recomputeDashLucro(){
   const lucro=_dashFat*margem;
   const el=$('dash-lucro');if(el)el.textContent=fmt(lucro);
   const sub=$('dash-luc-sub');if(sub)sub.textContent=margem>0?`margem média ~${Math.round(margem*100)}%`:'cadastre custos p/ estimar';
+  renderMetaBar();
 }
 function renderDashAlerts(){
   const ps=S.products;
   const set=(id,n)=>{const el=$(id);if(el)el.textContent=fmtN(n);};
   set('dash-zerados',ps.filter(p=>p.estoque<=0).length);
-  set('dash-criticos',ps.filter(p=>p.estoque>0&&p.estoque<=5).length);
+  set('dash-criticos',ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).length);
+  const dcl=$('dash-criticos-lbl');if(dcl)dcl.textContent=`Estoque crítico (≤${S.estoqueMin})`;
+  const tcl=$('tf-criticos-lbl');if(tcl)tcl.textContent=`Críticos (≤${S.estoqueMin})`;
   const pend=$('pt-cnt-pen')?.textContent;
   set('dash-pendentes',pend&&!isNaN(+pend)?+pend:(typeof _pedidosCache!=='undefined'?_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length:0));
 }
@@ -2144,6 +2177,22 @@ function updateKpis(){
   link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>EM</text></svg>";
 }
 function updateLowBadge(){const cnt=S.products.filter(p=>p.estoque<=S.estoqueMin).length;$('badge-low').textContent=cnt>0?cnt:'';const opt=$('flt-lo-opt');if(opt)opt.textContent=`Estoque baixo (≤${S.estoqueMin})`;}
+function saveMetaFat(){const v=parseFloat($('cfg-meta-fat').value)||0;S.metaFat=v;localStorage.setItem('em_meta',v);renderMetaBar();toast(v>0?`Meta: ${fmt(v)}`:'Meta desativada','ok');}
+function renderMetaBar(){
+  const wrap=$('meta-bar-wrap');if(!wrap)return;
+  if(!S.metaFat||S.metaFat<=0){wrap.classList.remove('vis');return;}
+  wrap.classList.add('vis');
+  const pct=Math.min(_dashFat/S.metaFat,1);
+  const pctPx=(pct*100).toFixed(1)+'%';
+  const fill=$('meta-bar-fill');
+  if(fill){fill.style.width=pctPx;fill.classList.toggle('done',pct>=1);}
+  const pctEl=$('meta-bar-pct');if(pctEl)pctEl.textContent=Math.round(pct*100)+'%';
+  const sub=$('meta-bar-sub');
+  if(sub){
+    const rest=S.metaFat-_dashFat;
+    sub.textContent=pct>=1?`Meta atingida! ${fmt(_dashFat)} faturados neste período.`:`Faltam ${fmt(Math.max(0,rest))} para atingir a meta de ${fmt(S.metaFat)}.`;
+  }
+}
 function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseInt(inp.value)||0);S.estoqueMin=v;localStorage.setItem('em_min',v);updateLowBadge();updateKpis();renderTable();toast(`Alerta de estoque: abaixo de ${v} un.`,'ok');}
 function updateSyncTs(){if(!S.lastSync)return;const diff=Math.round((Date.now()-S.lastSync)/1000);$('sync-ts').textContent=diff<60?'Atualizado agora':`Atualizado há ${Math.round(diff/60)} min`;}
 
@@ -2380,7 +2429,7 @@ function setAutoRefresh(mins){
 function renderTarefas(){
   const ps=S.products;
   const zerados=ps.filter(p=>p.estoque<=0).length;
-  const criticos=ps.filter(p=>p.estoque>0&&p.estoque<=5).length;
+  const criticos=ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).length;
   const total=zerados+criticos;
   const el=$('tarefas-panel');if(!el)return;
   el.style.display=total>0?'':'none';
@@ -3419,6 +3468,7 @@ document.addEventListener('touchend',()=>{
   applyTheme();
   if(S.collapsed)$('sidebar').classList.add('col');
   const cfgMin=$('cfg-min-stock');if(cfgMin)cfgMin.value=S.estoqueMin;
+  const cfgMeta=$('cfg-meta-fat');if(cfgMeta&&S.metaFat>0)cfgMeta.value=S.metaFat;
   applyCompact();
   renderPresets();
   $('si-nome').textContent='↑';
