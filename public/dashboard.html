@@ -652,7 +652,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
   .bbar{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
   .undo{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
   .topbar{padding:0 14px;gap:6px}
-  .sync-ts{display:none}
+  .sync-ts{font-size:10px;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tb-hide-mobile{display:none!important}
   .toolbar{flex-wrap:wrap;gap:6px;padding:10px 12px}
   .sw{flex:1;min-width:0}
@@ -2285,7 +2285,17 @@ function renderMetaBar(){
   }
 }
 function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseInt(inp.value)||0);S.estoqueMin=v;localStorage.setItem('em_min',v);updateLowBadge();updateKpis();renderTable();toast(`Alerta de estoque: abaixo de ${v} un.`,'ok');}
-function updateSyncTs(){if(!S.lastSync)return;const diff=Math.round((Date.now()-S.lastSync)/1000);$('sync-ts').textContent=diff<60?'Atualizado agora':`Atualizado há ${Math.round(diff/60)} min`;}
+function updateSyncTs(){
+  const el=$('sync-ts');if(!el)return;
+  if(!S.lastSync){el.textContent='';el.style.color='';return;}
+  const diff=Math.round((Date.now()-S.lastSync)/1000);
+  const mins=Math.round(diff/60);
+  el.textContent=diff<60?'agora':mins<60?`${mins}min`:`${Math.round(mins/60)}h`;
+  const stale=diff>=1800;
+  el.style.color=stale?'var(--wa)':'';
+  el.title=stale?'Dados desatualizados — clique em Atualizar':'Última sincronização: '+S.lastSync.toLocaleTimeString('pt-BR');
+}
+setInterval(updateSyncTs,60000);
 
 // ── FILTER/SORT ──────────────────────────────────
 function applyFilters(){
