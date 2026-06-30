@@ -863,6 +863,8 @@ button:focus:not(:focus-visible){outline:none}
 .ras-step-save:active{opacity:.8}
 .ras-step-save:disabled{opacity:.45;cursor:default}
 #ras-prev-btn:disabled,#ras-next-btn:disabled{opacity:.3;pointer-events:none}
+.voice-btn-listen{color:var(--er)!important;border-color:var(--er)!important;animation:micPulse 1.1s ease infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3)}50%{box-shadow:0 0 0 5px rgba(239,68,68,0)}}
 </style>
 </head>
 <body>
@@ -1163,6 +1165,9 @@ button:focus:not(:focus-visible){outline:none}
             <input class="sinp" id="search" type="search" placeholder="Buscar nome, SKU ou cole código de barras…" oninput="debouncedSearch(this)" autocomplete="off" style="padding-right:28px">
             <button class="sw-clr" id="sw-clr" onclick="clearSearch()" aria-label="Limpar busca" tabindex="-1">×</button>
           </div>
+          <button class="bti" id="voice-btn" onclick="startVoiceSearch()" title="Busca por voz (V)" aria-label="Busca por voz" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
           <button class="bti" id="scan-btn" onclick="openScanner()" title="Escanear código de barras">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="6" height="16" rx="1"/><rect x="10" y="4" width="2" height="16" rx=".5"/><rect x="14" y="4" width="4" height="16" rx=".5"/><rect x="20" y="4" width="2" height="16" rx=".5"/></svg>
           </button>
@@ -2639,7 +2644,7 @@ function editCell(span,field,id,current,nomeProd){
 
 // ── BULK EDIT ────────────────────────────────────
 function openBulk(){$('bdrop').classList.add('open');$('sheet').classList.add('open');}
-function closeSheet(){$('bdrop').classList.remove('open');$('sheet').classList.remove('open');}
+function closeSheet(){const sh=$('sheet');if(sh)sh.style.transform='';$('bdrop').classList.remove('open');$('sheet').classList.remove('open');}
 async function saveBulk(){
   const preco=$('bulk-preco').value.trim(),estoque=$('bulk-estoque').value.trim();
   if(!preco&&!estoque){toast('Preencha ao menos um campo','err');return;}
@@ -3113,6 +3118,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='?')  openModal('sc-modal');
   else if(k==='escape'){closeSheet();closeQuick();closeCmdPalette();closeModal('sc-modal');closeModal('im-modal');closeModal('create-modal');closeEditor();closeRowActions();closeImgLbox();$('undo-toast').classList.remove('vis');}
   else if(k==='n'&&S.view==='produtos')openCreate();
+  else if(k==='v'&&S.view==='produtos'){const vb=$('voice-btn');if(vb&&vb.style.display!=='none')startVoiceSearch();}
 });
 
 // ── EDITOR DRAWER ─────────────────────────────────
@@ -4140,6 +4146,58 @@ document.addEventListener('touchend',()=>{
       _stbTick=false;
     });
   },{passive:true});
+})();
+
+// ── VOICE SEARCH (HHH) ───────────────────────────
+let _voiceRec=null;
+function startVoiceSearch(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Reconhecimento de voz não suportado neste navegador','wa');return;}
+  const btn=$('voice-btn');
+  if(_voiceRec){_voiceRec.stop();return;}
+  _voiceRec=new SR();
+  _voiceRec.lang='pt-BR';_voiceRec.interimResults=false;_voiceRec.maxAlternatives=1;
+  if(btn)btn.classList.add('voice-btn-listen');
+  _voiceRec.onresult=e=>{
+    const q=e.results[0][0].transcript;
+    const inp=$('search');
+    if(inp){inp.value=q;const sw=$('sw-clr');if(sw)sw.classList.add('vis');}
+    applyFilters();
+    if(window.saveSearch&&q.length>=2)saveSearch(q);
+    vibrate([20,20,20]);
+  };
+  _voiceRec.onend=()=>{_voiceRec=null;if(btn)btn.classList.remove('voice-btn-listen');};
+  _voiceRec.onerror=e=>{
+    _voiceRec=null;if(btn)btn.classList.remove('voice-btn-listen');
+    if(e.error!=='no-speech')toast('Erro de voz: '+e.error,'err');
+  };
+  _voiceRec.start();vibrate(20);
+}
+(function(){
+  if(window.SpeechRecognition||window.webkitSpeechRecognition){
+    const btn=$('voice-btn');if(btn)btn.style.display='';
+  }
+})();
+
+// ── DRAG-TO-CLOSE BULK EDIT SHEET (III) ──────────
+(function(){
+  const sh=$('sheet');if(!sh)return;
+  let _sy=0,_drag=false;
+  sh.addEventListener('touchstart',e=>{
+    if(!e.target.closest('.sh-hand,.sh-title'))return;
+    _sy=e.touches[0].clientY;_drag=true;sh.style.transition='none';
+  },{passive:true});
+  sh.addEventListener('touchmove',e=>{
+    if(!_drag)return;
+    const dy=Math.max(0,e.touches[0].clientY-_sy);
+    sh.style.transform=`translateY(${dy}px)`;
+  },{passive:true});
+  sh.addEventListener('touchend',e=>{
+    if(!_drag)return;_drag=false;sh.style.transition='';
+    const dy=e.changedTouches[0].clientY-_sy;
+    if(dy>80){closeSheet();}else{sh.style.transform='';}
+  },{passive:true});
+  sh.addEventListener('touchcancel',()=>{if(_drag){_drag=false;sh.style.transform='';sh.style.transition='';}},{passive:true});
 })();
 
 // ── RECENT SEARCHES ──────────────────────────────

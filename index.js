@@ -220,23 +220,33 @@ app.use(express.static('public', { index: false }));
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body || {};
-  
+
   if (!email || !password) {
     return sendErrorResponse(res, 400, 'Email e senha são obrigatórios');
   }
-  
+
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !JWT_SECRET) {
+    return sendErrorResponse(res, 500,
+      'Configuração incompleta: variáveis de ambiente ADMIN_EMAIL, ADMIN_PASSWORD ou JWT_SECRET não definidas. ' +
+      'Acesse Vercel → Settings → Environment Variables e configure-as, depois faça um novo deploy.');
+  }
+
   if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
     return sendErrorResponse(res, 401, 'Email ou senha incorretos');
   }
 
-  const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('system_token', token, {
-    httpOnly: true, 
-    secure: NODE_ENV === 'production',
-    sameSite: 'lax', 
-    maxAge: 7 * 24 * 3600 * 1000,
-  });
-  res.json({ success: true });
+  try {
+    const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('system_token', token, {
+      httpOnly: true,
+      secure: NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 3600 * 1000,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    sendErrorResponse(res, 500, 'Erro ao gerar token. Verifique JWT_SECRET nas variáveis de ambiente.', e.message);
+  }
 });
 
 // Reconfirma a senha (para liberar áreas/ações sensíveis, estilo Shopee)
