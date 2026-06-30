@@ -1215,6 +1215,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="tr">
             <button class="btp" onclick="openCreate()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Novo Produto</button>
             <button class="bts" onclick="openModal('im-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar</button>
+            <button class="bts" onclick="openModal('custo-import-modal')" title="Importar custos por SKU via CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Custos</button>
             <button class="bts" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
             <button class="bts" onclick="openQuick()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Entrada rápida</button>
           </div>
@@ -1370,6 +1371,34 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="m-foot">
           <button class="btp" id="nfe-emit-btn" onclick="emitirNFe()">Emitir NF-e</button>
           <button class="bts" onclick="closeModal('nfe-modal')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DETALHE NF-e -->
+    <div class="modal" id="nfe-detail-modal" onclick="if(event.target===this)closeModal('nfe-detail-modal')">
+      <div class="mbox" style="width:500px;max-width:95vw">
+        <div id="nfe-detalhe"></div>
+        <div class="m-foot">
+          <button class="bts" id="nfe-det-danfe-btn" onclick="abrirDanfeDet()" style="display:none">Abrir DANFE</button>
+          <button class="bts" onclick="closeModal('nfe-detail-modal')">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL IMPORTAR CUSTOS -->
+    <div class="modal" id="custo-import-modal" onclick="if(event.target===this)closeModal('custo-import-modal')">
+      <div class="mbox" style="max-width:480px">
+        <div class="m-title">Importar Custos de Produtos</div>
+        <div class="m-desc">Faça upload de um CSV com duas colunas: <strong>SKU</strong> e <strong>Custo</strong> (sem cabeçalho ou com cabeçalho). O sistema vai atualizar o custo de cada produto encontrado pelo SKU.</div>
+        <div class="df">
+          <label>Arquivo CSV</label>
+          <input type="file" id="custo-csv-file" accept=".csv,text/csv" onchange="parseCustoCSV(this)">
+        </div>
+        <div id="custo-import-preview" style="max-height:200px;overflow-y:auto;margin-top:8px"></div>
+        <div class="m-foot">
+          <button class="btp" id="custo-import-btn" onclick="applyCustoImport()" style="display:none">Aplicar</button>
+          <button class="bts" onclick="closeModal('custo-import-modal')">Cancelar</button>
         </div>
       </div>
     </div>
@@ -1593,27 +1622,51 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="view" id="view-integracoes">
       <!-- Status do Bling -->
       <div class="cfg-card">
-        <div class="cfg-title">Canais ativos</div>
-        <div class="cfg-desc">Status das integrações conectadas ao sistema.</div>
-        <div class="cfg-row">
+        <div class="cfg-title">Status das conexões</div>
+        <div class="cfg-desc">Integrações ativas e disponíveis. A sincronização de estoque, pedidos e NF-e é feita via Bling ERP.</div>
+        <div class="cfg-row" style="margin-bottom:8px">
           <span style="display:flex;align-items:center;gap:10px">
             <span style="width:32px;height:32px;border-radius:8px;background:#eef2ff;color:#4f46e5;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">B</span>
-            <span style="font-weight:600;color:var(--tx)">Bling ERP</span>
+            <span><span style="font-weight:600;color:var(--tx)">Bling ERP</span><br><span style="font-size:11px;color:var(--mu)">Produtos · Pedidos · NF-e · Estoque</span></span>
           </span>
           <span class="sb2 s-ok" id="bling-status-badge">Conectado</span>
+        </div>
+        <div class="cfg-row" style="margin-bottom:8px">
+          <span style="display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#010101;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">TT</span>
+            <span><span style="font-weight:600;color:var(--tx)">TikTok Shop</span><br><span style="font-size:11px;color:var(--mu)">Sincronize via Bling → Integrações → TikTok</span></span>
+          </span>
+          <span class="sb2 s-lo">Via Bling</span>
+        </div>
+        <div class="cfg-row" style="margin-bottom:8px">
+          <span style="display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">ML</span>
+            <span><span style="font-weight:600;color:var(--tx)">Mercado Livre</span><br><span style="font-size:11px;color:var(--mu)">Sincronize via Bling → Integrações → ML</span></span>
+          </span>
+          <span class="sb2 s-lo">Via Bling</span>
+        </div>
+        <div class="cfg-row" style="margin-bottom:8px">
+          <span style="display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#ee4d2d;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">SP</span>
+            <span><span style="font-weight:600;color:var(--tx)">Shopee</span><br><span style="font-size:11px;color:var(--mu)">Sincronize via Bling → Integrações → Shopee</span></span>
+          </span>
+          <span class="sb2 s-lo">Via Bling</span>
+        </div>
+        <div style="margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--mu);line-height:1.6">
+          <strong style="color:var(--tx)">Como sincronizar:</strong> Acesse o Bling → Configurações → Integrações e conecte cada canal de vendas. O estoque e pedidos passam a ser sincronizados automaticamente pelo Bling.
         </div>
       </div>
       <!-- Taxas de Marketplace -->
       <div class="cfg-card">
-        <div class="cfg-title">Custos por marketplace</div>
-        <div class="cfg-desc">Configure a comissão e taxa fixa de cada canal para calcular o lucro real por plataforma. Dados salvos localmente no seu navegador.</div>
+        <div class="cfg-title">Comissões e taxas por canal</div>
+        <div class="cfg-desc">Configure a comissão e taxa fixa de cada canal para calcular o lucro líquido estimado. Marque os canais que você usa. Dados salvos localmente.</div>
         <div id="int-canais"></div>
         <button class="btp" onclick="saveIntegracoes()" style="width:100%;margin-top:14px;justify-content:center">Salvar configurações</button>
       </div>
       <!-- Lucro estimado por canal -->
       <div class="cfg-card" id="int-lucro-card" style="display:none">
         <div class="cfg-title">Lucro estimado por canal</div>
-        <div class="cfg-desc">Baseado na margem média dos produtos com custo cadastrado no Bling.</div>
+        <div class="cfg-desc">Baseado na margem média dos produtos com custo cadastrado no Bling. Cadastre os custos dos produtos para ver estimativas precisas.</div>
         <div id="int-lucro-body"></div>
       </div>
     </div>
@@ -2123,7 +2176,7 @@ function setLayout(l){
   ['list','grid','cat'].forEach(k=>{const el=$('lt-'+k);if(el)el.classList.toggle('on',k===l||(k==='cat'&&l==='catalog'));});
   const cc=$('card-container'),lc=$('list-container');
   if(l==='list'){cc.className='';cc.style.display='none';lc.style.display='';}
-  else{lc.style.display='none';cc.className='card-grid '+(l==='grid'?'vg':'vc');renderCards();}
+  else{lc.style.display='none';cc.style.display='';cc.className='card-grid '+(l==='grid'?'vg':'vc');renderCards();}
 }
 function renderCards(){
   const cc=$('card-container');
@@ -2347,9 +2400,13 @@ function compartilharCriticos(){
 const INT_CANAIS=[
   {id:'ml',nome:'Mercado Livre',cor:'#ffe600',tc:'#333',comissao:14,fixo:6},
   {id:'shopee',nome:'Shopee',cor:'#ee4d2d',tc:'#fff',comissao:13,fixo:0},
+  {id:'tiktok',nome:'TikTok Shop',cor:'#010101',tc:'#fff',comissao:8,fixo:0},
   {id:'amazon',nome:'Amazon Brasil',cor:'#ff9900',tc:'#333',comissao:12,fixo:0},
   {id:'magalu',nome:'Magazine Luiza',cor:'#0086ff',tc:'#fff',comissao:11,fixo:0},
   {id:'americanas',nome:'Americanas',cor:'#e30613',tc:'#fff',comissao:12,fixo:0},
+  {id:'shein',nome:'Shein',cor:'#000',tc:'#fff',comissao:10,fixo:0},
+  {id:'kwai',nome:'Kwai Shop',cor:'#ff5a00',tc:'#fff',comissao:8,fixo:0},
+  {id:'shopee_af',nome:'Shopee (afiliados)',cor:'#c0392b',tc:'#fff',comissao:18,fixo:0},
   {id:'ifood',nome:'iFood Shop',cor:'#ea1d2c',tc:'#fff',comissao:12,fixo:0},
   {id:'custom',nome:'Canal próprio',cor:'#6366f1',tc:'#fff',comissao:0,fixo:0},
 ];
@@ -2825,6 +2882,55 @@ async function importCSV(){
 }
 function resetImport(){S.importData=[];$('iprev').style.display='none';$('im-btn').style.display='none';$('csv-file').value='';}
 
+// ── IMPORTAR CUSTOS CSV ───────────────────────────
+let _custoImportData=[];
+function parseCustoCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    _custoImportData=[];
+    let skipped=0;
+    lines.forEach((line,i)=>{
+      const cols=line.split(/[,;]/).map(c=>c.trim().replace(/^["']|["']$/g,''));
+      if(cols.length<2)return;
+      const sku=cols[0];
+      const custo=parseFloat(String(cols[1]).replace(',','.'));
+      if(!sku||i===0&&isNaN(custo)){skipped++;return;}
+      if(isNaN(custo)||custo<0){skipped++;return;}
+      const prod=S.products.find(p=>p.codigo&&p.codigo.toLowerCase()===sku.toLowerCase());
+      if(prod)_custoImportData.push({id:prod.id,sku,nome:prod.nome,custo});
+      else skipped++;
+    });
+    const prev=$('custo-import-preview');
+    if(!_custoImportData.length){
+      prev.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum produto encontrado pelos SKUs do arquivo. Verifique se os SKUs batem com os cadastrados no Bling. Linhas ignoradas: ${skipped}</p></div>`;
+      $('custo-import-btn').style.display='none';
+      return;
+    }
+    prev.innerHTML=`<div style="font-size:12px;color:var(--mu);margin-bottom:8px">${_custoImportData.length} produto(s) encontrado(s) · ${skipped} linha(s) ignorada(s)</div><table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">SKU</th><th style="text-align:left">Produto</th><th class="r">Custo (R$)</th></tr></thead><tbody>${_custoImportData.map(r=>`<tr><td><span class="sku">${esc(r.sku)}</span></td><td>${esc(r.nome)}</td><td class="r" style="color:var(--ok-t);font-weight:600">${fmt(r.custo)}</td></tr>`).join('')}</tbody></table>`;
+    $('custo-import-btn').style.display='';
+    $('custo-import-btn').textContent=`Aplicar ${_custoImportData.length} custo${_custoImportData.length!==1?'s':''}`;
+  };
+  reader.readAsText(file,'UTF-8');
+}
+async function applyCustoImport(){
+  if(!_custoImportData.length)return;
+  const btn=$('custo-import-btn');btn.disabled=true;btn.textContent='Aplicando…';
+  let ok=0,fail=0;
+  for(const row of _custoImportData){
+    try{
+      const r=await fetch('/api/produtos/'+row.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({precoCusto:row.custo,nome_produto:row.nome})});
+      if(r.ok){ok++;const p=S.products.find(x=>x.id===row.id);if(p)p.precoCusto=row.custo;}
+      else fail++;
+    }catch{fail++;}
+  }
+  btn.disabled=false;
+  toast(ok>0?`${ok} custo${ok!==1?'s':''} atualizado${ok!==1?'s':''}${fail>0?' · '+fail+' erro(s)':''}`:'Nenhum custo atualizado, verifique sua conexão com o Bling',ok>0?'ok':'err');
+  if(ok>0){_custoImportData=[];closeModal('custo-import-modal');applyFilters();}
+  else btn.textContent=`Tentar novamente`;
+}
+
 // ── PRESETS ──────────────────────────────────────
 function savePreset(){const name=prompt('Nome para este filtro:');if(!name)return;const p={name,f:{status:$('f-status').value,cat:$('f-cat').value,stMin:$('f-st-min').value,stMax:$('f-st-max').value,prMin:$('f-pr-min').value,prMax:$('f-pr-max').value}};S.presets=S.presets.filter(x=>x.name!==name);S.presets.push(p);localStorage.setItem('presets',JSON.stringify(S.presets));renderPresets();toast('Filtro salvo','ok');}
 function applyPreset(name){const p=S.presets.find(x=>x.name===name);if(!p)return;$('f-status').value=p.f.status||'';$('f-cat').value=p.f.cat||'';$('f-st-min').value=p.f.stMin||'';$('f-st-max').value=p.f.stMax||'';$('f-pr-min').value=p.f.prMin||'';$('f-pr-max').value=p.f.prMax||'';applyFilters();$('fpanel').classList.add('open');}
@@ -2933,19 +3039,29 @@ async function openPedidoDetalhe(id){
     if(!r.ok)throw new Error(p.error||'Erro ao carregar pedido');
     const cat=categorizePed(p.situacao);
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
-    const itensRows=(p.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}</td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    const itensRows=(p.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}<br><span style="font-size:10px;color:var(--mu)">${it.codigo?'SKU: '+esc(it.codigo):''}</span></td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    const waNum=(p.contatoTel||'').replace(/\D/g,'');
+    const waLink=waNum?`https://wa.me/55${waNum}`:'';
     $('ped-detalhe').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
-        <div style="min-width:0"><div style="font-size:16px;font-weight:700">Pedido #${esc(String(p.numero||p.id))}</div><div style="font-size:12px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}${p.contatoDoc?' · '+esc(p.contatoDoc):''}</div></div>
+        <div style="min-width:0">
+          <div style="font-size:16px;font-weight:700">Pedido #${esc(String(p.numero||p.id))}</div>
+          <div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(p.contato)}${p.contatoDoc?' · '+esc(p.contatoDoc):''}</div>
+          ${waLink?`<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#25d366;margin-top:4px;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>${p.contatoTel}</a>`:''}
+        </div>
         <span class="sb2 ${sb}" style="flex-shrink:0">${esc(p.situacao)}</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Data</div><div style="font-size:14px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Total</div><div style="font-size:14px;font-weight:700;color:var(--ok-t)">${fmt(p.total)}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Data</div><div style="font-size:13px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(p.total)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(p.frete||0)}</div></div>
       </div>
-      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS</div>
-      <div style="max-height:240px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${(p.itens||[]).length})</div>
+      <div style="max-height:220px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
       ${p.observacoes?`<div style="margin-top:12px;font-size:12px;color:var(--mu);background:var(--bg);border-radius:8px;padding:10px"><strong>Obs:</strong> ${esc(p.observacoes)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
+      </div>
     `;
   }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
@@ -2996,11 +3112,44 @@ function renderNotas(){
     return true;
   });
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhuma nota encontrada${q?' para "'+esc(q)+'"':''}.</p></div>`;return;}
-  body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th><th style="width:90px"></th></tr></thead><tbody>${list.map(n=>{
+  body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${list.map(n=>{
     const sc=notaSitClass(n.situacao);
     const sb=sc==='ok'?'s-ok':sc==='can'?'s-out':'s-lo';
-    return`<tr><td><span class="sku">${esc(String(n.numero||n.id))}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td><span class="sb2 ${sb}">${esc(n.situacao)}</span></td><td><span class="nfe-key">${n.chave?n.chave.substring(0,18)+'…':'—'}</span></td><td>${sc==='ok'?`<button class="bts" style="height:26px;padding:0 8px;font-size:11px" onclick="abrirDanfe('${esc(String(n.id))}')">DANFE</button>`:''}</td></tr>`;
+    return`<tr style="cursor:pointer" onclick="openNotaDetalhe('${esc(String(n.id))}')"><td><span class="sku">${esc(String(n.numero||n.id))}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td><span class="sb2 ${sb}">${esc(n.situacao)}</span></td><td><span class="nfe-key">${n.chave?n.chave.substring(0,18)+'…':'—'}</span></td></tr>`;
   }).join('')}</tbody></table>`;
+}
+let _nfeDetId=null;
+async function openNotaDetalhe(id){
+  _nfeDetId=id;
+  $('nfe-detalhe').innerHTML='<div class="st-wrap"><p class="st-d">Carregando NF-e…</p></div>';
+  $('nfe-det-danfe-btn').style.display='none';
+  openModal('nfe-detail-modal');
+  try{
+    const r=await fetch(`/api/nfe/${id}/detalhe`),n=await r.json();
+    if(!r.ok)throw new Error(n.error||'Erro ao carregar NF-e');
+    const sc=notaSitClass(n.situacao);
+    const sb=sc==='ok'?'s-ok':sc==='can'?'s-out':'s-lo';
+    const itensRows=(n.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}</td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    $('nfe-detalhe').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
+        <div><div style="font-size:16px;font-weight:700">NF-e nº ${esc(String(n.numero||n.id))}-${esc(n.serie||'1')}</div><div style="font-size:12px;color:var(--mu)">${esc(n.contato)}${n.contatoDoc?' · '+esc(n.contatoDoc):''}</div>${n.natureza?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${esc(n.natureza)}</div>`:''}</div>
+        <span class="sb2 ${sb}" style="flex-shrink:0">${esc(n.situacao)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Emissão</div><div style="font-size:13px;font-weight:700">${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(n.total)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(n.totalFrete||0)}</div></div>
+      </div>
+      ${n.chave?`<div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10px;color:var(--mu);flex-shrink:0">Chave de acesso:</span><span class="nfe-key" style="flex:1">${esc(n.chave)}</span><button class="bts" style="height:24px;padding:0 8px;font-size:11px" onclick="copySku('${esc(n.chave)}');event.stopPropagation()">Copiar</button></div>`:''}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${n.itens?.length||0})</div>
+      <div style="max-height:220px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+    `;
+    if(sc==='ok')$('nfe-det-danfe-btn').style.display='';
+  }catch(e){$('nfe-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+async function abrirDanfeDet(){
+  if(!_nfeDetId)return;
+  await abrirDanfe(_nfeDetId);
 }
 async function abrirDanfe(id){
   try{

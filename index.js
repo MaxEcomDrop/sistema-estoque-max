@@ -483,7 +483,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
 
   const { id } = req.params;
-  const { estoque, preco, nome_produto, valor_anterior, _fullUpdate } = req.body;
+  const { estoque, preco, precoCusto, nome_produto, valor_anterior, _fullUpdate } = req.body;
 
   // Atualização completa via drawer editor
   if (_fullUpdate) {
@@ -535,6 +535,25 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         produto_nome: nome_produto || `#${id}`, campo: 'preço',
         valor_anterior: valor_anterior || '—',
         valor_novo: `R$ ${Number(preco).toFixed(2)}`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (precoCusto !== undefined) {
+      const { data: current } = await axios.get(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { headers: blingHeaders(token) }
+      );
+      const prod = current?.data || {};
+      await axios.put(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { ...prod, precoCusto: Number(precoCusto) },
+        { headers: blingHeaders(token) }
+      );
+      changeLog.push({
+        id: changeLog.length + 1, produto_id: id,
+        produto_nome: nome_produto || `#${id}`, campo: 'custo',
+        valor_anterior: valor_anterior || '—',
+        valor_novo: `R$ ${Number(precoCusto).toFixed(2)}`,
         timestamp: new Date().toISOString(),
       });
     }
@@ -765,6 +784,45 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, 500, 'Erro ao buscar NF-e', err.message);
+  }
+});
+
+app.get('/api/nfe/:id/detalhe', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/nfe/${req.params.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const n = data?.data || data || {};
+    const itens = (Array.isArray(n.itens) ? n.itens : []).map(it => ({
+      descricao: it.descricao || it.produto?.nome || 'Item',
+      qtd: Number(it.quantidade) || 0,
+      valor: Number(it.valor) || 0,
+      total: (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
+    }));
+    res.json({
+      id: n.id,
+      numero: n.numero,
+      serie: n.serie || '1',
+      dataEmissao: n.dataEmissao || n.data || '',
+      total: n.totalProdutos || n.total || n.valor || 0,
+      totalFrete: Number(n.totalFrete || 0),
+      totalDesconto: Number(n.totalDesconto || 0),
+      situacao: String(n.situacao?.nome || n.situacao?.valor || n.situacao || '—'),
+      chave: n.chaveAcesso || n.chave || '',
+      contato: n.contato?.nome || '—',
+      contatoDoc: n.contato?.numeroDocumento || '',
+      natureza: n.naturezaOperacao || '',
+      modelo: n.modelo || '55',
+      itens,
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar NF-e', err.message);
   }
 });
 
