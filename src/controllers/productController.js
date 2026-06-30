@@ -25,16 +25,22 @@ exports.syncProdutos = async (req, res) => {
         const produtos = await blingService.getProdutos(accessToken);
 
         db.serialize(() => {
+          db.run('BEGIN TRANSACTION');
+
           db.run('DELETE FROM products WHERE user_id = ?', [userId], (deleteErr) => {
             if (deleteErr) {
+              db.run('ROLLBACK');
               return res.status(500).json({ error: 'Erro ao limpar produtos antigos' });
             }
 
+            const stmt = db.prepare(
+              `INSERT INTO products (user_id, bling_product_id, nome, codigo, preco, estoque, situacao)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`
+            );
+
             let inserted = 0;
             produtos.forEach((produto) => {
-              db.run(
-                `INSERT INTO products (user_id, bling_product_id, nome, codigo, preco, estoque, situacao)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              stmt.run(
                 [
                   userId,
                   produto.id,
@@ -50,9 +56,17 @@ exports.syncProdutos = async (req, res) => {
               );
             });
 
-            res.json({
-              message: 'Produtos sincronizados com sucesso',
-              total: produtos.length,
+            stmt.finalize();
+
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                return res.status(500).json({ error: 'Erro ao salvar produtos' });
+              }
+
+              res.json({
+                message: 'Produtos sincronizados com sucesso',
+                total: produtos.length,
+              });
             });
           });
         });
