@@ -330,6 +330,8 @@ tr:hover .thumb{box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .pcard-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--bord-l)}
 .pcard-price{font-size:13px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
 .pcard-stock{font-size:11px;color:var(--mu)}
+.pcard-sa{width:22px;height:22px;border-radius:5px;border:1.5px solid var(--bord);background:var(--surf);color:var(--tx);font-size:14px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;padding:0;flex-shrink:0}
+.pcard-sa:active{background:var(--bord-l)}
 /* Catalog: 2 columns with horizontal layout */
 .vc .pcard{flex-direction:row;align-items:stretch}
 .vc .pcard-img{width:90px;aspect-ratio:1;border-bottom:none;border-right:1px solid var(--bord-l);flex-shrink:0}
@@ -2096,7 +2098,7 @@ function renderCards(){
         ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
         <div class="pcard-meta">
           <span class="pcard-price">${fmt(p.preco)}</span>
-          <span class="pcard-stock">${fmtN(p.estoque)} un.</span>
+          <div style="display:flex;align-items:center;gap:3px"><button class="pcard-sa" onclick="event.stopPropagation();cardStockAdj(${p.id},-1)">−</button><span class="pcard-stock">${fmtN(p.estoque)}</span><button class="pcard-sa" onclick="event.stopPropagation();cardStockAdj(${p.id},1)">+</button></div>
           <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc)" title="Selecionar">
         </div>
         ${badge}
@@ -2691,6 +2693,22 @@ async function undoLast(){
   const body={nome_produto:nome};body[field]=prev;
   try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){const p=S.products.find(x=>x.id===id);if(p)p[field]=prev;updateKpis();updateLowBadge();applyFilters();toast('Desfeito','ok');$('undo-toast').classList.remove('vis');}else toast('Erro ao desfazer','err');}
   catch{toast('Erro de conexão','err');}
+}
+
+// ── CARD QUICK STOCK ADJ ────────────────────────
+async function cardStockAdj(id,delta){
+  const p=S.products.find(x=>x.id===id);if(!p)return;
+  const nv=Math.max(0,p.estoque+delta);p.estoque=nv;
+  vibrate(15);
+  const card=document.querySelector(`.pcard[data-id="${id}"]`);
+  if(card){
+    const stEl=card.querySelector(".pcard-stock");if(stEl)stEl.textContent=fmtN(nv);
+    const fill=card.querySelector(".pcard-sfill");
+    if(fill){const max=Math.max(S.estoqueMin*4,nv,1);const pct=nv<=0?0:Math.min(100,Math.round((nv/max)*100));fill.style.width=pct+"%";fill.style.background=nv<=0?"var(--er)":nv<=S.estoqueMin?"var(--wa)":"var(--ok)";}
+    card.classList.add("row-flash");setTimeout(()=>card.classList.remove("row-flash"),1000);
+  }
+  try{await fetch(`/api/produtos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estoque:nv})});}catch{toast("Erro ao salvar","err");}
+  updateKpis();updateLowBadge();if(S.view==="inicio")renderDashAlerts();
 }
 
 // ── EXPORT/IMPORT ────────────────────────────────
