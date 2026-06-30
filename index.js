@@ -194,6 +194,11 @@ const _SIT_PT_MAP = {
   'return':'Devolvido','returned':'Devolvido','partially_refunded':'Parcialmente devolvido',
   'on_hold':'Em espera','suspended':'Suspenso','voided':'Cancelado','disputed':'Contestado',
 };
+const _TRANSP_TIPO = {
+  'R':'A cargo do destinatário','E':'A cargo do remetente','T':'A cargo de terceiros',
+  'D':'Sem frete','S':'Sem frete','own_account':'Conta própria','third_party':'Terceiros',
+  'recipient':'Destinatário','sender':'Remetente','free':'Frete grátis',
+};
 function situacaoPT(s) {
   const raw = String(s || '—');
   return _SIT_PT_MAP[raw.toLowerCase().replace(/\s+/g,'_')] || raw;
@@ -417,7 +422,7 @@ async function fetchPedidos(token, inicio, fim, maxPg = 3) {
 const categorizePedido = s => {
   const raw = String(s?.nome || s?.valor || s || '');
   const n = (situacaoPT(raw)).toLowerCase();
-  if (n.includes('cancel')) return 'cancelado';
+  if (n.includes('cancel') || n.includes('devolv') || n.includes('reembolsad') || n.includes('suspenso') || n.includes('falhou')) return 'cancelado';
   if (n.includes('atend') || n.includes('conclui') || n.includes('entregue') || n.includes('faturad') || n.includes('despachad') || n.includes('enviado') || n.includes('encerrad')) return 'concluido';
   return 'pendente';
 };
@@ -761,7 +766,7 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       observacoes: p.observacoes || p.observacoesInternas || '',
       total:       Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
       frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
-      transportadora:   p.transporte?.transportadora?.nome || p.transporte?.tipo || '',
+      transportadora:   p.transporte?.transportadora?.nome || _TRANSP_TIPO[p.transporte?.tipo] || '',
       desconto:         Number(p.desconto) || 0,
       itens,
     });

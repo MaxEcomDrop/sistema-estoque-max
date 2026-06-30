@@ -1042,6 +1042,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <span id="dash-fat-pend" style="color:var(--wa-t)"></span>
             <span id="dash-fat-canc" style="color:var(--er-t)"></span>
           </div>
+          <svg id="dash-sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="position:absolute;bottom:0;left:0;right:0;width:100%;height:52px;opacity:.35;pointer-events:none"></svg>
         </div>
         <div class="hero-card hero-luc" onclick="setView('financeiro')" style="cursor:pointer">
           <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado</div>
@@ -1339,7 +1340,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="view" id="view-relatorio">
       <div class="rep-grid">
         <div class="rep-card"><div class="rep-lbl">Produtos zerados</div><div class="rep-val" id="rep-parado">—</div></div>
-        <div class="rep-card"><div class="rep-lbl">Estoque crítico (≤3)</div><div class="rep-val" id="rep-crit">—</div></div>
+        <div class="rep-card"><div class="rep-lbl" id="rep-crit-lbl">Estoque crítico (≤3)</div><div class="rep-val" id="rep-crit">—</div></div>
         <div class="rep-card"><div class="rep-lbl">Valor imobilizado</div><div class="rep-val" id="rep-imob" style="font-size:16px">—</div></div>
         <div class="rep-card"><div class="rep-lbl">Preço médio</div><div class="rep-val" id="rep-ticket" style="font-size:16px">—</div></div>
       </div>
@@ -2376,6 +2377,7 @@ async function loadDashboard(force=false){
     setTxt('dash-vencidas',fmtN((cr.vencidas||0)+(cp.vencidas||0)));
     renderContasList('dash-receber-list',cr,'receber');
     renderContasList('dash-pagar-list',cp,'pagar');
+    renderDashSparkline(v.byDay||{});
   }catch(e){
     _dashLoaded=false;
     ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
@@ -2403,6 +2405,22 @@ function recomputeDashLucro(){
     }
   }
   renderMetaBar();
+}
+function renderDashSparkline(byDay){
+  const svg=$('dash-sparkline');if(!svg)return;
+  const days=Object.keys(byDay).sort();
+  if(days.length<2){svg.innerHTML='';return;}
+  const vals=days.map(d=>byDay[d]||0);
+  const minV=Math.min(...vals),maxV=Math.max(...vals);
+  const W=200,H=40,pad=4;
+  const scaleX=(i)=>pad+i*((W-pad*2)/(vals.length-1));
+  const scaleY=(v)=>H-pad-(maxV===minV?H/2:(v-minV)/(maxV-minV)*(H-pad*2));
+  const pts=vals.map((v,i)=>`${scaleX(i).toFixed(1)},${scaleY(v).toFixed(1)}`).join(' ');
+  const areaClose=`${scaleX(vals.length-1).toFixed(1)},${H} ${scaleX(0).toFixed(1)},${H}`;
+  svg.innerHTML=
+    `<defs><linearGradient id="spark-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".25"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`+
+    `<polygon points="${pts} ${areaClose}" fill="url(#spark-g)"/>`+
+    `<polyline points="${pts}" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`;
 }
 function renderDashAlerts(){
   const ps=S.products;
@@ -3123,17 +3141,19 @@ function pedSituacaoPT(s){
 }
 function categorizePed(s){
   const n=pedSituacaoPT(String(s||'')).toLowerCase();
-  if(n.includes('cancel'))return'cancelado';
+  if(n.includes('cancel')||n.includes('devolv')||n.includes('reembolsad')||n.includes('parcialmente devolv')||n.includes('suspenso')||n.includes('falhou'))return'cancelado';
   if(n.includes('atend')||n.includes('conclui')||n.includes('entregue')||n.includes('faturad')||n.includes('despachad')||n.includes('enviado')||n.includes('encerrad'))return'concluido';
   return'pendente';
 }
 function pedSitIcon(situacao){
   const n=pedSituacaoPT(String(situacao||'')).toLowerCase();
-  if(n.includes('cancel'))return'🚫';
+  if(n.includes('cancel')||n.includes('suspenso')||n.includes('falhou'))return'🚫';
+  if(n.includes('devolv')||n.includes('reembolsad'))return'↩️';
   if(n.includes('atend')||n.includes('conclui')||n.includes('entregue')||n.includes('faturad'))return'✅';
   if(n.includes('despachad')||n.includes('enviado'))return'📦';
   if(n.includes('aguardando')||n.includes('pend'))return'⏳';
   if(n.includes('aprovad')||n.includes('pago')||n.includes('verificad'))return'✔';
+  if(n.includes('contest'))return'⚠️';
   return'🔄';
 }
 function renderPedidosTable(status){
@@ -3321,8 +3341,9 @@ async function emitirNFe(){
 
 function renderReport(){
   const ps=S.products;
-  $('rep-parado').textContent=fmtN(ps.filter(p=>p.estoque===0).length);
-  $('rep-crit').textContent=fmtN(ps.filter(p=>p.estoque>0&&p.estoque<=3).length);
+  $('rep-parado').textContent=fmtN(ps.filter(p=>p.estoque<=0).length);
+  $('rep-crit').textContent=fmtN(ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).length);
+  const rcl=$('rep-crit-lbl');if(rcl)rcl.textContent=`Estoque crítico (≤${S.estoqueMin})`;
   $('rep-imob').textContent=fmt(ps.reduce((a,p)=>a+(p.preco*p.estoque),0));
   $('rep-ticket').textContent=ps.length?fmt(ps.reduce((a,p)=>a+p.preco,0)/ps.length):'—';
   const zero=ps.filter(p=>p.estoque===0).sort((a,b)=>b.preco-a.preco);
