@@ -833,6 +833,8 @@ button:focus:not(:focus-visible){outline:none}
 .rupt-badge.r-ok{background:var(--ok-bg,#d1fae5);color:var(--ok-t,#065f46)}
 .rupt-badge.r-wa{background:var(--wa-bg,#fef3c7);color:var(--wa-t,#92400e)}
 .rupt-badge.r-er{background:var(--er-bg,#fee2e2);color:var(--er-t,#991b1b)}
+.rupt-adj{flex-shrink:0;width:30px;height:30px;border-radius:8px;background:var(--acc);border:none;color:#fff;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;transition:opacity .1s}
+.rupt-adj:active{opacity:.75}
 .rupt-empty{padding:18px 16px;font-size:13px;color:var(--mu);text-align:center}
 .rupt-ver-mais{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--acc);padding:10px;cursor:pointer;border-top:1px solid var(--bord-l)}
 .rupt-ver-mais:active{background:var(--bg)}
@@ -2243,6 +2245,7 @@ function renderRupturaWidget(){
         <div class="rupt-track"><div class="rupt-fill ${cls}" style="width:${barW}%"></div></div>
       </div>
       <span class="rupt-badge ${cls}">${esc(label)}</span>
+      <button class="rupt-adj" onclick="event.stopPropagation();openRowActions(${p.id})" title="Ajustar estoque" aria-label="Ajustar estoque">+</button>
     </div>`;
   }).join('');
 }
