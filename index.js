@@ -44,8 +44,9 @@ function getAdmin() {
 
 const app = express();
 
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use('/api/produtos/importar', express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use(cookieParser());
 app.use(cors());
 
