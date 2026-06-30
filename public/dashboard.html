@@ -105,6 +105,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
 /* TABLE CARD */
 .tcard{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
+.stick-head{background:var(--surf)}
 
 /* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--bord-l);flex-wrap:wrap}
@@ -680,6 +681,8 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
   .layout-toggle{display:none}
   .tr{gap:4px}
   .tr .bts{display:none}
+  .tcard{overflow:clip}
+  .stick-head{position:sticky;top:var(--th);z-index:49;border-bottom:1px solid var(--bord-l);box-shadow:0 2px 8px rgba(0,0,0,.05)}
 }
 @media(max-width:600px){
   .kpi-row{grid-template-columns:1fr 1fr}
@@ -1135,6 +1138,7 @@ button:focus:not(:focus-visible){outline:none}
       </div>
 
       <div class="tcard">
+        <div class="stick-head">
         <div class="toolbar">
           <div class="sw">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1175,6 +1179,7 @@ button:focus:not(:focus-visible){outline:none}
           <span id="qchip-count" style="margin-left:auto;font-size:11px;color:var(--fa);white-space:nowrap;align-self:center;padding-right:2px;flex-shrink:0"></span>
         </div>
 
+        </div><!-- .stick-head -->
         <div class="fpanel" id="fpanel">
           <div class="fgrid">
             <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo" id="flt-lo-opt">Estoque baixo (≤5)</option><option value="out">Sem estoque</option></select></div>
