@@ -5,6 +5,32 @@ const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const winston = require('winston');
+
+const axiosInstance = axios.create({
+  timeout: 10000,
+});
+
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' }),
+  ],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+  }));
+}
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -19,8 +45,8 @@ function validateEnvironment() {
   
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
-    console.warn('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
-    console.warn('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
+    logger.warn('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
+    logger.warn('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
   }
 }
 
@@ -37,17 +63,41 @@ function getAdmin() {
     }
     _fbAdmin = admin;
   } catch (e) { 
-    console.error('⚠️  Firebase Admin init error:', e.message); 
+    logger.error('⚠️  Firebase Admin init error:', e.message);
   }
   return _fbAdmin;
 }
 
 const app = express();
 
+// Confia no proxy para que o rate limiter identifique o IP real (útil para Vercel)
+app.set('trust proxy', 1);
+
+// Segurança
+app.use(helmet({
+  contentSecurityPolicy: false, // Desabilitado temporariamente para não quebrar scripts inline do html
+}));
+
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors());
+
+// Rate Limiting
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // 5 tentativas
+  message: 'Muitas tentativas de login. Tente novamente mais tarde.',
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 100, // 100 requisições
+  message: 'Muitas requisições. Tente novamente mais tarde.'
+});
+
+// Aplicar limite de requisições
+app.use('/api/', apiLimiter);
 
 // ── Carregar Variáveis de Ambiente Seguramente ───────────────────────
 // Validar variáveis de ambiente ANTES de carregar qualquer rota
@@ -70,7 +120,7 @@ let _depositoId = null;
 async function getDepositoId(token) {
   if (_depositoId) return _depositoId;
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/depositos', {
+    const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/depositos', {
       headers: { Authorization: `Bearer ${token}` },
     });
     const deps = Array.isArray(data?.data) ? data.data : [];
@@ -124,7 +174,7 @@ async function saveBlingRefresh(refreshToken) {
     await admin.firestore().collection('bling_auth').doc('tokens').set({
       refreshToken, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-  } catch (e) { console.error('[saveBlingRefresh]', e.message); }
+  } catch (e) { logger.error('[saveBlingRefresh]', e.message); }
 }
 
 // Gera um access_token válido a partir do refresh salvo (usado pelos crons)
@@ -138,13 +188,13 @@ async function getCronBlingToken() {
     const data = await refreshBlingToken(refresh);
     if (data.refresh_token) await saveBlingRefresh(data.refresh_token);
     return data.access_token;
-  } catch (e) { console.error('[getCronBlingToken]', e.message); return null; }
+  } catch (e) { logger.error('[getCronBlingToken]', e.message); return null; }
 }
 
 async function refreshBlingToken(refreshToken) {
   const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
   const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken });
-  const { data } = await axios.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
+  const { data } = await axiosInstance.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
     headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
   });
   return data;
@@ -162,7 +212,7 @@ async function ensureBlingToken(req, res) {
     setBlingCookies(res, data);
     return data.access_token;
   } catch (e) {
-    console.error('[Bling refresh]', e.response?.data || e.message);
+    logger.error('[Bling refresh]', e.response?.data || e.message);
     res.clearCookie('bling_refresh');
     return null;
   }
@@ -179,7 +229,7 @@ function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
   
   // Registrar erro completo em log interno
   if (detail) {
-    console.error(`[${new Date().toISOString()}] Error:`, detail);
+    logger.error(`[${new Date().toISOString()}] Error:`, detail);
   }
   
   res.status(statusCode).json(response);
@@ -218,7 +268,7 @@ app.use(express.static('public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { email, password } = req.body || {};
   
   if (!email || !password) {
@@ -275,7 +325,7 @@ app.get('/api/webhook/bling', async (req, res) => {
     const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
     const body  = new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: BLING_REDIRECT_URI });
 
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
+    const { data } = await axiosInstance.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
       headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 
@@ -283,7 +333,7 @@ app.get('/api/webhook/bling', async (req, res) => {
 
     res.redirect('/dashboard.html');
   } catch (err) {
-    console.error('[OAuth]', err.response?.data || err.message);
+    logger.error('[OAuth]', err.response?.data || err.message);
     res.redirect('/?error=token_exchange_failed');
   }
 });
@@ -302,7 +352,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
     let hasMore = true;
 
     while (hasMore && page <= 5) {
-      const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
+      const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/produtos', {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: limit, pagina: page },
       });
@@ -343,7 +393,7 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${req.params.id}`, {
+    const { data } = await axiosInstance.get(`https://www.bling.com.br/Api/v3/produtos/${req.params.id}`, {
       headers: blingHeaders(token),
     });
     res.json(data?.data || {});
@@ -358,7 +408,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
+    const { data } = await axiosInstance.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
@@ -379,7 +429,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
 async function fetchPedidos(token, inicio, fim, maxPg = 3) {
   let all = [];
   for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+    const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
       headers: { Authorization: `Bearer ${token}` },
       params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
     });
@@ -484,12 +534,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         if (payload.imagemUrl) payload.imagem = { link: payload.imagemUrl };
         delete payload.imagemUrl;
       }
-      await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
+      await axiosInstance.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
       if (estoque !== undefined) {
         const depositoId = await getDepositoId(token);
-        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+        await axiosInstance.post('https://www.bling.com.br/Api/v3/estoques',
           { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
           { headers: blingHeaders(token) }
         );
@@ -510,13 +560,11 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   try {
     if (preco !== undefined) {
       // Busca o produto completo antes de atualizar (Bling exige objeto completo no PUT)
-      const { data: current } = await axios.get(
-        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+      const { data: current } = await axiosInstance.get(`https://www.bling.com.br/Api/v3/produtos/${id}`,
         { headers: blingHeaders(token) }
       );
       const prod = current?.data || {};
-      await axios.put(
-        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+      await axiosInstance.put(`https://www.bling.com.br/Api/v3/produtos/${id}`,
         { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
@@ -530,7 +578,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     }
     if (estoque !== undefined) {
       const depositoId = await getDepositoId(token);
-      await axios.post('https://www.bling.com.br/Api/v3/estoques',
+      await axiosInstance.post('https://www.bling.com.br/Api/v3/estoques',
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
@@ -544,7 +592,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
-    console.error('[Update]', err.response?.data || err.message);
+    logger.error('[Update]', err.response?.data || err.message);
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
     sendErrorResponse(res, 500, 'Erro ao atualizar produto', detail);
   }
@@ -565,14 +613,14 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
   for (const p of produtos) {
     try {
       if (p.preco !== undefined && p.preco !== '') {
-        await axios.put(`https://www.bling.com.br/Api/v3/produtos/${p.id}`,
+        await axiosInstance.put(`https://www.bling.com.br/Api/v3/produtos/${p.id}`,
           { preco: Number(p.preco) },
           { headers: blingHeaders(token) }
         );
       }
       if (p.estoque !== undefined && p.estoque !== '') {
         const depositoId = await getDepositoId(token);
-        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+        await axiosInstance.post('https://www.bling.com.br/Api/v3/estoques',
           { produto: { id: Number(p.id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(p.estoque) },
           { headers: blingHeaders(token) }
         );
@@ -602,7 +650,7 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+    const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
       headers: { Authorization: `Bearer ${token}` },
       params: { limite: 50, pagina: 1 },
     });
@@ -632,7 +680,7 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfe', {
+    const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/nfe', {
       headers: { Authorization: `Bearer ${token}` },
       params: { limite: 50, pagina: 1 },
     });
@@ -664,7 +712,7 @@ app.post('/api/nfe/emitir', requireAuthJson, async (req, res) => {
   try {
     const payload = { pedido: { id: Number(pedidoId) } };
     if (obs) payload.observacoes = obs;
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/nfe', payload, {
+    const { data } = await axiosInstance.post('https://www.bling.com.br/Api/v3/nfe', payload, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
     res.json({ ok: true, nfe: data?.data || data });
@@ -827,7 +875,7 @@ async function pushParaTodos(admin, { title, body, url = '/dashboard.html', tipo
 async function fetchResumoProdutos(token, maxPg = 3) {
   let all = [];
   for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
+    const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/produtos', {
       headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
     });
     const items = Array.isArray(data?.data) ? data.data : [];
@@ -979,7 +1027,7 @@ async function fetchContas(token, tipo) {
   let all = [];
   try {
     for (let pg = 1; pg <= 3; pg++) {
-      const { data } = await axios.get(`https://www.bling.com.br/Api/v3/contas/${tipo}`, {
+      const { data } = await axiosInstance.get(`https://www.bling.com.br/Api/v3/contas/${tipo}`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: 100, pagina: pg },
       });
@@ -1114,7 +1162,7 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
     const contatosPromise = (async () => {
       let all = [];
       for (let pg = 1; pg <= 3; pg++) {
-        const { data } = await axios.get('https://www.bling.com.br/Api/v3/contatos', {
+        const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/contatos', {
           headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
         });
         const items = Array.isArray(data?.data) ? data.data : [];
@@ -1198,7 +1246,7 @@ app.post('/api/webhook/bling', async (req, res) => {
       return; // evento não mapeado — não notifica (evita spam)
     }
     await pushParaTodos(admin, { title, body, url: '/dashboard.html', tipo: 'evento' });
-  } catch (e) { console.error('[webhook bling]', e.message); }
+  } catch (e) { logger.error('[webhook bling]', e.message); }
 });
 
 // ── 404 ──────────────────────────────────────────────────────────────
@@ -1208,7 +1256,7 @@ app.use((req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
 // ── Error Handler ────────────────────────────────────────────────────
 
 app.use((err, req, res, next) => {
-  console.error('[Unhandled Error]', err);
+  logger.error('[Unhandled Error]', err);
   sendErrorResponse(res, 500, 'Erro interno do servidor', NODE_ENV === 'development' ? err.message : undefined);
 });
 
@@ -1216,8 +1264,8 @@ app.use((err, req, res, next) => {
 
 if (require.main === module) {
   app.listen(process.env.PORT || 3000, () => {
-    console.log(`✅ Servidor iniciado em http://localhost:${process.env.PORT || 3000}`);
-    console.log(`📝 Ambiente: ${NODE_ENV}`);
+    logger.info(`✅ Servidor iniciado em http://localhost:${process.env.PORT || 3000}`);
+    logger.info(`📝 Ambiente: ${NODE_ENV}`);
   });
 }
 
