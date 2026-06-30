@@ -191,6 +191,8 @@ const _SIT_PT_MAP = {
   'complete':'Concluído','cancelled':'Cancelado','canceled':'Cancelado','refunded':'Reembolsado',
   'failed':'Falhou','open':'Em aberto','closed':'Encerrado','waiting':'Aguardando',
   'waiting_payment':'Aguardando pagamento','ready_to_ship':'Pronto p/ envio',
+  'return':'Devolvido','returned':'Devolvido','partially_refunded':'Parcialmente devolvido',
+  'on_hold':'Em espera','suspended':'Suspenso','voided':'Cancelado','disputed':'Contestado',
 };
 function situacaoPT(s) {
   const raw = String(s || '—');

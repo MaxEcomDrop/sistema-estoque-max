@@ -716,6 +716,13 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
   #list-container .sb2{font-size:10px;padding:3px 6px}
   .pname{font-size:12.5px}
   .pname-sub{font-size:10.5px}
+  /* Pedidos: hide Data column on phones */
+  #pedidos-body thead th:nth-child(2),#pedidos-body tbody td:nth-child(2){display:none!important}
+  /* Clientes: hide UF column on phones */
+  #clientes-body thead th:nth-child(3),#clientes-body tbody td:nth-child(3){display:none!important}
+  /* Notas: hide Série column on phones */
+  #notas-body thead th:nth-child(2),#notas-body tbody td:nth-child(2){display:none!important}
+  .mbox{padding:16px}
 }
 @media(max-width:380px){
   .bnav-item span{font-size:9px}
@@ -1030,9 +1037,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div>
           <div class="hero-val" id="dash-faturamento">—</div>
           <div class="hero-sub" id="dash-fat-sub">no período selecionado</div>
-          <div style="margin-top:8px;display:flex;gap:12px;font-size:11px">
+          <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap">
             <span id="dash-fat-conc" style="color:var(--ok-t)"></span>
             <span id="dash-fat-pend" style="color:var(--wa-t)"></span>
+            <span id="dash-fat-canc" style="color:var(--er-t)"></span>
           </div>
         </div>
         <div class="hero-card hero-luc" onclick="setView('financeiro')" style="cursor:pointer">
@@ -2343,9 +2351,10 @@ async function loadDashboard(force=false){
       fsub.innerHTML=txt;
     }
     // Extra info lines in the faturamento card
-    const fatConc=$('dash-fat-conc'),fatPend=$('dash-fat-pend');
+    const fatConc=$('dash-fat-conc'),fatPend=$('dash-fat-pend'),fatCanc=$('dash-fat-canc');
     if(fatConc)fatConc.textContent=v.concluidos>0?`✅ ${fmtN(v.concluidos)} concluídos`:'';
     if(fatPend)fatPend.textContent=v.pendentes>0?`⏳ ${fmtN(v.pendentes||0)} pendentes`:'';
+    if(fatCanc)fatCanc.textContent=v.cancelados>0?`🚫 ${fmtN(v.cancelados)} cancelados`:'';
     // Lucro estimado via margem média do catálogo
     _dashFat=v.faturamento||0;
     _dashTotalPedidos=v.totalPedidos||0;
@@ -3099,11 +3108,15 @@ async function loadPedidosUrl(url){
     renderPedidosTable(_pedStatus);
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
-const _SIT_PT={'pending':'Pendente','approved':'Aprovado','paid':'Pago','processing':'Em processamento',
+const _SIT_PT={
+  'pending':'Pendente','approved':'Aprovado','paid':'Pago','processing':'Em processamento',
   'in_process':'Em processamento','shipped':'Enviado','delivered':'Entregue','completed':'Concluído',
   'complete':'Concluído','cancelled':'Cancelado','canceled':'Cancelado','refunded':'Reembolsado',
   'failed':'Falhou','open':'Em aberto','closed':'Encerrado','waiting':'Aguardando',
-  'waiting_payment':'Aguardando pagamento','ready_to_ship':'Pronto p/ envio'};
+  'waiting_payment':'Aguardando pagamento','ready_to_ship':'Pronto p/ envio',
+  'return':'Devolvido','returned':'Devolvido','partially_refunded':'Parcialmente devolvido',
+  'on_hold':'Em espera','suspended':'Suspenso','voided':'Cancelado','disputed':'Contestado',
+};
 function pedSituacaoPT(s){
   const raw=String(s||'—');
   return _SIT_PT[raw.toLowerCase().replace(/\s+/g,'_')]||raw;
