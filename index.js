@@ -59,6 +59,7 @@ const BLING_REDIRECT_URI  = process.env.BLING_REDIRECT_URI;
 const ADMIN_EMAIL         = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
 const JWT_SECRET          = process.env.JWT_SECRET;
+const BLING_API_URL       = 'https://www.bling.com.br/Api/v3';
 const NODE_ENV            = process.env.NODE_ENV || 'development';
 
 // In-memory change log (resets on cold start)
@@ -70,7 +71,7 @@ let _depositoId = null;
 async function getDepositoId(token) {
   if (_depositoId) return _depositoId;
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/depositos', {
+    const { data } = await axios.get(`${BLING_API_URL}/depositos`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const deps = Array.isArray(data?.data) ? data.data : [];
@@ -144,7 +145,7 @@ async function getCronBlingToken() {
 async function refreshBlingToken(refreshToken) {
   const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
   const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken });
-  const { data } = await axios.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
+  const { data } = await axios.post(`${BLING_API_URL}/oauth/token`, body.toString(), {
     headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
   });
   return data;
@@ -263,7 +264,7 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
     redirect_uri: BLING_REDIRECT_URI,
     state: 'estoque_max',
   });
-  res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
+  res.json({ authUrl: `${BLING_API_URL}/oauth/authorize?${params}` });
 });
 
 app.get('/api/webhook/bling', async (req, res) => {
@@ -275,7 +276,7 @@ app.get('/api/webhook/bling', async (req, res) => {
     const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
     const body  = new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: BLING_REDIRECT_URI });
 
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/oauth/token', body.toString(), {
+    const { data } = await axios.post(`${BLING_API_URL}/oauth/token`, body.toString(), {
       headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 
@@ -302,7 +303,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
     let hasMore = true;
 
     while (hasMore && page <= 5) {
-      const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
+      const { data } = await axios.get(`${BLING_API_URL}/produtos`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: limit, pagina: page },
       });
@@ -343,7 +344,7 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${req.params.id}`, {
+    const { data } = await axios.get(`${BLING_API_URL}/produtos/${req.params.id}`, {
       headers: blingHeaders(token),
     });
     res.json(data?.data || {});
@@ -358,7 +359,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
+    const { data } = await axios.post(`${BLING_API_URL}/produtos`, req.body, {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
@@ -379,7 +380,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
 async function fetchPedidos(token, inicio, fim, maxPg = 3) {
   let all = [];
   for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+    const { data } = await axios.get(`${BLING_API_URL}/pedidos/vendas`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
     });
@@ -484,12 +485,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         if (payload.imagemUrl) payload.imagem = { link: payload.imagemUrl };
         delete payload.imagemUrl;
       }
-      await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
+      await axios.put(`${BLING_API_URL}/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
       if (estoque !== undefined) {
         const depositoId = await getDepositoId(token);
-        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+        await axios.post(`${BLING_API_URL}/estoques`,
           { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
           { headers: blingHeaders(token) }
         );
@@ -511,12 +512,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     if (preco !== undefined) {
       // Busca o produto completo antes de atualizar (Bling exige objeto completo no PUT)
       const { data: current } = await axios.get(
-        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        `${BLING_API_URL}/produtos/${id}`,
         { headers: blingHeaders(token) }
       );
       const prod = current?.data || {};
       await axios.put(
-        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        `${BLING_API_URL}/produtos/${id}`,
         { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
@@ -530,7 +531,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     }
     if (estoque !== undefined) {
       const depositoId = await getDepositoId(token);
-      await axios.post('https://www.bling.com.br/Api/v3/estoques',
+      await axios.post(`${BLING_API_URL}/estoques`,
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
@@ -565,14 +566,14 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
   for (const p of produtos) {
     try {
       if (p.preco !== undefined && p.preco !== '') {
-        await axios.put(`https://www.bling.com.br/Api/v3/produtos/${p.id}`,
+        await axios.put(`${BLING_API_URL}/produtos/${p.id}`,
           { preco: Number(p.preco) },
           { headers: blingHeaders(token) }
         );
       }
       if (p.estoque !== undefined && p.estoque !== '') {
         const depositoId = await getDepositoId(token);
-        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+        await axios.post(`${BLING_API_URL}/estoques`,
           { produto: { id: Number(p.id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(p.estoque) },
           { headers: blingHeaders(token) }
         );
@@ -602,7 +603,7 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+    const { data } = await axios.get(`${BLING_API_URL}/pedidos/vendas`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { limite: 50, pagina: 1 },
     });
@@ -632,7 +633,7 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfe', {
+    const { data } = await axios.get(`${BLING_API_URL}/nfe`, {
       headers: { Authorization: `Bearer ${token}` },
       params: { limite: 50, pagina: 1 },
     });
@@ -664,7 +665,7 @@ app.post('/api/nfe/emitir', requireAuthJson, async (req, res) => {
   try {
     const payload = { pedido: { id: Number(pedidoId) } };
     if (obs) payload.observacoes = obs;
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/nfe', payload, {
+    const { data } = await axios.post(`${BLING_API_URL}/nfe`, payload, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
     res.json({ ok: true, nfe: data?.data || data });
@@ -827,7 +828,7 @@ async function pushParaTodos(admin, { title, body, url = '/dashboard.html', tipo
 async function fetchResumoProdutos(token, maxPg = 3) {
   let all = [];
   for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
+    const { data } = await axios.get(`${BLING_API_URL}/produtos`, {
       headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
     });
     const items = Array.isArray(data?.data) ? data.data : [];
@@ -979,7 +980,7 @@ async function fetchContas(token, tipo) {
   let all = [];
   try {
     for (let pg = 1; pg <= 3; pg++) {
-      const { data } = await axios.get(`https://www.bling.com.br/Api/v3/contas/${tipo}`, {
+      const { data } = await axios.get(`${BLING_API_URL}/contas/${tipo}`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: 100, pagina: pg },
       });
@@ -1114,7 +1115,7 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
     const contatosPromise = (async () => {
       let all = [];
       for (let pg = 1; pg <= 3; pg++) {
-        const { data } = await axios.get('https://www.bling.com.br/Api/v3/contatos', {
+        const { data } = await axios.get(`${BLING_API_URL}/contatos`, {
           headers: { Authorization: `Bearer ${token}` }, params: { limite: 100, pagina: pg },
         });
         const items = Array.isArray(data?.data) ? data.data : [];
