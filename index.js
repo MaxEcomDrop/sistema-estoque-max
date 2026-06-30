@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -43,6 +44,7 @@ function getAdmin() {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -218,7 +220,15 @@ app.use(express.static('public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Limita a 5 requisições por IP
+  message: { error: 'Muitas tentativas de login. Tente novamente após 15 minutos.' },
+  standardHeaders: true, // Retorna os headers de limite na resposta
+  legacyHeaders: false, // Desabilita os cabeçalhos 'X-RateLimit-*'
+});
+
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { email, password } = req.body || {};
   
   if (!email || !password) {
