@@ -1530,9 +1530,9 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <input type="date" id="fin-dt-start">
           <span style="color:var(--mu)">—</span>
           <input type="date" id="fin-dt-end">
-          <button class="btp" onclick="loadFinanceiro()">Aplicar</button>
+          <button class="btp" onclick="_finCacheKey='';loadFinanceiro()">Aplicar</button>
         </div>
-        <button class="bts" onclick="loadFinanceiro()" style="margin-left:auto">↻ Atualizar</button>
+        <button class="bts" onclick="loadFinanceiro(true)" style="margin-left:auto">↻ Atualizar</button>
       </div>
       <!-- Row 1: main KPIs -->
       <div class="fk-grid" id="fin-kpis">
@@ -2641,7 +2641,7 @@ function renderSkeleton(n=7){
 }
 function renderNoBling(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><p class="st-t">Bling não conectado</p><p class="st-d">Conecte sua conta para carregar produtos.</p><button class="st-btn" onclick="window.location.href='/'">Conectar Bling</button></div></td></tr>`;}
 function renderExpired(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p class="st-t">Sessão Bling expirada</p><button class="st-btn" onclick="window.location.href='/'">Reconectar</button></div></td></tr>`;}
-function sync(){_dashLoaded=false;_pedidosLoaded=false;_clientesLoaded=false;_notasLoaded=false;loadProducts(true);}
+function sync(){_dashLoaded=false;_pedidosLoaded=false;_clientesLoaded=false;_notasLoaded=false;_finCacheKey='';_finCache={};loadProducts(true);}
 
 // ── KPI ──────────────────────────────────────────
 function updateKpis(){
@@ -3075,13 +3075,18 @@ function renderTarefas(){
   const ps=S.products;
   const zerados=ps.filter(p=>p.estoque<=0).length;
   const criticos=ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).length;
-  const total=zerados+criticos;
+  const pendentes=_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length;
+  const nfeAutor=_notasCache.filter(n=>notaSitClass(n.situacao)==='ok').length;
+  const total=zerados+criticos+pendentes;
   const el=$('tarefas-panel');if(!el)return;
   el.style.display=total>0?'':'none';
   const z=$('tf-zerados'),c=$('tf-criticos'),b=$('tf-total-badge');
+  const pc=$('tf-pend-count'),nc=$('tf-nfe-count');
   if(z)z.textContent=zerados;
   if(c)c.textContent=criticos;
   if(b)b.textContent=total;
+  if(pc)pc.textContent=pendentes;
+  if(nc)nc.textContent=nfeAutor||'—';
 }
 function filterByStock(min,max){
   $('f-st-min').value=min;
@@ -3127,9 +3132,8 @@ async function loadPedidosUrl(url){
     const can=_pedidosCache.filter(p=>categorizePed(p.situacao)==='cancelado').length;
     const setC=(id,n)=>{const el=$(id);if(el){el.textContent=n||'';el.style.display=n?'':'none';}};
     setC('pt-cnt-all',_pedidosCache.length);setC('pt-cnt-pen',pen);setC('pt-cnt-ok',ok);setC('pt-cnt-can',can);
-    // Atualiza Tarefas panel
-    const tf=$('tf-pend-count');if(tf)tf.textContent=pen;
     renderPedidosTable(_pedStatus);
+    renderTarefas();
   }catch(e){_pedidosLoaded=false;body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 const _SIT_PT={
@@ -3256,8 +3260,8 @@ async function loadNotas(force=false){
     if(!r.ok)throw new Error(d.error||'Erro ao carregar notas');
     _notasCache=d.notas||[];
     _notasLoaded=true;
-    const nfeC=$('tf-nfe-count');if(nfeC)nfeC.textContent=_notasCache.filter(n=>notaSitClass(n.situacao)==='ok').length;
     renderNotas();
+    renderTarefas();
   }catch(e){_notasLoaded=false;body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 function notaSitClass(situacao){
@@ -3865,6 +3869,8 @@ async function saveCreate(){
 
 // ── FINANCEIRO ────────────────────────────────────
 let finPeriod='30d';
+let _finCache={};
+let _finCacheKey='';
 function setFinPeriod(p,btn){
   finPeriod=p;
   document.querySelectorAll('.fp-btn').forEach(b=>b.classList.remove('on'));
@@ -3873,8 +3879,14 @@ function setFinPeriod(p,btn){
   if(cr)cr.style.display=p==='custom'?'flex':'none';
   if(p!=='custom')loadFinanceiro();
 }
-async function loadFinanceiro(){
+async function loadFinanceiro(force=false){
   const body=$('fin-margin-body');
+  let cacheKey=finPeriod;
+  if(finPeriod==='custom'){const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;cacheKey=`custom:${s}:${e}`;}
+  if(!force&&_finCacheKey===cacheKey&&_finCache[cacheKey]){
+    const d=_finCache[cacheKey];
+    renderFinFromData(d);return;
+  }
   body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados financeiros…</p></div>';
   ['fin-bruto','fin-rec','fin-cancelado','fin-pend-val','fin-frete','fin-ticket','fin-desconto','fin-total'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
   ['fin-sub-total','fin-sub-conc','fin-sub-canc','fin-sub-pend'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
@@ -3890,6 +3902,12 @@ async function loadFinanceiro(){
       body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
     }
     if(!r.ok)throw new Error(d.error||'Erro');
+    _finCache[cacheKey]=d;_finCacheKey=cacheKey;
+    renderFinFromData(d);
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderFinFromData(d){
+  const body=$('fin-margin-body');if(!body)return;
     // KPI Row 1
     $('fin-bruto').textContent=fmt(d.totalBruto);
     $('fin-rec').textContent=fmt(d.receitaConcluida);
@@ -3921,7 +3939,6 @@ async function loadFinanceiro(){
       prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
       return`<tr><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
     }</tbody></table>`;
-  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 function renderFinTrend(d){
   const c=d.comparativo;
