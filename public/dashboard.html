@@ -1623,6 +1623,10 @@ button:focus:not(:focus-visible){outline:none}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
     Movimento de estoque
   </button>
+  <button class="ras-btn" onclick="rasCopiarCodigo(_rasId)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Copiar código SKU
+  </button>
   <div class="ras-sep"></div>
   <button class="ras-btn" onclick="closeRowActions();rasDuplicar(_rasId)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -3576,6 +3580,12 @@ function rasExcluir(id){
   if(!p)return;
   editorId=id;editorProduct={nome:p.nome};
   excluirProdutoAtual();
+}
+function rasCopiarCodigo(id){
+  const p=S.products.find(x=>x.id===id);if(!p)return;
+  const txt=p.codigo||String(p.id);
+  try{navigator.clipboard.writeText(txt).then(()=>{closeRowActions();toast(`Código copiado: ${txt}`,'ok');vibrate(20);});}
+  catch{const inp=document.createElement('textarea');inp.value=txt;inp.style.position='fixed';inp.style.opacity='0';document.body.appendChild(inp);inp.select();document.execCommand('copy');inp.remove();closeRowActions();toast(`Código copiado: ${txt}`,'ok');}
 }
 (function(){
   const tbody=$('tbody');if(!tbody)return;
