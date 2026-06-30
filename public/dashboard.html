@@ -3187,7 +3187,7 @@ function renderPedidosTable(status){
   const body=$('pedidos-body');
   let list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
   const q=($('ped-search')?.value||'').toLowerCase().trim();
-  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao}`.toLowerCase().includes(q));
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao} ${pedSituacaoPT(p.situacao)}`.toLowerCase().includes(q));
   const _statusLbl={all:'encontrado',pendente:'pendente',concluido:'concluído',cancelado:'cancelado'};
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${q?'encontrado para "'+esc(q)+'"':_statusLbl[status]||status}.</p></div>`;return;}
   const totalVal=list.reduce((a,p)=>a+(p.valor||0),0);
@@ -3251,7 +3251,7 @@ async function openPedidoDetalhe(id){
 function exportPedidosCSV(){
   let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);
   const q=($('ped-search')?.value||'').toLowerCase().trim();
-  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao}`.toLowerCase().includes(q));
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao} ${pedSituacaoPT(p.situacao)}`.toLowerCase().includes(q));
   if(!list.length){toast('Nenhum pedido para exportar','err');return;}
   const hdrs=['Número','Data','Cliente','Valor','Situação'];
   const csv=[hdrs.join(','),...list.map(p=>['numero','data','contato','valor','situacao'].map(c=>{
