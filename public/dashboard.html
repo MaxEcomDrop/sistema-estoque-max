@@ -1179,7 +1179,7 @@ button:focus:not(:focus-visible){outline:none}
         <div class="toolbar">
           <div class="sw">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="sinp" id="search" type="search" placeholder="Buscar nome, SKU ou cole código de barras…" oninput="debouncedSearch(this)" autocomplete="off" style="padding-right:28px">
+            <input class="sinp" id="search" type="search" placeholder="Buscar nome, SKU ou cole código de barras…" oninput="debouncedSearch(this)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="padding-right:28px">
             <button class="sw-clr" id="sw-clr" onclick="clearSearch()" aria-label="Limpar busca" tabindex="-1">×</button>
           </div>
           <button class="bti" id="voice-btn" onclick="startVoiceSearch()" title="Busca por voz (V)" aria-label="Busca por voz" style="display:none">
@@ -2668,6 +2668,7 @@ function updateBatchBar(){const cnt=S.selected.size;$('bbar').classList.toggle('
 function editCell(span,field,id,current,nomeProd){
   const inp=document.createElement('input');
   inp.className='iinp';inp.type='number';inp.value=current;inp.step=field==='preco'?'0.01':'1';inp.min='0';
+  inp.inputMode=field==='preco'?'decimal':'numeric';
   span.replaceWith(inp);inp.focus();inp.select();
   const restore=()=>{const p=S.products.find(x=>x.id===id);if(!p)return;const ns=document.createElement('span');ns.className='ev'+(field==='preco'?' pcell':'');ns.innerHTML=(field==='preco'?fmt(p.preco):`${fmtN(p.estoque)} un.`)+editIco;ns.onclick=()=>editCell(ns,field,id,p[field],p.nome);inp.replaceWith(ns);};
   const save=async()=>{
@@ -4146,10 +4147,8 @@ function rasCopiarCodigo(id){
     if(_swipeTr){
       const dx=e.changedTouches[0].clientX-_rasStartPos.x;
       const dy=Math.abs(e.changedTouches[0].clientY-_rasStartPos.y);
-      if(dx<-55&&dy<40){
-        const id=Number(_swipeTr.dataset.id);
-        if(id)openRowActions(id);
-      }
+      if(dx<-55&&dy<40){const id=Number(_swipeTr.dataset.id);if(id)openRowActions(id);}
+      else if(dx>55&&dy<40){const id=Number(_swipeTr.dataset.id);if(id){vibrate(20);openEditor(id);}}
     }
     _swipeTr=null;
   },{passive:true});
@@ -4182,6 +4181,7 @@ function rasCopiarCodigo(id){
       const dx=e.changedTouches[0].clientX-_cardPos.x;
       const dy=Math.abs(e.changedTouches[0].clientY-_cardPos.y);
       if(dx<-55&&dy<40){const id=Number(_swipeCard.dataset.id);if(id)openRowActions(id);}
+      else if(dx>55&&dy<40){const id=Number(_swipeCard.dataset.id);if(id){vibrate(20);openEditor(id);}}
     }
     _swipeCard=null;
   },{passive:true});
