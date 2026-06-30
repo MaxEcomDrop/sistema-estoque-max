@@ -1181,7 +1181,12 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="kpi">
           <div class="kpi-lbl">Valor em estoque</div>
           <div class="kpi-val" id="k-val" style="font-size:18px;letter-spacing:-.5px">—</div>
-          <div class="kpi-sub">preço × quantidade</div>
+          <div class="kpi-sub" id="k-val-s">preço × quantidade</div>
+        </div>
+        <div class="kpi" onclick="openModal('custo-import-modal')" style="cursor:pointer" title="Clique para importar custos">
+          <div class="kpi-lbl">Margem média</div>
+          <div class="kpi-val" id="k-margem" style="font-size:18px;letter-spacing:-.5px">—</div>
+          <div class="kpi-sub" id="k-margem-s">cadastre custos p/ calcular</div>
         </div>
       </div>
 
@@ -2542,8 +2547,24 @@ function sync(){loadProducts(true);}
 function updateKpis(){
   const ps=S.products,total=ps.length,ok=ps.filter(p=>p.estoque>0).length,out=total-ok;
   const val=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
+  const custoTotal=ps.reduce((a,p)=>a+(p.precoCusto>0?p.precoCusto*p.estoque:0),0);
   animNum($('k-total'),total);animNum($('k-ok'),ok);animNum($('k-out'),out);
   $('k-val').textContent=fmt(val);
+  const vs=$('k-val-s');if(vs)vs.textContent=custoTotal>0?`custo: ${fmt(custoTotal)}`:'preço × quantidade';
+  const withCost=ps.filter(p=>p.preco>0&&p.precoCusto>0);
+  const margEl=$('k-margem'),margSub=$('k-margem-s');
+  if(margEl&&margSub){
+    if(withCost.length){
+      const m=withCost.reduce((a,p)=>a+((p.preco-p.precoCusto)/p.preco),0)/withCost.length;
+      margEl.textContent=Math.round(m*100)+'%';
+      margSub.textContent=`${withCost.length} de ${total} com custo`;
+      margEl.style.color=m>=0.25?'var(--ok-t)':m>=0.1?'var(--wa)':'var(--er-t)';
+    }else{
+      margEl.textContent='—';
+      margSub.textContent=`toque para importar custos`;
+      margEl.style.color='';
+    }
+  }
   $('k-total-s').textContent=`${total} produto${total!==1?'s':''} no Bling`;
   $('k-out-s').textContent=`${out} produto${out!==1?'s':''} sem estoque`;
   const lowList=ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).map(p=>p.nome).slice(0,5);
