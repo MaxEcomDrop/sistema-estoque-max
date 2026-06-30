@@ -1160,6 +1160,7 @@ button:focus:not(:focus-visible){outline:none}
           <span class="qchip" data-s="ok" onclick="setQChip(this,'ok')">Em estoque</span>
           <span class="qchip" data-s="lo" onclick="setQChip(this,'lo')" id="qchip-lo">Estoque baixo</span>
           <span class="qchip" data-s="out" onclick="setQChip(this,'out')">Sem estoque</span>
+          <span class="qchip" id="qchip-crit" onclick="toggleCritSort(this)" data-s="__crit" style="border-color:transparent;color:var(--mu)">⬆ Críticos</span>
           <span id="qchip-count" style="margin-left:auto;font-size:11px;color:var(--fa);white-space:nowrap;align-self:center;padding-right:2px;flex-shrink:0"></span>
         </div>
 
@@ -2435,13 +2436,24 @@ function sortBy(field){
   });
   applyFilters();
 }
+function toggleCritSort(el){
+  const active=S.sort.field==='estoque'&&S.sort.dir==='asc';
+  if(active){S.sort.field='nome';S.sort.dir='asc';}
+  else{S.sort.field='estoque';S.sort.dir='asc';}
+  vibrate(8);
+  const chip=$('qchip-crit');
+  if(chip){chip.classList.toggle('on',!active);chip.style.borderColor=active?'transparent':'';chip.style.color=active?'var(--mu)':'';}
+  applyFilters();
+}
 function toggleFilters(){$('fpanel').classList.toggle('open');}
 function clearFilters(){$('f-status').value='';$('f-cat').value='';$('f-st-min').value='';$('f-st-max').value='';$('f-pr-min').value='';$('f-pr-max').value='';applyFilters();}
 function updateFilterBadge(){const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';}
 function setQChip(el,v){$('f-status').value=v;vibrate(8);applyFilters();}
 function updateQChips(){
   const v=$('f-status').value;
-  document.querySelectorAll('#qchips-bar .qchip').forEach(c=>c.classList.toggle('on',c.dataset.s===v));
+  document.querySelectorAll('#qchips-bar .qchip').forEach(c=>{if(c.dataset.s!=='__crit')c.classList.toggle('on',c.dataset.s===v);});
+  const cc=$('qchip-crit'),isCrit=S.sort.field==='estoque'&&S.sort.dir==='asc';
+  if(cc){cc.classList.toggle('on',isCrit);cc.style.borderColor=isCrit?'':'transparent';cc.style.color=isCrit?'':'var(--mu)';};
   const ql=$('qchip-lo');if(ql)ql.textContent=`Estoque baixo (≤${S.estoqueMin})`;
   const cnt=$('qchip-count');
   if(cnt){const tot=S.products.length,fil=S.filtered.length;cnt.textContent=fil<tot?`${fmtN(fil)} de ${fmtN(tot)}`:`${fmtN(tot)} produto${tot!==1?'s':''}`;}
