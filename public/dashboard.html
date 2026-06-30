@@ -3796,6 +3796,37 @@ function rasCopiarCodigo(id){
   },{passive:true});
 })();
 
+// Long-press / swipe-left on card grid (mirrors tbody IIFE)
+(function(){
+  const cc=$('card-container');if(!cc)return;
+  let _swipeCard=null,_cardTimer=null,_cardPos={x:0,y:0};
+  cc.addEventListener('touchstart',e=>{
+    const card=e.target.closest('[data-id]');if(!card)return;
+    _cardPos={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    _swipeCard=card;
+    _cardTimer=setTimeout(()=>{_cardTimer=null;openRowActions(Number(card.dataset.id));},480);
+  },{passive:true});
+  cc.addEventListener('touchmove',e=>{
+    if(!_cardTimer)return;
+    const dx=Math.abs(e.touches[0].clientX-_cardPos.x);
+    const dy=Math.abs(e.touches[0].clientY-_cardPos.y);
+    if(dx>8||dy>8){clearTimeout(_cardTimer);_cardTimer=null;}
+  },{passive:true});
+  cc.addEventListener('touchend',e=>{
+    if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;}
+    if(_swipeCard){
+      const dx=e.changedTouches[0].clientX-_cardPos.x;
+      const dy=Math.abs(e.changedTouches[0].clientY-_cardPos.y);
+      if(dx<-55&&dy<40){const id=Number(_swipeCard.dataset.id);if(id)openRowActions(id);}
+    }
+    _swipeCard=null;
+  },{passive:true});
+  cc.addEventListener('touchcancel',()=>{
+    if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;}
+    _swipeCard=null;
+  },{passive:true});
+})();
+
 // ── PULL TO REFRESH ───────────────────────────────
 const _ptrFnMap={
   inicio:()=>loadDashboard(true),
