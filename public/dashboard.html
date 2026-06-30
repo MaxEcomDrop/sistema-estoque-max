@@ -3336,7 +3336,7 @@ async function openNotaDetalhe(id){
     const r=await fetch(`/api/nfe/${id}/detalhe`),n=await r.json();
     if(!r.ok)throw new Error(n.error||'Erro ao carregar NF-e');
     const sc=notaSitClass(n.situacao);
-    const itensRows=(n.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}</td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    const itensRows=(n.itens||[]).map(it=>{const mp=S.products.find(q=>q.codigo&&it.codigo&&q.codigo===it.codigo);return`<tr${mp?` style="cursor:pointer" onclick="closeModal('nfe-detail-modal');setView('produtos');setTimeout(()=>openEditor(${mp.id}),80)" title="Ver produto"`:''}><td>${esc(it.descricao)}${it.codigo?`<br><span style="font-size:10px;color:var(--mu)">SKU: ${esc(it.codigo)}</span>`:''}  </td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
     const totalNota=Number(n.total||0)+Number(n.totalFrete||0)-Number(n.totalDesconto||0);
     $('nfe-detalhe').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">

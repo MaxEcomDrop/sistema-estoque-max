@@ -819,6 +819,7 @@ app.get('/api/nfe/:id/detalhe', requireAuthJson, async (req, res) => {
     const n = data?.data || data || {};
     const itens = (Array.isArray(n.itens) ? n.itens : []).map(it => ({
       descricao: it.descricao || it.produto?.nome || 'Item',
+      codigo: it.codigo || it.produto?.codigo || '',
       qtd: Number(it.quantidade) || 0,
       valor: Number(it.valor) || 0,
       total: (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
