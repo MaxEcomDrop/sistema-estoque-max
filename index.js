@@ -6,8 +6,9 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const { rateLimit } = require('express-rate-limit');
 const winston = require('winston');
+const http = require('http');
 
 const axiosInstance = axios.create({
   timeout: 10000,
@@ -21,8 +22,12 @@ const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' }),
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    })
   ],
 });
 
@@ -69,6 +74,7 @@ function getAdmin() {
 }
 
 const app = express();
+const server = http.createServer(app);
 
 // Confia no proxy para que o rate limiter identifique o IP real (útil para Vercel)
 app.set('trust proxy', 1);
@@ -346,12 +352,13 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
 
   try {
     // Fetch up to 500 products (paginated)
-    const limit = 100;
-    let page = 1;
+    const limit = parseInt(req.query.limite) || 100;
+    const maxPages = parseInt(req.query.maxPaginas) || 5;
+    let page = parseInt(req.query.pagina) || 1;
     let allProducts = [];
     let hasMore = true;
 
-    while (hasMore && page <= 5) {
+    while (hasMore && page <= maxPages) {
       const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/produtos', {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: limit, pagina: page },
@@ -426,12 +433,12 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
 });
 
 // Busca pedidos de venda num intervalo (paginado)
-async function fetchPedidos(token, inicio, fim, maxPg = 3) {
+async function fetchPedidos(token, inicio, fim, maxPg = 3, limite = 100, paginaInicial = 1) {
   let all = [];
-  for (let pg = 1; pg <= maxPg; pg++) {
+  for (let pg = paginaInicial; pg < paginaInicial + maxPg; pg++) {
     const { data } = await axiosInstance.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
       headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
+      params: { limite, pagina: pg, dataInicial: inicio, dataFinal: fim },
     });
     const items = Array.isArray(data?.data) ? data.data : [];
     all = all.concat(items);
@@ -468,7 +475,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
 
     // Período atual (3 págs) + período anterior (2 págs) em paralelo
     const [allPedidos, prevPedidos] = await Promise.all([
-      fetchPedidos(token, inicio, fim, 3),
+      fetchPedidos(token, inicio, fim, parseInt(req.query.maxPaginas) || 3, parseInt(req.query.limite) || 100, parseInt(req.query.pagina) || 1),
       fetchPedidos(token, prev.inicio, prev.fim, 2).catch(() => []),
     ]);
 
@@ -1022,14 +1029,14 @@ function contaEmAberto(situacao) {
   return false;
 }
 
-async function fetchContas(token, tipo) {
+async function fetchContas(token, tipo, limit = 100, maxPg = 3, startPage = 1) {
   // tipo: 'receber' | 'pagar'
   let all = [];
   try {
-    for (let pg = 1; pg <= 3; pg++) {
+    for (let pg = startPage; pg < startPage + maxPg; pg++) {
       const { data } = await axiosInstance.get(`https://www.bling.com.br/Api/v3/contas/${tipo}`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { limite: 100, pagina: pg },
+        params: { limite: limit, pagina: pg },
       });
       const items = Array.isArray(data?.data) ? data.data : [];
       all = all.concat(items);
@@ -1061,7 +1068,7 @@ app.get('/api/contas/:tipo', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   const tipo = req.params.tipo === 'pagar' ? 'pagar' : 'receber';
-  const data = await fetchContas(token, tipo);
+  const data = await fetchContas(token, tipo, parseInt(req.query.limite) || 100, parseInt(req.query.maxPaginas) || 3, parseInt(req.query.pagina) || 1);
   res.json(data);
 });
 
@@ -1246,6 +1253,7 @@ app.post('/api/webhook/bling', async (req, res) => {
       return; // evento não mapeado — não notifica (evita spam)
     }
     await pushParaTodos(admin, { title, body, url: '/dashboard.html', tipo: 'evento' });
+
   } catch (e) { logger.error('[webhook bling]', e.message); }
 });
 
@@ -1263,7 +1271,7 @@ app.use((err, req, res, next) => {
 // ── Start ─────────────────────────────────────────────────────────────
 
 if (require.main === module) {
-  app.listen(process.env.PORT || 3000, () => {
+  server.listen(process.env.PORT || 3000, () => {
     logger.info(`✅ Servidor iniciado em http://localhost:${process.env.PORT || 3000}`);
     logger.info(`📝 Ambiente: ${NODE_ENV}`);
   });
