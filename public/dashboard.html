@@ -2480,6 +2480,12 @@ const INT_CANAIS=[
   {id:'custom',nome:'Canal próprio',cor:'#6366f1',tc:'#fff',comissao:0,fixo:0},
 ];
 function loadIntegracoes(){
+  // Update Bling status badge
+  const badge=$('bling-status-badge');
+  if(badge){
+    if(S.products.length>0){badge.textContent='Conectado';badge.className='sb2 s-ok';}
+    else{badge.textContent='Aguardando';badge.className='sb2 s-lo';}
+  }
   const saved=JSON.parse(localStorage.getItem('em_integracoes')||'{}');
   const wrap=$('int-canais');if(!wrap)return;
   wrap.innerHTML=INT_CANAIS.map(c=>{
@@ -3204,6 +3210,7 @@ async function loadNotas(){
     if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
     if(!r.ok)throw new Error(d.error||'Erro ao carregar notas');
     _notasCache=d.notas||[];
+    const nfeC=$('tf-nfe-count');if(nfeC)nfeC.textContent=_notasCache.filter(n=>notaSitClass(n.situacao)==='ok').length;
     renderNotas();
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
