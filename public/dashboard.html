@@ -1161,6 +1161,7 @@ button:focus:not(:focus-visible){outline:none}
           <span class="qchip" data-s="lo" onclick="setQChip(this,'lo')" id="qchip-lo">Estoque baixo</span>
           <span class="qchip" data-s="out" onclick="setQChip(this,'out')">Sem estoque</span>
           <span class="qchip" id="qchip-crit" onclick="toggleCritSort(this)" data-s="__crit" style="border-color:transparent;color:var(--mu)">⬆ Críticos</span>
+          <span class="qchip" id="qchip-clear" onclick="clearFilters()" style="display:none;border-color:var(--er);color:var(--er);background:var(--er-bg,#fee2e2)">× Limpar filtros</span>
           <span id="qchip-count" style="margin-left:auto;font-size:11px;color:var(--fa);white-space:nowrap;align-self:center;padding-right:2px;flex-shrink:0"></span>
         </div>
 
@@ -2448,7 +2449,11 @@ function toggleCritSort(el){
 }
 function toggleFilters(){$('fpanel').classList.toggle('open');}
 function clearFilters(){$('f-status').value='';$('f-cat').value='';$('f-st-min').value='';$('f-st-max').value='';$('f-pr-min').value='';$('f-pr-max').value='';applyFilters();}
-function updateFilterBadge(){const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';}
+function updateFilterBadge(){
+  const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;
+  const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';
+  const cc=$('qchip-clear');if(cc)cc.style.display=cnt>1||($('f-cat').value||$('f-st-min').value||$('f-st-max').value||$('f-pr-min').value||$('f-pr-max').value)?'':'none';
+}
 function setQChip(el,v){$('f-status').value=v;vibrate(8);applyFilters();}
 function updateQChips(){
   const v=$('f-status').value;
