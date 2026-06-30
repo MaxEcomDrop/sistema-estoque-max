@@ -1723,6 +1723,7 @@ button:focus:not(:focus-visible){outline:none}
 <div class="sheet" id="ras-sheet">
   <div class="sh-hand"></div>
   <div style="margin-bottom:12px;display:flex;align-items:flex-start;gap:8px">
+    <img id="ras-thumb" alt="" style="display:none;width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid var(--bord);flex-shrink:0;cursor:zoom-in" onclick="openImgLbox(this.src)" loading="lazy">
     <div style="flex:1;min-width:0">
       <div class="sh-title" id="ras-name" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:4px"></div>
       <div id="ras-info" style="display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -3988,6 +3989,7 @@ function openRowActions(id){
   }
   const pb=$('ras-photo-btn');
   if(pb){if(p.imagemUrl){pb.style.display='';pb.onclick=()=>openImgLbox(p.imagemUrl);}else pb.style.display='none';}
+  const rt=$('ras-thumb');if(rt){if(p.imagemUrl){rt.src=p.imagemUrl;rt.style.display='';}else{rt.src='';rt.style.display='none';}}
   const cb=$('ras-cat-btn');
   if(cb){if(p.categoria){cb.style.display='';cb.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Ver em: ${esc(p.categoria)}`;cb.onclick=()=>{closeRowActions();$('f-cat').value=p.categoria;applyFilters();};}else cb.style.display='none';}
   _rasStepVal=_rasStepOrig=p.estoque||0;
@@ -4189,6 +4191,21 @@ function rasCopiarCodigo(id){
     if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
     _swipeCard=null;
   },{passive:true});
+})();
+
+// ── UUU: FIRST-TIME SWIPE GESTURE HINT ───────────
+(function(){
+  if(localStorage.getItem('swipe-hint-v2')||!navigator.maxTouchPoints)return;
+  const _tryShow=()=>{
+    if(S.view!=='produtos'||(S.products||[]).length<2)return false;
+    localStorage.setItem('swipe-hint-v2','1');
+    const nd=document.createElement('div');nd.className='noti info';nd.id='swipe-hint-noti';
+    nd.innerHTML='<span class="noti-dot" style="background:var(--acc)"></span><span style="flex:1;font-size:12px;line-height:1.5">Dica: <strong>← deslize</strong> num produto para ações rápidas, <strong>deslize →</strong> para editar</span><button class="noti-x" onclick="dismissNoti(\'swipe-hint-noti\')">×</button>';
+    const stack=$('noti-stack');if(stack){stack.appendChild(nd);setTimeout(()=>dismissNoti('swipe-hint-noti'),7000);}
+    return true;
+  };
+  let _tried=0;
+  const _iv=setInterval(()=>{if(_tryShow()||++_tried>20)clearInterval(_iv);},500);
 })();
 
 // ── PULL TO REFRESH ───────────────────────────────
