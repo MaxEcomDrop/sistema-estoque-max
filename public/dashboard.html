@@ -2965,8 +2965,9 @@ async function cardStockAdj(id,delta){
 function exportCSV(ids=null){
   const rows=ids?S.products.filter(p=>ids.has(p.id)):S.filtered;
   if(!rows.length){toast('Nenhum produto para exportar','err');return;}
-  const cols=['id','codigo','nome','categoria','preco','estoque'];
-  const csv=[cols.join(','),...rows.map(p=>cols.map(c=>{const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
+  const cols=['id','codigo','nome','categoria','preco','precoCusto','estoque'];
+  const hdrs=['ID','Código','Nome','Categoria','Preço','Custo','Estoque'];
+  const csv=[hdrs.join(','),...rows.map(p=>cols.map(c=>{const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`estoque_${new Date().toISOString().slice(0,10)}.csv`;a.click();
   toast(`${rows.length} produto${rows.length!==1?'s':''} exportado${rows.length!==1?'s':''}`, 'ok');
 }
