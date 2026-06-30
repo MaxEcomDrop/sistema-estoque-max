@@ -1833,6 +1833,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     Copiar código SKU
   </button>
+  <button class="ras-btn" onclick="rasEditarCusto(_rasId)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Editar custo do produto
+  </button>
   <button class="ras-btn" id="ras-share-btn" onclick="rasCompartilhar(_rasId)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
     Compartilhar produto
@@ -4167,7 +4171,10 @@ function openRowActions(id){
     const arr=ppOld!==undefined&&ppOld!==p.preco?(p.preco>ppOld?'↑':'↓'):'';
     const priceColor=arr==='↑'?'var(--ok)':arr==='↓'?'var(--er)':'';
     const valorTotal=p.preco&&p.estoque>0?chip('Em estoque',fmt(p.preco*p.estoque).replace('R$ ','')): '';
-    info.innerHTML=chip('R$',(arr?arr+' ':'')+fmt(p.preco).replace('R$ ',''),priceColor)+chip('Estoque',fmtN(p.estoque)+' un.',stk)+(p.codigo?chip('SKU',p.codigo):'')+valorTotal;
+    const custoChip=p.precoCusto>0?chip('Custo',fmt(p.precoCusto).replace('R$ ','')):chip('Custo','—','var(--wa)');
+    const margem=p.preco>0&&p.precoCusto>0?Math.round((p.preco-p.precoCusto)/p.preco*100):null;
+    const margemChip=margem!==null?chip('Margem',margem+'%',margem>=25?'var(--ok)':margem>=10?'var(--wa)':'var(--er)'):'';
+    info.innerHTML=chip('R$',(arr?arr+' ':'')+fmt(p.preco).replace('R$ ',''),priceColor)+chip('Estoque',fmtN(p.estoque)+' un.',stk)+custoChip+margemChip+(p.codigo?chip('SKU',p.codigo):'')+valorTotal;
   }
   const pb=$('ras-photo-btn');
   if(pb){if(p.imagemUrl){pb.style.display='';pb.onclick=()=>openImgLbox(p.imagemUrl);}else pb.style.display='none';}
@@ -4309,6 +4316,18 @@ function rasCopiarCodigo(id){
   const txt=p.codigo||String(p.id);
   try{navigator.clipboard.writeText(txt).then(()=>{closeRowActions();toast(`Código copiado: ${txt}`,'ok');vibrate(20);});}
   catch{const inp=document.createElement('textarea');inp.value=txt;inp.style.position='fixed';inp.style.opacity='0';document.body.appendChild(inp);inp.select();document.execCommand('copy');inp.remove();closeRowActions();toast(`Código copiado: ${txt}`,'ok');}
+}
+function rasEditarCusto(id){
+  const p=S.products.find(x=>x.id===id);if(!p)return;
+  const cur=p.precoCusto||0;
+  const val=prompt(`Custo de "${p.nome.substring(0,40)}" (R$):`,cur>0?cur.toFixed(2):'');
+  if(val===null)return;
+  const novo=parseFloat(String(val).replace(',','.'));
+  if(isNaN(novo)||novo<0){toast('Valor inválido','err');return;}
+  fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({precoCusto:novo,nome_produto:p.nome,valor_anterior:cur>0?cur.toFixed(2):'—'})})
+    .then(r=>r.ok?r.json():r.json().then(d=>{throw new Error(d.error||'Erro');}))
+    .then(()=>{p.precoCusto=novo;updateKpis();recomputeDashLucro();closeRowActions();toast(`Custo atualizado: ${fmt(novo)}`,'ok');vibrate(15);})
+    .catch(e=>toast('Erro: '+e.message,'err'));
 }
 (function(){
   const tbody=$('tbody');if(!tbody)return;
