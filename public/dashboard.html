@@ -753,6 +753,24 @@ button:focus:not(:focus-visible){outline:none}
 .meta-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--acc),#8b5cf6);transition:width .6s cubic-bezier(.22,1,.36,1)}
 .meta-bar-fill.done{background:linear-gradient(90deg,var(--ok),#10b981)}
 .meta-bar-sub{font-size:11.5px;color:var(--mu)}
+/* Command palette */
+.cp-box{padding:0!important;width:560px;max-width:calc(100vw - 32px);border-radius:16px!important;max-height:70vh;display:flex;flex-direction:column;overflow:hidden}
+.cp-inp-wrap{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--bord);flex-shrink:0}
+.cp-inp-wrap svg{width:18px;height:18px;color:var(--mu);flex-shrink:0}
+#cp-inp{flex:1;border:none;outline:none;background:none;font-size:15px;color:var(--tx);font-family:inherit}
+#cp-inp::placeholder{color:var(--fa)}
+.cp-list-wrap{overflow-y:auto;flex:1}
+.cp-row{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .08s}
+.cp-row.on{background:var(--acc-bg)}
+.cp-row.on .cp-row-ico{color:var(--acc)}
+.cp-row:active{background:var(--bg)}
+.cp-row-ico{width:18px;height:18px;color:var(--mu);flex-shrink:0}
+.cp-row-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cp-row-lbl{font-size:13.5px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-row-sub{font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-empty{padding:20px;text-align:center;color:var(--mu);font-size:13px}
+.cp-footer{padding:8px 16px;border-top:1px solid var(--bord);display:flex;align-items:center;gap:12px;font-size:11px;color:var(--fa);flex-shrink:0}
+.cp-footer kbd{padding:2px 5px}
 /* Previsão de ruptura */
 .rupt-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
 .rupt-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
@@ -1628,6 +1646,7 @@ button:focus:not(:focus-visible){outline:none}
   <div class="mbox sc-box">
     <div class="m-title">Atalhos de teclado</div>
     <div class="sc-list">
+      <div class="sc-row"><span class="sc-lbl">Paleta de comandos</span><kbd class="kbd">Ctrl K</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Focar busca</span><kbd class="kbd">/</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Sincronizar</span><kbd class="kbd">R</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Exportar CSV</span><kbd class="kbd">E</kbd></div>
@@ -1641,6 +1660,19 @@ button:focus:not(:focus-visible){outline:none}
       <div class="sc-row"><span class="sc-lbl">Este painel</span><kbd class="kbd">?</kbd></div>
     </div>
     <div class="m-foot"><button class="bts" onclick="closeModal('sc-modal')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- COMMAND PALETTE -->
+<div class="modal" id="cp-modal" onclick="if(event.target===this)closeCmdPalette()">
+  <div class="mbox cp-box">
+    <div class="cp-inp-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="cp-inp" placeholder="Buscar abas, ações ou produtos…" autocomplete="off" oninput="_cpFilter()" onkeydown="_cpKey(event)">
+      <kbd class="kbd">Esc</kbd>
+    </div>
+    <div class="cp-list-wrap" id="cp-list"></div>
+    <div class="cp-footer"><kbd class="kbd">↑↓</kbd> navegar&nbsp;&nbsp;<kbd class="kbd">Enter</kbd> abrir&nbsp;&nbsp;<kbd class="kbd">Esc</kbd> fechar</div>
   </div>
 </div>
 
@@ -2718,7 +2750,91 @@ function openModal(id){$(id).classList.add('open');}
 function closeModal(id){$(id).classList.remove('open');}
 
 // ── KEYBOARD ─────────────────────────────────────
+// ── COMMAND PALETTE ──────────────────────────────────
+const _CP_CMDS=[
+  {label:'Início',sub:'Painel de controle',icon:'home',fn:()=>setView('inicio')},
+  {label:'Produtos',sub:'Catálogo de produtos',icon:'package',fn:()=>setView('produtos')},
+  {label:'Pedidos',sub:'Gerenciar pedidos',icon:'check-square',fn:()=>setView('pedidos')},
+  {label:'Clientes',sub:'CRM — lista de clientes',icon:'users',fn:()=>setView('clientes')},
+  {label:'Financeiro',sub:'Relatórios financeiros',icon:'trending-up',fn:()=>setView('financeiro')},
+  {label:'Notas Fiscais',sub:'Emitir e consultar NF-e',icon:'file-text',fn:()=>setView('notas')},
+  {label:'Histórico',sub:'Log de alterações',icon:'clock',fn:()=>setView('historico')},
+  {label:'Relatório',sub:'Curva ABC e mais vendidos',icon:'bar-chart',fn:()=>setView('relatorio')},
+  {label:'Notificações',sub:'Alertas automáticos',icon:'bell',fn:()=>setView('notificacoes')},
+  {label:'Integrações',sub:'Marketplaces e canais',icon:'git-branch',fn:()=>setView('integracoes')},
+  {label:'Configurações',sub:'Preferências do sistema',icon:'settings',fn:()=>setView('config')},
+  {label:'Novo produto',sub:'Cadastrar produto',icon:'plus-circle',fn:()=>{setView('produtos');setTimeout(openCreate,60)}},
+  {label:'Sincronizar',sub:'Atualizar dados do Bling',icon:'refresh',fn:()=>sync()},
+  {label:'Exportar CSV',sub:'Baixar planilha de produtos',icon:'download',fn:()=>exportCSV()},
+  {label:'Entrada rápida',sub:'Lançar movimentação de estoque',icon:'zap',fn:()=>openQuick()},
+  {label:'Scanner',sub:'Escanear código de barras por câmera',icon:'camera',fn:()=>{setView('produtos');setTimeout(openScanner,60)}},
+  {label:'Modo escuro',sub:'Alternar tema claro/escuro',icon:'moon',fn:()=>toggleDark()},
+  {label:'Modo compacto',sub:'Visualização densa da tabela',icon:'list',fn:()=>toggleCompact()},
+  {label:'Atalhos de teclado',sub:'Ver todos os atalhos',icon:'command',fn:()=>openModal('sc-modal')},
+];
+let _cpIdx=-1;
+function openCmdPalette(){
+  openModal('cp-modal');
+  setTimeout(()=>{const inp=$('cp-inp');if(inp){inp.value='';inp.focus();}_cpFilter();},50);
+}
+function closeCmdPalette(){closeModal('cp-modal');}
+function _cpItems(){
+  const q=($('cp-inp')?.value||'').toLowerCase().trim();
+  const cmds=_CP_CMDS.filter(c=>!q||c.label.toLowerCase().includes(q)||c.sub.toLowerCase().includes(q));
+  let prods=[];
+  if(q.length>=2){
+    prods=S.products.filter(p=>p.nome.toLowerCase().includes(q)||(p.codigo||'').toLowerCase().includes(q))
+      .slice(0,4).map(p=>({label:p.nome,sub:`Produto · ${p.codigo||'#'+p.id} · estoque: ${p.estoque}`,icon:'box',fn:()=>{setView('produtos');setTimeout(()=>openEditor(p.id),80)}}));
+  }
+  return[...prods,...cmds].slice(0,12);
+}
+function _cpFilter(){
+  const list=$('cp-list');if(!list)return;
+  _cpIdx=-1;
+  const items=_cpItems();
+  if(!items.length){list.innerHTML='<div class="cp-empty">Nenhum resultado</div>';return;}
+  list.innerHTML=items.map((c,i)=>`<div class="cp-row" data-i="${i}" onclick="_cpExec(${i})" onmouseenter="_cpSetIdx(${i})">${_cpIco(c.icon)}<div class="cp-row-info"><span class="cp-row-lbl">${esc(c.label)}</span><span class="cp-row-sub">${esc(c.sub)}</span></div></div>`).join('');
+}
+function _cpSetIdx(i){
+  _cpIdx=i;
+  document.querySelectorAll('#cp-list .cp-row').forEach((el,j)=>el.classList.toggle('on',j===i));
+}
+function _cpExec(i){const items=_cpItems();if(items[i]){closeCmdPalette();items[i].fn();}}
+function _cpKey(e){
+  const rows=document.querySelectorAll('#cp-list .cp-row');
+  if(e.key==='ArrowDown'){e.preventDefault();_cpSetIdx(Math.min(_cpIdx+1,rows.length-1));}
+  else if(e.key==='ArrowUp'){e.preventDefault();_cpSetIdx(Math.max(_cpIdx-1,0));}
+  else if(e.key==='Enter'){e.preventDefault();if(_cpIdx>=0)_cpExec(_cpIdx);else if(rows.length)_cpExec(0);}
+  else if(e.key==='Escape'){e.preventDefault();closeCmdPalette();}
+}
+function _cpIco(name){
+  const d={
+    home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+    package:'<line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+    'check-square':'<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+    users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    'trending-up':'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+    'file-text':'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    'bar-chart':'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+    'git-branch':'<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+    settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+    'plus-circle':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+    refresh:'<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"/>',
+    download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    list:'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+    camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+    zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    command:'<path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>',
+    box:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+  };
+  return`<svg class="cp-row-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d[name]||d.command}</svg>`;
+}
+
 document.addEventListener('keydown',e=>{
+  if((e.key==='k'||e.key==='K')&&(e.ctrlKey||e.metaKey)){e.preventDefault();openCmdPalette();return;}
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
   const k=e.key.toLowerCase();
   if(k==='/')  {e.preventDefault();$('search').focus();}
@@ -2734,7 +2850,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='z')  undoLast();
   else if(k==='a')  {$('cb-all').checked=true;toggleAllCb();}
   else if(k==='?')  openModal('sc-modal');
-  else if(k==='escape'){closeSheet();closeQuick();closeModal('sc-modal');closeModal('im-modal');closeModal('create-modal');closeEditor();$('undo-toast').classList.remove('vis');}
+  else if(k==='escape'){closeSheet();closeQuick();closeCmdPalette();closeModal('sc-modal');closeModal('im-modal');closeModal('create-modal');closeEditor();$('undo-toast').classList.remove('vis');}
   else if(k==='n'&&S.view==='produtos')openCreate();
 });
 
