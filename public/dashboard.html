@@ -762,6 +762,9 @@ button:focus:not(:focus-visible){outline:none}
 [data-theme=dark] .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
 @keyframes shimmer{100%{transform:translateX(100%)}}
 @keyframes scanLine{0%{top:15%}50%{top:82%}100%{top:15%}}
+.scan-inv-bar{display:none;background:var(--acc-bg);border:1.5px solid var(--acc);border-radius:10px;padding:8px 12px;margin-bottom:12px;align-items:center;gap:8px}
+.scan-inv-bar.on{display:flex}
+.scan-inv-fin{padding:6px 14px;border-radius:8px;background:var(--acc);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit;flex-shrink:0}
 .skel-row{height:14px;margin:10px 16px;border-radius:6px}
 .skel-row.w60{width:60%}.skel-row.w40{width:40%}.skel-row.w80{width:80%}
 /* Botões primários com brilho sutil ao hover */
@@ -1867,6 +1870,13 @@ button:focus:not(:focus-visible){outline:none}
         <path d="M75 90 L90 90 L90 75" stroke="var(--acc)" stroke-width="3" stroke-linecap="round"/>
       </svg>
       <div id="scan-line" style="position:absolute;left:10%;right:10%;height:2px;background:var(--acc);opacity:.8;top:50%;animation:scanLine 2s linear infinite"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button id="scan-inv-toggle" onclick="toggleInvMode()" style="flex:1;padding:7px 10px;border-radius:8px;background:var(--surf);border:1.5px solid var(--bord);color:var(--mu);font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit">Modo inventário</button>
+    </div>
+    <div id="scan-inv-bar" class="scan-inv-bar">
+      <span id="scan-inv-cnt" style="flex:1;font-size:13px;font-weight:700;color:var(--acc)">0 scans</span>
+      <button class="scan-inv-fin" onclick="finalizarInv()">Finalizar</button>
     </div>
     <div id="scan-status" style="font-size:13px;color:var(--mu);margin-bottom:14px">Aponte a câmera para o código de barras</div>
     <div class="m-foot"><button class="bts" onclick="closeScanner()" style="flex:1;justify-content:center">Cancelar</button></div>
@@ -3292,6 +3302,7 @@ async function excluirProdutoAtual(){
   },{title:'Confirmar exclusão',desc:`Atenção: isso apagará "${nome}" permanentemente do seu Bling.`,force:true});
 }
 
+let _invMode=false,_invCounts={},_invCooldown=false;
 // ── SCANNER DE CÓDIGO DE BARRAS ───────────────────
 let _scanStream=null,_scanRaf=null,_barcodeDetector=null;
 async function openScanner(){
@@ -3304,6 +3315,10 @@ async function openScanner(){
     _scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
     const video=$('scan-video');video.srcObject=_scanStream;await video.play();
     $('scan-status').textContent='Aponte para o código de barras';
+    const _ibar=$('scan-inv-bar'),_ibtn=$('scan-inv-toggle');
+    if(_ibar)_ibar.classList.toggle('on',_invMode);
+    if(_ibtn){_ibtn.textContent=_invMode?'Modo busca':'Modo inventário';_ibtn.style.background=_invMode?'var(--acc-bg)':'';_ibtn.style.borderColor=_invMode?'var(--acc)':'var(--bord)';_ibtn.style.color=_invMode?'var(--acc)':'var(--mu)';}
+    if(_invMode&&$('scan-status'))$('scan-status').textContent='Aponte para o código (modo inventário)';
     _scanLoop();
   }catch(e){
     $('scan-status').textContent='Sem acesso à câmera: '+e.message;
@@ -3317,6 +3332,24 @@ function _scanLoop(){
     if(barcodes.length>0){
       const code=barcodes[0].rawValue;
       vibrate([50,30,50]);
+      if(_invMode){
+        if(!_invCooldown){
+          const p=S.products.find(x=>x.codigo===code);
+          if(p){
+            _invCounts[p.id]=(_invCounts[p.id]||0)+1;
+            const total=Object.values(_invCounts).reduce((a,b)=>a+b,0);
+            const cnt=$('scan-inv-cnt');if(cnt)cnt.textContent=total+' scan'+(total!==1?'s':'');
+            $('scan-status').textContent='\u2713 '+p.nome.substring(0,30)+' +'+_invCounts[p.id];
+            vibrate(30);
+          }else{
+            $('scan-status').textContent='"'+code+'" não encontrado';
+            vibrate([15,15,15]);
+          }
+          _invCooldown=true;
+          setTimeout(()=>{_invCooldown=false;$('scan-status').textContent='Aponte para o próximo\u2026';},900);
+        }
+        _scanRaf=requestAnimationFrame(_scanLoop);return;
+      }
       closeScanner();
       const inp=$('search');inp.value=code;applyFilters();
       const matched=S.filtered.length;
@@ -3331,6 +3364,31 @@ function closeScanner(){
   if(_scanStream){_scanStream.getTracks().forEach(t=>t.stop());_scanStream=null;}
   _barcodeDetector=null;
   closeModal('scan-modal');
+}
+function toggleInvMode(){
+  _invMode=!_invMode;
+  if(!_invMode)_invCooldown=false;
+  const bar=$("scan-inv-bar"),btn=$("scan-inv-toggle");
+  if(bar)bar.classList.toggle("on",_invMode);
+  if(btn){btn.textContent=_invMode?"Modo busca":"Modo inventário";btn.style.background=_invMode?"var(--acc-bg)":"";btn.style.borderColor=_invMode?"var(--acc)":"var(--bord)";btn.style.color=_invMode?"var(--acc)":"var(--mu)";}
+  const st=$("scan-status");if(st)st.textContent=_invMode?"Aponte para o código (modo inventário)":"Aponte para o código de barras";
+}
+async function finalizarInv(){
+  const entries=Object.entries(_invCounts);
+  if(!entries.length){toast("Nenhum produto escaneado","wa");return;}
+  const lines=entries.map(([id,delta])=>{const p=S.products.find(x=>x.id===+id);return p?p.nome.substring(0,28)+" +"+delta+" (→ "+(p.estoque+delta)+")":null;}).filter(Boolean);
+  if(!confirm("Atualizar estoque de "+entries.length+" produto"+(entries.length!==1?"s":"")+"?\n\n"+lines.join("\n")))return;
+  closeScanner();
+  let saved=0;
+  for(const [id,delta] of entries){
+    const p=S.products.find(x=>x.id===+id);if(!p)continue;
+    const nv=p.estoque+delta;
+    try{const r=await fetch("/api/produtos/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estoque:nv})});if(r.ok){p.estoque=nv;saved++;}}catch{}
+  }
+  _invCounts={};_invMode=false;
+  updateKpis();updateLowBadge();applyFilters();
+  toast(saved+" produto"+(saved!==1?"s":"")+" atualizado"+(saved!==1?"s":"")+"!","ok");
+  vibrate([50,30,50]);
 }
 
 // ── CRIAR PRODUTO ─────────────────────────────────
