@@ -78,6 +78,22 @@ function initializeTables() {
       else console.log('[DB] Tabela products inicializada');
     });
 
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS change_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        produto_id TEXT,
+        produto_nome TEXT,
+        campo TEXT,
+        valor_anterior TEXT,
+        valor_novo TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `, (err) => {
+      if (err) console.error('[DB] Erro ao criar tabela change_log:', err);
+      else console.log('[DB] Tabela change_log inicializada');
+    });
+
     console.log('[DB] ✅ Tabelas inicializadas com sucesso');
   });
 }
