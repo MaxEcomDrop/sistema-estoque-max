@@ -771,6 +771,12 @@ button:focus:not(:focus-visible){outline:none}
 .cp-empty{padding:20px;text-align:center;color:var(--mu);font-size:13px}
 .cp-footer{padding:8px 16px;border-top:1px solid var(--bord);display:flex;align-items:center;gap:12px;font-size:11px;color:var(--fa);flex-shrink:0}
 .cp-footer kbd{padding:2px 5px}
+/* Quick filter chips */
+.qchips-bar{display:flex;gap:6px;padding:8px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--bord-l);scrollbar-width:none;flex-shrink:0}
+.qchips-bar::-webkit-scrollbar{display:none}
+.qchip{font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;background:var(--surf);border:1.5px solid var(--bord);color:var(--mu);cursor:pointer;white-space:nowrap;transition:all .12s;flex-shrink:0;-webkit-tap-highlight-color:transparent;user-select:none}
+.qchip.on{background:var(--acc-bg);border-color:var(--acc);color:var(--acc-t)}
+.qchip:active{opacity:.7}
 /* Previsão de ruptura */
 .rupt-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
 .rupt-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
@@ -1115,6 +1121,13 @@ button:focus:not(:focus-visible){outline:none}
             <button class="bts" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
             <button class="bts" onclick="openQuick()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Entrada rápida</button>
           </div>
+        </div>
+
+        <div class="qchips-bar" id="qchips-bar">
+          <span class="qchip on" data-s="" onclick="setQChip(this,'')">Todos</span>
+          <span class="qchip" data-s="ok" onclick="setQChip(this,'ok')">Em estoque</span>
+          <span class="qchip" data-s="lo" onclick="setQChip(this,'lo')" id="qchip-lo">Estoque baixo</span>
+          <span class="qchip" data-s="out" onclick="setQChip(this,'out')">Sem estoque</span>
         </div>
 
         <div class="fpanel" id="fpanel">
@@ -2320,7 +2333,7 @@ function applyFilters(){
   const{field,dir}=S.sort;
   filtered.sort((a,b)=>{let av=a[field],bv=b[field];if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}if(av<bv)return dir==='asc'?-1:1;if(av>bv)return dir==='asc'?1:-1;return 0;});
   S.filtered=filtered;S.page=0;
-  updateFilterBadge();renderTable();
+  updateFilterBadge();updateQChips();renderTable();
 }
 function sortBy(field){
   if(S.sort.field===field)S.sort.dir=S.sort.dir==='asc'?'desc':'asc';
@@ -2335,6 +2348,12 @@ function sortBy(field){
 function toggleFilters(){$('fpanel').classList.toggle('open');}
 function clearFilters(){$('f-status').value='';$('f-cat').value='';$('f-st-min').value='';$('f-st-max').value='';$('f-pr-min').value='';$('f-pr-max').value='';applyFilters();}
 function updateFilterBadge(){const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';}
+function setQChip(el,v){$('f-status').value=v;vibrate(8);applyFilters();}
+function updateQChips(){
+  const v=$('f-status').value;
+  document.querySelectorAll('#qchips-bar .qchip').forEach(c=>c.classList.toggle('on',c.dataset.s===v));
+  const ql=$('qchip-lo');if(ql)ql.textContent=`Estoque baixo (≤${S.estoqueMin})`;
+}
 function toggleGroup(){S.grouped=!S.grouped;$('grp-lbl').textContent=S.grouped?'Desagrupar':'Agrupar';renderTable();}
 function applyCompact(){const lc=$('list-container');if(!lc)return;lc.classList.toggle('t-compact',S.compact);const btn=$('lt-compact');if(btn){btn.style.background=S.compact?'var(--acc-bg)':'';btn.style.borderColor=S.compact?'var(--acc)':'var(--bord)';btn.style.color=S.compact?'var(--acc-t)':'';}};
 function toggleCompact(){S.compact=!S.compact;localStorage.setItem('compact',S.compact?'1':'0');applyCompact();}
