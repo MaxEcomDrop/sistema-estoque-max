@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const dbConfig = require('./config/database-vercel');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -61,9 +62,8 @@ const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
 const JWT_SECRET          = process.env.JWT_SECRET;
 const NODE_ENV            = process.env.NODE_ENV || 'development';
 
-// In-memory change log (resets on cold start)
-// TODO: Persistir em banco de dados em produção
-const changeLog = [];
+// Database is loaded here, we use it to persist the change log
+const db = dbConfig.getDb();
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;
@@ -210,7 +210,11 @@ app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
 app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
-app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
+app.get('/health', (req, res) => {
+  db.get('SELECT COUNT(*) as count FROM change_log', [], (err, row) => {
+    res.json({ status: 'OK', history: row ? row.count : 0, environment: NODE_ENV });
+  });
+});
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
@@ -362,12 +366,10 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
-    changeLog.push({
-      id: changeLog.length + 1, produto_id: criado?.id || '—',
-      produto_nome: req.body.nome || 'Novo produto', campo: 'criação',
-      valor_anterior: '—', valor_novo: req.body.nome || '—',
-      timestamp: new Date().toISOString(),
-    });
+    db.run(
+      `INSERT INTO change_log (produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+      [String(criado?.id || '—'), String(req.body.nome || 'Novo produto'), String('criação'), String('—'), String(req.body.nome || '—'), new Date().toISOString()]
+    );
     res.json(criado);
   } catch (err) {
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
@@ -494,12 +496,10 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      changeLog.push({
-        id: changeLog.length + 1, produto_id: id,
-        produto_nome: _fullUpdate.nome || `#${id}`, campo: 'edição completa',
-        valor_anterior: '—', valor_novo: 'campos atualizados',
-        timestamp: new Date().toISOString(),
-      });
+      db.run(
+      `INSERT INTO change_log (produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+      [String(id), String(_fullUpdate.nome || `#${id}`), String('edição completa'), String('—'), String('campos atualizados'), new Date().toISOString()]
+    );
       return res.json({ success: true });
     } catch (err) {
       const detail = err.response?.data?.error?.message || err.response?.data || err.message;
@@ -520,13 +520,10 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
-      changeLog.push({
-        id: changeLog.length + 1, produto_id: id,
-        produto_nome: nome_produto || `#${id}`, campo: 'preço',
-        valor_anterior: valor_anterior || '—',
-        valor_novo: `R$ ${Number(preco).toFixed(2)}`,
-        timestamp: new Date().toISOString(),
-      });
+      db.run(
+      `INSERT INTO change_log (produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+      [String(id), String(nome_produto || `#${id}`), String('preço'), String(valor_anterior || '—'), String(`R$ ${Number(preco).toFixed(2)}`), new Date().toISOString()]
+    );
     }
     if (estoque !== undefined) {
       const depositoId = await getDepositoId(token);
@@ -534,13 +531,10 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
-      changeLog.push({
-        id: changeLog.length + 1, produto_id: id,
-        produto_nome: nome_produto || `#${id}`, campo: 'estoque',
-        valor_anterior: valor_anterior || '—',
-        valor_novo: `${Number(estoque)} un.`,
-        timestamp: new Date().toISOString(),
-      });
+      db.run(
+      `INSERT INTO change_log (produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+      [String(id), String(nome_produto || `#${id}`), String('estoque'), String(valor_anterior || '—'), String(`${Number(estoque)} un.`), new Date().toISOString()]
+    );
     }
     res.json({ success: true });
   } catch (err) {
@@ -577,15 +571,10 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      changeLog.push({
-        id: changeLog.length + 1,
-        produto_id: p.id,
-        produto_nome: p.nome || `#${p.id}`,
-        campo: 'importação CSV',
-        valor_anterior: '—',
-        valor_novo: `preço=${p.preco ?? '—'}, estoque=${p.estoque ?? '—'}`,
-        timestamp: new Date().toISOString(),
-      });
+      db.run(
+      `INSERT INTO change_log (produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp) VALUES (?, ?, ?, ?, ?, ?)`,
+      [String(p.id), String(p.nome || `#${p.id}`), String('importação CSV'), String('—'), String(`preço=${p.preco ?? '—'}, estoque=${p.estoque ?? '—'}`), new Date().toISOString()]
+    );
       success++;
     } catch (err) {
       errors.push({ id: p.id, nome: p.nome, error: err.response?.data?.error?.message || err.message });
@@ -1174,7 +1163,10 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 // ── Histórico ────────────────────────────────────────────────────
 
 app.get('/api/historico', requireAuthJson, (req, res) => {
-  res.json({ history: changeLog.slice().reverse().slice(0, 300) });
+  db.all('SELECT * FROM change_log ORDER BY id DESC LIMIT 300', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Erro ao buscar histórico' });
+    res.json({ history: rows });
+  });
 });
 
 // ── Webhook (Bling notificações) ──────────────────────────────────────
