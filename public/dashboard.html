@@ -846,7 +846,9 @@ button:focus:not(:focus-visible){outline:none}
 .ras-step-btn{flex-shrink:0;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--bord);background:var(--surf);font-size:18px;font-weight:700;color:var(--tx);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;-webkit-tap-highlight-color:transparent;font-family:inherit}
 .ras-step-btn:active{background:var(--bord-l)}
 .ras-step-btn.sm{width:36px;height:36px;font-size:12px;color:var(--mu);font-weight:600}
-.ras-step-val{flex:1;text-align:center;font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-0.5px}
+.ras-step-val{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.ras-step-inp{width:100%;text-align:center;font-size:26px;font-weight:700;color:var(--tx);letter-spacing:-0.5px;background:none;border:none;outline:none;font-family:inherit;-webkit-tap-highlight-color:transparent;cursor:text;-moz-appearance:textfield;padding:0;min-width:0}
+.ras-step-inp::-webkit-outer-spin-button,.ras-step-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .ras-step-unit{font-size:11px;font-weight:400;color:var(--mu)}
 .ras-step-save{width:100%;margin-top:8px;padding:10px;border-radius:10px;background:var(--acc);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .1s;-webkit-tap-highlight-color:transparent}
 .ras-step-save:active{opacity:.8}
@@ -1693,7 +1695,7 @@ button:focus:not(:focus-visible){outline:none}
     <div class="ras-step-row">
       <button class="ras-step-btn sm" onclick="rasStep(-5)">−5</button>
       <button class="ras-step-btn" onclick="rasStep(-1)">−</button>
-      <div class="ras-step-val" id="ras-step-val">0 <span class="ras-step-unit">un.</span></div>
+      <div class="ras-step-val"><input class="ras-step-inp" id="ras-step-val" type="number" min="0" inputmode="numeric" value="0" oninput="rasStepFromInp(this)"><span class="ras-step-unit">un.</span></div>
       <button class="ras-step-btn" onclick="rasStep(1)">+</button>
       <button class="ras-step-btn sm" onclick="rasStep(5)">+5</button>
     </div>
@@ -3747,19 +3749,26 @@ function openRowActions(id){
   }
   _rasStepVal=_rasStepOrig=p.estoque||0;
   const sv=$('ras-step-val'),ss=$('ras-step-save');
-  if(sv)sv.innerHTML=`${fmtN(_rasStepVal)} <span class="ras-step-unit">un.</span>`;
+  if(sv)sv.value=_rasStepVal;
   if(ss){ss.disabled=true;ss.textContent='Salvar estoque';}
   $('ras-bdrop').classList.add('open');
   $('ras-sheet').classList.add('open');
   vibrate(30);
 }
+function _rasRefreshSave(){
+  const ss=$('ras-step-save'),changed=_rasStepVal!==_rasStepOrig;
+  if(ss){ss.disabled=!changed;ss.textContent=changed?`Salvar: ${fmtN(_rasStepVal)} un.`:'Salvar estoque';}
+}
+function rasStepFromInp(inp){
+  const v=Math.max(0,parseInt(inp.value,10)||0);
+  _rasStepVal=v;inp.value=v;
+  _rasRefreshSave();
+}
 function rasStep(delta){
   _rasStepVal=Math.max(0,_rasStepVal+delta);
   vibrate(8);
-  const sv=$('ras-step-val'),ss=$('ras-step-save');
-  if(sv)sv.innerHTML=`${fmtN(_rasStepVal)} <span class="ras-step-unit">un.</span>`;
-  const changed=_rasStepVal!==_rasStepOrig;
-  if(ss){ss.disabled=!changed;ss.textContent=changed?`Salvar: ${fmtN(_rasStepVal)} un.`:'Salvar estoque';}
+  const sv=$('ras-step-val');if(sv)sv.value=_rasStepVal;
+  _rasRefreshSave();
 }
 async function rasSaveStep(){
   if(_rasStepVal===_rasStepOrig||!_rasId)return;
