@@ -1784,6 +1784,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="cfg-title">Sobre</div>
         <div class="cfg-row"><span class="cfg-row-lbl">Sistema</span><span class="cfg-row-val">Estoque Max</span></div>
         <div class="cfg-row"><span class="cfg-row-lbl">Integrado a</span><span class="cfg-row-val">Bling ERP</span></div>
+        <div class="cfg-row" style="cursor:pointer" onclick="sync()" title="Força recarregamento de todos os dados da API">
+          <span class="cfg-row-lbl">Dados</span>
+          <span class="cfg-row-val" style="color:var(--acc)">Limpar cache e sincronizar ↺</span>
+        </div>
       </div>
     </div>
 
@@ -3661,7 +3665,7 @@ async function saveEditorFull(){
     if(!isNaN(newEstoque)&&newEstoque!==oldEst)body.estoque=newEstoque;
     const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
-    if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;p.imagemUrl=updated.imagemUrl||p.imagemUrl;if(!isNaN(newEstoque))p.estoque=newEstoque;}
+    if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;p.tipo=updated.tipo;p.gtin=updated.gtin;p.unidade=updated.unidade;p.pesoBruto=updated.pesoBruto;p.descricaoComplementar=updated.descricaoComplementar;p.imagemUrl=updated.imagemUrl||p.imagemUrl;if(!isNaN(newEstoque))p.estoque=newEstoque;}
     toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent='Salvar alterações';}
