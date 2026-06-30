@@ -2022,7 +2022,7 @@ const S = {
   presets:JSON.parse(localStorage.getItem('presets')||'[]'),
   undoStack:[], undoTimeout:null, importData:[],
   estoqueMin:Math.max(0,parseInt(localStorage.getItem('em_min')||'5')),
-  compact:localStorage.getItem('compact')==='1',
+  compact:localStorage.getItem('compact')!==null?localStorage.getItem('compact')==='1':window.innerWidth<640,
   metaFat:parseFloat(localStorage.getItem('em_meta')||'0'),
 };
 
