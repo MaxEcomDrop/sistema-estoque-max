@@ -106,6 +106,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 /* TABLE CARD */
 .tcard{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
 .stick-head{background:var(--surf)}
+.srch-hist{display:flex;gap:6px;padding:6px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:1px solid var(--bord-l);background:var(--bg);flex-wrap:nowrap}
+.srch-hist::-webkit-scrollbar{display:none}
+.srch-hist-lbl{font-size:10px;font-weight:600;color:var(--mu);white-space:nowrap;align-self:center;flex-shrink:0;text-transform:uppercase;letter-spacing:.4px}
+.srch-hist-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surf);border:1.5px solid var(--bord);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--tx);white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0}
+.srch-hist-chip:active{background:var(--bord-l)}
+.srch-hist-del{color:var(--mu);font-size:14px;line-height:1;padding:0 0 0 2px;background:none;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:inherit}
 
 /* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--bord-l);flex-wrap:wrap}
@@ -1168,6 +1174,7 @@ button:focus:not(:focus-visible){outline:none}
             <button class="bts" onclick="openQuick()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Entrada rápida</button>
           </div>
         </div>
+        <div class="srch-hist" id="srch-hist" style="display:none"></div>
 
         <div class="qchips-bar" id="qchips-bar">
           <span class="qchip on" data-s="" onclick="setQChip(this,'')">Todos</span>
@@ -3953,6 +3960,52 @@ document.addEventListener('touchend',()=>{
       _stbTick=false;
     });
   },{passive:true});
+})();
+
+// ── RECENT SEARCHES ──────────────────────────────
+(function(){
+  const MAX=6,KEY='srch-hist';
+  function load(){try{return JSON.parse(localStorage.getItem(KEY)||'[]');}catch{return[];}}
+  function save(arr){try{localStorage.setItem(KEY,JSON.stringify(arr));}catch{}}
+  function render(){
+    const el=$('srch-hist');if(!el)return;
+    const hist=load();
+    if(!hist.length){el.style.display='none';return;}
+    el.innerHTML=`<span class="srch-hist-lbl">Recentes</span>`+hist.map((q,i)=>
+      `<span class="srch-hist-chip" onclick="applySearchHist('${q.replace(/'/g,"&#39;")}')">${esc(q)}<button class="srch-hist-del" onclick="event.stopPropagation();delSearchHist(${i})" aria-label="Remover">×</button></span>`
+    ).join('');
+    el.style.display='flex';
+  }
+  window.saveSearch=function(q){
+    if(!q||q.length<2)return;
+    let hist=load().filter(x=>x!==q);
+    hist.unshift(q);if(hist.length>MAX)hist=hist.slice(0,MAX);
+    save(hist);
+  };
+  window.delSearchHist=function(i){
+    const hist=load();hist.splice(i,1);save(hist);render();
+  };
+  window.applySearchHist=function(q){
+    const inp=$('search');if(!inp)return;
+    inp.value=q;
+    const swClr=$('sw-clr');if(swClr)swClr.classList.toggle('vis',!!q);
+    applyFilters();
+    inp.blur();$('srch-hist').style.display='none';
+  };
+  window.showSearchHist=render;
+  window.hideSearchHist=function(){const el=$('srch-hist');if(el)el.style.display='none';};
+  const inp=$('search');
+  if(inp){
+    inp.addEventListener('focus',render,{passive:true});
+    inp.addEventListener('blur',()=>setTimeout(hideSearchHist,200),{passive:true});
+    inp.form?.addEventListener('submit',()=>{const q=(inp.value||'').trim();if(q)saveSearch(q);},{passive:true});
+  }
+  const _orig=window.applyFilters;
+  window.applyFilters=function(){
+    _orig();
+    const q=($('search')?.value||'').trim();
+    if(q&&q.length>=2)saveSearch(q);
+  };
 })();
 
 // ── INIT ─────────────────────────────────────────
