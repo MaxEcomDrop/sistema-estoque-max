@@ -3579,9 +3579,11 @@ function rasExcluir(id){
 }
 (function(){
   const tbody=$('tbody');if(!tbody)return;
+  let _swipeTr=null;
   tbody.addEventListener('touchstart',e=>{
     const tr=e.target.closest('tr[data-id]');if(!tr)return;
     _rasStartPos={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    _swipeTr=tr;
     _rasTimer=setTimeout(()=>{_rasTimer=null;openRowActions(Number(tr.dataset.id));},480);
   },{passive:true});
   tbody.addEventListener('touchmove',e=>{
@@ -3590,11 +3592,21 @@ function rasExcluir(id){
     const dy=Math.abs(e.touches[0].clientY-_rasStartPos.y);
     if(dx>8||dy>8){clearTimeout(_rasTimer);_rasTimer=null;}
   },{passive:true});
-  tbody.addEventListener('touchend',()=>{
+  tbody.addEventListener('touchend',e=>{
     if(_rasTimer){clearTimeout(_rasTimer);_rasTimer=null;}
+    if(_swipeTr){
+      const dx=e.changedTouches[0].clientX-_rasStartPos.x;
+      const dy=Math.abs(e.changedTouches[0].clientY-_rasStartPos.y);
+      if(dx<-55&&dy<40){
+        const id=Number(_swipeTr.dataset.id);
+        if(id)openRowActions(id);
+      }
+    }
+    _swipeTr=null;
   },{passive:true});
   tbody.addEventListener('touchcancel',()=>{
     if(_rasTimer){clearTimeout(_rasTimer);_rasTimer=null;}
+    _swipeTr=null;
   },{passive:true});
 })();
 
