@@ -1026,15 +1026,20 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- HERO: Faturamento + Lucro -->
       <div class="dash-hero">
-        <div class="hero-card hero-fat">
+        <div class="hero-card hero-fat" onclick="setView('financeiro')" style="cursor:pointer">
           <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div>
           <div class="hero-val" id="dash-faturamento">—</div>
           <div class="hero-sub" id="dash-fat-sub">no período selecionado</div>
+          <div style="margin-top:8px;display:flex;gap:12px;font-size:11px">
+            <span id="dash-fat-conc" style="color:var(--ok-t)"></span>
+            <span id="dash-fat-pend" style="color:var(--wa-t)"></span>
+          </div>
         </div>
-        <div class="hero-card hero-luc">
+        <div class="hero-card hero-luc" onclick="setView('financeiro')" style="cursor:pointer">
           <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado</div>
           <div class="hero-val" id="dash-lucro">—</div>
           <div class="hero-sub" id="dash-luc-sub">margem média do catálogo</div>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.7)" id="dash-luc-custo"></div>
         </div>
       </div>
 
@@ -1581,8 +1586,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- Curva ABC -->
       <div class="tcard" style="margin-top:0">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Curva ABC</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(concentração de valor em estoque)</span></div>
-        <div class="vtable" id="fin-abc-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para calcular a curva ABC.</p></div></div>
+        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Curva ABC</span><span style="font-size:12px;color:var(--mu);margin-left:6px">— produtos por valor total em estoque (preço × qtd)</span><div class="tr"><button class="bts" onclick="renderCurvaABC()">↻ Calcular</button></div></div>
+        <div class="vtable" id="fin-abc-body"><div class="st-wrap"><p class="st-d">Carregue os produtos e clique em Calcular para ver a Curva ABC.</p></div></div>
       </div>
       <!-- Margem por produto -->
       <div class="tcard" style="margin-top:0">
@@ -1628,37 +1633,77 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <!-- Status do Bling -->
       <div class="cfg-card">
         <div class="cfg-title">Status das conexões</div>
-        <div class="cfg-desc">Integrações ativas e disponíveis. A sincronização de estoque, pedidos e NF-e é feita via Bling ERP.</div>
-        <div class="cfg-row" style="margin-bottom:8px">
+        <div class="cfg-desc">O Bling ERP centraliza todos os canais de venda. Conecte cada marketplace no Bling e os pedidos, estoque e NF-e são sincronizados automaticamente aqui.</div>
+        <!-- Bling -->
+        <div class="cfg-row" style="margin-bottom:10px">
           <span style="display:flex;align-items:center;gap:10px">
-            <span style="width:32px;height:32px;border-radius:8px;background:#eef2ff;color:#4f46e5;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">B</span>
-            <span><span style="font-weight:600;color:var(--tx)">Bling ERP</span><br><span style="font-size:11px;color:var(--mu)">Produtos · Pedidos · NF-e · Estoque</span></span>
+            <span style="width:36px;height:36px;border-radius:10px;background:#eef2ff;color:#4f46e5;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">B</span>
+            <span><span style="font-weight:700;color:var(--tx);font-size:13px">Bling ERP</span><br><span style="font-size:11px;color:var(--mu)">Hub central · Produtos · Pedidos · NF-e · Estoque · Contas</span></span>
           </span>
           <span class="sb2 s-ok" id="bling-status-badge">Conectado</span>
         </div>
-        <div class="cfg-row" style="margin-bottom:8px">
-          <span style="display:flex;align-items:center;gap:10px">
-            <span style="width:32px;height:32px;border-radius:8px;background:#010101;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">TT</span>
-            <span><span style="font-weight:600;color:var(--tx)">TikTok Shop</span><br><span style="font-size:11px;color:var(--mu)">Sincronize via Bling → Integrações → TikTok</span></span>
-          </span>
-          <span class="sb2 s-lo">Via Bling</span>
-        </div>
-        <div class="cfg-row" style="margin-bottom:8px">
-          <span style="display:flex;align-items:center;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+          <!-- TikTok Shop -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#010101;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;flex-shrink:0">TT</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">TikTok Shop</div><div style="font-size:10px;color:var(--mu)">Comissão ~8% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Mercado Livre -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
             <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">ML</span>
-            <span><span style="font-weight:600;color:var(--tx)">Mercado Livre</span><br><span style="font-size:11px;color:var(--mu)">Sincronize via Bling → Integrações → ML</span></span>
-          </span>
-          <span class="sb2 s-lo">Via Bling</span>
-        </div>
-        <div class="cfg-row" style="margin-bottom:8px">
-          <span style="display:flex;align-items:center;gap:10px">
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Mercado Livre</div><div style="font-size:10px;color:var(--mu)">Comissão ~14% + R$6 · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Shopee -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
             <span style="width:32px;height:32px;border-radius:8px;background:#ee4d2d;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">SP</span>
-            <span><span style="font-weight:600;color:var(--tx)">Shopee</span><br><span style="font-size:11px;color:var(--mu)">Sincronize via Bling → Integrações → Shopee</span></span>
-          </span>
-          <span class="sb2 s-lo">Via Bling</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Shopee</div><div style="font-size:10px;color:var(--mu)">Comissão ~13% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Amazon -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#ff9900;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">AZ</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Amazon Brasil</div><div style="font-size:10px;color:var(--mu)">Comissão ~12% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Magalu -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#0086ff;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">MG</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Magazine Luiza</div><div style="font-size:10px;color:var(--mu)">Comissão ~11% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Americanas -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#e30613;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">AM</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Americanas</div><div style="font-size:10px;color:var(--mu)">Comissão ~12% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Shein -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#000;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">SH</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Shein</div><div style="font-size:10px;color:var(--mu)">Comissão ~10% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Kwai -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#ff5a00;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">KW</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Kwai Shop</div><div style="font-size:10px;color:var(--mu)">Comissão ~8% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- iFood -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span style="width:32px;height:32px;border-radius:8px;background:#ea1d2c;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">IF</span>
+            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">iFood Shop</div><div style="font-size:10px;color:var(--mu)">Comissão ~12% · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
         </div>
-        <div style="margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--mu);line-height:1.6">
-          <strong style="color:var(--tx)">Como sincronizar:</strong> Acesse o Bling → Configurações → Integrações e conecte cada canal de vendas. O estoque e pedidos passam a ser sincronizados automaticamente pelo Bling.
+        <div style="margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:10px;font-size:12px;color:var(--mu);line-height:1.7;border-left:3px solid var(--acc)">
+          <strong style="color:var(--tx)">Como conectar um marketplace:</strong><br>
+          1. Acesse <strong>bling.com.br → Configurações → Integrações</strong><br>
+          2. Escolha o canal (TikTok Shop, Mercado Livre, Shopee, etc.) e clique em <em>Conectar</em><br>
+          3. Autorize o acesso na plataforma do marketplace<br>
+          4. Os pedidos, estoque e NF-e passam a ser sincronizados automaticamente pelo Bling
         </div>
       </div>
       <!-- Taxas de Marketplace -->
@@ -2256,7 +2301,7 @@ function setView(v){
 // ── DASHBOARD / INÍCIO ───────────────────────────
 let dashPeriod='30d';
 let _dashLoaded=false;
-let _dashFat=0;
+let _dashFat=0,_dashTotalPedidos=0,_dashCancelados=0;
 function setDashPeriod(p,btn){
   dashPeriod=p;
   document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('on'));
@@ -2297,8 +2342,14 @@ async function loadDashboard(force=false){
       }
       fsub.innerHTML=txt;
     }
+    // Extra info lines in the faturamento card
+    const fatConc=$('dash-fat-conc'),fatPend=$('dash-fat-pend');
+    if(fatConc)fatConc.textContent=v.concluidos>0?`✅ ${fmtN(v.concluidos)} concluídos`:'';
+    if(fatPend)fatPend.textContent=v.pendentes>0?`⏳ ${fmtN(v.pendentes||0)} pendentes`:'';
     // Lucro estimado via margem média do catálogo
     _dashFat=v.faturamento||0;
+    _dashTotalPedidos=v.totalPedidos||0;
+    _dashCancelados=v.cancelados||0;
     recomputeDashLucro();
     // KPIs
     setTxt('dash-vendas',fmtN(v.concluidos||0));
@@ -2329,8 +2380,17 @@ function avgMargem(){
 function recomputeDashLucro(){
   const margem=avgMargem();
   const lucro=_dashFat*margem;
-  const el=$('dash-lucro');if(el)el.textContent=fmt(lucro);
+  const el=$('dash-lucro');if(el)el.textContent=margem>0?fmt(lucro):'—';
   const sub=$('dash-luc-sub');if(sub)sub.textContent=margem>0?`margem média ~${Math.round(margem*100)}%`:'cadastre custos p/ estimar';
+  const custoEl=$('dash-luc-custo');
+  if(custoEl){
+    if(margem>0){
+      const custoEst=_dashFat*(1-margem);
+      custoEl.textContent=`Custo estimado: ${fmt(custoEst)}`;
+    } else {
+      custoEl.textContent='Importe custos dos produtos para ver estimativa';
+    }
+  }
   renderMetaBar();
 }
 function renderDashAlerts(){
@@ -2518,7 +2578,8 @@ async function loadProducts(showToast=false){
     const _sf=localStorage.getItem('sf')||'nome',_sd=localStorage.getItem('sd')||'asc';
     ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{const el=$('si-'+f);if(!el)return;if(f===_sf){el.textContent=_sd==='asc'?'\u2191':'\u2193';el.closest('th')?.classList.add('srt');}else{el.textContent='';el.closest('th')?.classList.remove('srt');}});
     updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
-    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();}
+    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();if(!_dashLoaded)loadDashboard();}
+    else{renderDashAlerts();recomputeDashLucro();}
     if(showToast)toast('Produtos atualizados','ok');
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{lbDone();btn.disabled=false;ico.classList.remove('spin');}
@@ -2545,7 +2606,7 @@ function renderSkeleton(n=7){
 }
 function renderNoBling(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><p class="st-t">Bling não conectado</p><p class="st-d">Conecte sua conta para carregar produtos.</p><button class="st-btn" onclick="window.location.href='/'">Conectar Bling</button></div></td></tr>`;}
 function renderExpired(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p class="st-t">Sessão Bling expirada</p><button class="st-btn" onclick="window.location.href='/'">Reconectar</button></div></td></tr>`;}
-function sync(){loadProducts(true);}
+function sync(){_dashLoaded=false;loadProducts(true);}
 
 // ── KPI ──────────────────────────────────────────
 function updateKpis(){
@@ -3030,11 +3091,29 @@ async function loadPedidosUrl(url){
     renderPedidosTable(_pedStatus);
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
+const _SIT_PT={'pending':'Pendente','approved':'Aprovado','paid':'Pago','processing':'Em processamento',
+  'in_process':'Em processamento','shipped':'Enviado','delivered':'Entregue','completed':'Concluído',
+  'complete':'Concluído','cancelled':'Cancelado','canceled':'Cancelado','refunded':'Reembolsado',
+  'failed':'Falhou','open':'Em aberto','closed':'Encerrado','waiting':'Aguardando',
+  'waiting_payment':'Aguardando pagamento','ready_to_ship':'Pronto p/ envio'};
+function pedSituacaoPT(s){
+  const raw=String(s||'—');
+  return _SIT_PT[raw.toLowerCase().replace(/\s+/g,'_')]||raw;
+}
 function categorizePed(s){
-  const n=String(s||'').toLowerCase();
+  const n=pedSituacaoPT(String(s||'')).toLowerCase();
   if(n.includes('cancel'))return'cancelado';
-  if(n.includes('atend')||n.includes('conclui')||n.includes('entregue'))return'concluido';
+  if(n.includes('atend')||n.includes('conclui')||n.includes('entregue')||n.includes('faturad')||n.includes('despachad')||n.includes('enviado')||n.includes('encerrad'))return'concluido';
   return'pendente';
+}
+function pedSitIcon(situacao){
+  const n=pedSituacaoPT(String(situacao||'')).toLowerCase();
+  if(n.includes('cancel'))return'🚫';
+  if(n.includes('atend')||n.includes('conclui')||n.includes('entregue')||n.includes('faturad'))return'✅';
+  if(n.includes('despachad')||n.includes('enviado'))return'📦';
+  if(n.includes('aguardando')||n.includes('pend'))return'⏳';
+  if(n.includes('aprovad')||n.includes('pago')||n.includes('verificad'))return'✔';
+  return'🔄';
 }
 function renderPedidosTable(status){
   const body=$('pedidos-body');
@@ -3044,14 +3123,14 @@ function renderPedidosTable(status){
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${q?'encontrado para "'+esc(q)+'"':status==='all'?'encontrado':status}.</p></div>`;return;}
   const rows=list.map(p=>{
     const cat=categorizePed(p.situacao);
-    const cls=cat==='concluido'?'o-ok':cat==='cancelado'?'o-can':'o-pen';
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+    const ico=pedSitIcon(p.situacao);
     return`<tr style="cursor:pointer" onclick="openPedidoDetalhe('${esc(String(p.id))}')">
       <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
       <td>${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
       <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
-      <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
+      <td><span class="sb2 ${sb}" style="gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -3064,27 +3143,35 @@ async function openPedidoDetalhe(id){
     if(!r.ok)throw new Error(p.error||'Erro ao carregar pedido');
     const cat=categorizePed(p.situacao);
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+    const ico=pedSitIcon(p.situacao);
     const itensRows=(p.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}<br><span style="font-size:10px;color:var(--mu)">${it.codigo?'SKU: '+esc(it.codigo):''}</span></td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
     const waNum=(p.contatoTel||'').replace(/\D/g,'');
     const waLink=waNum?`https://wa.me/55${waNum}`:'';
+    const totalPed=Number(p.total||p.valor||0);
+    const fretePed=Number(p.frete||0);
+    const descPed=Number(p.desconto||0);
+    const qtdItens=(p.itens||[]).reduce((a,it)=>a+Number(it.qtd||0),0);
     $('ped-detalhe').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
         <div style="min-width:0">
           <div style="font-size:16px;font-weight:700">Pedido #${esc(String(p.numero||p.id))}</div>
-          <div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(p.contato)}${p.contatoDoc?' · '+esc(p.contatoDoc):''}</div>
+          <div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(p.contato)}${p.contatoDoc?' · CNPJ/CPF: '+esc(p.contatoDoc):''}</div>
           ${waLink?`<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#25d366;margin-top:4px;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>${p.contatoTel}</a>`:''}
         </div>
-        <span class="sb2 ${sb}" style="flex-shrink:0">${esc(p.situacao)}</span>
+        <span class="sb2 ${sb}" style="flex-shrink:0;gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Data</div><div style="font-size:13px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(p.total)}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(p.frete||0)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(totalPed)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(fretePed)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--bord)"><div style="font-size:10px;color:var(--mu)">Itens</div><div style="font-size:13px;font-weight:700">${fmtN(qtdItens)} un.</div></div>
       </div>
-      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${(p.itens||[]).length})</div>
+      ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:6px 10px;background:var(--bg);border-radius:8px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
       <div style="max-height:220px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
       ${p.observacoes?`<div style="margin-top:12px;font-size:12px;color:var(--mu);background:var(--bg);border-radius:8px;padding:10px"><strong>Obs:</strong> ${esc(p.observacoes)}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
         <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
       </div>
     `;
@@ -3122,9 +3209,16 @@ async function loadNotas(){
 }
 function notaSitClass(situacao){
   const s=(situacao||'').toLowerCase();
-  if(s.includes('cancel'))return'can';
   if(s.includes('autoriza'))return'ok';
+  if(s.includes('cancel')||s.includes('denegad')||s.includes('inutiliz'))return'can';
+  if(s.includes('rejeit'))return'rej';
   return'pen';
+}
+function notaSitBadge(situacao){
+  const sc=notaSitClass(situacao);
+  const cls=sc==='ok'?'s-ok':sc==='can'?'s-out':sc==='rej'?'s-lo':'s-lo';
+  const style=sc==='rej'?'background:var(--er-bg,#fee2e2);color:var(--er-t);border-color:var(--er)':'';
+  return`<span class="sb2 ${cls}"${style?' style="'+style+'"':''}>${esc(situacao||'—')}</span>`;
 }
 function renderNotas(){
   const body=$('notas-body');
@@ -3138,9 +3232,7 @@ function renderNotas(){
   });
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhuma nota encontrada${q?' para "'+esc(q)+'"':''}.</p></div>`;return;}
   body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${list.map(n=>{
-    const sc=notaSitClass(n.situacao);
-    const sb=sc==='ok'?'s-ok':sc==='can'?'s-out':'s-lo';
-    return`<tr style="cursor:pointer" onclick="openNotaDetalhe('${esc(String(n.id))}')"><td><span class="sku">${esc(String(n.numero||n.id))}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td><span class="sb2 ${sb}">${esc(n.situacao)}</span></td><td><span class="nfe-key">${n.chave?n.chave.substring(0,18)+'…':'—'}</span></td></tr>`;
+    return`<tr style="cursor:pointer" onclick="openNotaDetalhe('${esc(String(n.id))}')"><td><span class="sku">${esc(String(n.numero||n.id))}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td>${notaSitBadge(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,18)+'…':'—'}</span></td></tr>`;
   }).join('')}</tbody></table>`;
 }
 let _nfeDetId=null;
@@ -3153,17 +3245,18 @@ async function openNotaDetalhe(id){
     const r=await fetch(`/api/nfe/${id}/detalhe`),n=await r.json();
     if(!r.ok)throw new Error(n.error||'Erro ao carregar NF-e');
     const sc=notaSitClass(n.situacao);
-    const sb=sc==='ok'?'s-ok':sc==='can'?'s-out':'s-lo';
     const itensRows=(n.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}</td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    const totalNota=Number(n.total||0)+Number(n.totalFrete||0)-Number(n.totalDesconto||0);
     $('nfe-detalhe').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
         <div><div style="font-size:16px;font-weight:700">NF-e nº ${esc(String(n.numero||n.id))}-${esc(n.serie||'1')}</div><div style="font-size:12px;color:var(--mu)">${esc(n.contato)}${n.contatoDoc?' · '+esc(n.contatoDoc):''}</div>${n.natureza?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${esc(n.natureza)}</div>`:''}</div>
-        <span class="sb2 ${sb}" style="flex-shrink:0">${esc(n.situacao)}</span>
+        ${notaSitBadge(n.situacao)}
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Emissão</div><div style="font-size:13px;font-weight:700">${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(n.total)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(n.total)}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(n.totalFrete||0)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--bord)"><div style="font-size:10px;color:var(--mu)">Total NF-e</div><div style="font-size:13px;font-weight:800;color:var(--acc)">${fmt(totalNota)}</div></div>
       </div>
       ${n.chave?`<div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10px;color:var(--mu);flex-shrink:0">Chave de acesso:</span><span class="nfe-key" style="flex:1">${esc(n.chave)}</span><button class="bts" style="height:24px;padding:0 8px;font-size:11px" onclick="copySku('${esc(n.chave)}');event.stopPropagation()">Copiar</button></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${n.itens?.length||0})</div>

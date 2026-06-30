@@ -185,6 +185,18 @@ function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
   res.status(statusCode).json(response);
 }
 
+const _SIT_PT_MAP = {
+  'pending':'Pendente','approved':'Aprovado','paid':'Pago','processing':'Em processamento',
+  'in_process':'Em processamento','shipped':'Enviado','delivered':'Entregue','completed':'Concluído',
+  'complete':'Concluído','cancelled':'Cancelado','canceled':'Cancelado','refunded':'Reembolsado',
+  'failed':'Falhou','open':'Em aberto','closed':'Encerrado','waiting':'Aguardando',
+  'waiting_payment':'Aguardando pagamento','ready_to_ship':'Pronto p/ envio',
+};
+function situacaoPT(s) {
+  const raw = String(s || '—');
+  return _SIT_PT_MAP[raw.toLowerCase().replace(/\s+/g,'_')] || raw;
+}
+
 // Resolve intervalo de datas a partir do período (today | 7d | 30d | custom)
 function resolvePeriodo(period, startDate, endDate) {
   const hoje = new Date();
@@ -401,9 +413,10 @@ async function fetchPedidos(token, inicio, fim, maxPg = 3) {
 }
 
 const categorizePedido = s => {
-  const n = String(s?.nome || s?.valor || s || '').toLowerCase();
+  const raw = String(s?.nome || s?.valor || s || '');
+  const n = (situacaoPT(raw)).toLowerCase();
   if (n.includes('cancel')) return 'cancelado';
-  if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
+  if (n.includes('atend') || n.includes('conclui') || n.includes('entregue') || n.includes('faturad') || n.includes('despachad') || n.includes('enviado') || n.includes('encerrad')) return 'concluido';
   return 'pendente';
 };
 const valorPedido = p => p.totalVenda || p.totalProdutos || 0;
@@ -703,8 +716,8 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       id:        p.id,
       numero:    p.numero,
       data:      p.data,
-      valor:     p.totalProdutos || p.totalVenda || 0,
-      situacao:  String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
+      valor:     Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
+      situacao:  situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
       contato:   p.contato?.nome || '—',
     }));
 
@@ -739,13 +752,14 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       id:          p.id,
       numero:      p.numero,
       data:        p.data,
-      situacao:    String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
+      situacao:    situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
       contato:     p.contato?.nome || '—',
       contatoDoc:  p.contato?.numeroDocumento || '',
       contatoTel:  p.contato?.celular || p.contato?.telefone || '',
       observacoes: p.observacoes || p.observacoesInternas || '',
-      total:       p.totalProdutos || p.totalVenda || p.total || 0,
-      frete:       p.transporte?.frete || 0,
+      total:       Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
+      frete:       Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
+      desconto:    Number(p.desconto) || 0,
       itens,
     });
   } catch (err) {
@@ -1214,12 +1228,7 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
 
   const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
 
-  const categorize = s => {
-    const n = String(s?.nome || s?.valor || s || '').toLowerCase();
-    if (n.includes('cancel')) return 'cancelado';
-    if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
-    return 'pendente';
-  };
+  const categorize = s => categorizePedido(s);
 
   try {
     // Pedidos do período + período anterior + contas, em paralelo
