@@ -3219,7 +3219,7 @@ async function openPedidoDetalhe(id){
     const cat=categorizePed(p.situacao);
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
     const ico=pedSitIcon(p.situacao);
-    const itensRows=(p.itens||[]).map(it=>`<tr><td>${esc(it.descricao)}<br><span style="font-size:10px;color:var(--mu)">${it.codigo?'SKU: '+esc(it.codigo):''}</span></td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    const itensRows=(p.itens||[]).map(it=>{const mp=S.products.find(q=>q.codigo&&it.codigo&&q.codigo===it.codigo);return`<tr${mp?` style="cursor:pointer" onclick="closeModal('ped-modal');setView('produtos');setTimeout(()=>openEditor(${mp.id}),80)" title="Ver produto"`:''}><td>${esc(it.descricao)}<br><span style="font-size:10px;color:var(--mu)">${it.codigo?'SKU: '+esc(it.codigo):''}</span></td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
     const waNum=(p.contatoTel||'').replace(/\D/g,'');
     const waLink=waNum?`https://wa.me/55${waNum}`:'';
     const totalPed=Number(p.total||p.valor||0);
