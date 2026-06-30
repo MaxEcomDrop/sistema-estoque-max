@@ -753,6 +753,29 @@ button:focus:not(:focus-visible){outline:none}
 .meta-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--acc),#8b5cf6);transition:width .6s cubic-bezier(.22,1,.36,1)}
 .meta-bar-fill.done{background:linear-gradient(90deg,var(--ok),#10b981)}
 .meta-bar-sub{font-size:11.5px;color:var(--mu)}
+/* Previsão de ruptura */
+.rupt-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
+.rupt-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+.rupt-hd-t{font-size:12px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.rupt-hd-t svg{color:var(--wa)}
+.rupt-row{display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer;transition:background .12s;border-top:1px solid var(--bord-l)}
+.rupt-row:active{background:var(--bg)}
+.rupt-thumb{width:34px;height:34px;border-radius:8px;object-fit:cover;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--mu);font-size:11px;font-weight:600;overflow:hidden}
+.rupt-thumb img{width:100%;height:100%;object-fit:cover}
+.rupt-info{flex:1;min-width:0}
+.rupt-nome{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rupt-track{height:5px;border-radius:3px;background:var(--bord-l);overflow:hidden;margin-top:4px}
+.rupt-fill{height:100%;border-radius:3px;transition:width .5s}
+.rupt-fill.r-ok{background:var(--ok)}
+.rupt-fill.r-wa{background:var(--wa)}
+.rupt-fill.r-er{background:var(--er)}
+.rupt-badge{font-size:11px;font-weight:700;flex-shrink:0;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.rupt-badge.r-ok{background:var(--ok-bg,#d1fae5);color:var(--ok-t,#065f46)}
+.rupt-badge.r-wa{background:var(--wa-bg,#fef3c7);color:var(--wa-t,#92400e)}
+.rupt-badge.r-er{background:var(--er-bg,#fee2e2);color:var(--er-t,#991b1b)}
+.rupt-empty{padding:18px 16px;font-size:13px;color:var(--mu);text-align:center}
+.rupt-ver-mais{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--acc);padding:10px;cursor:pointer;border-top:1px solid var(--bord-l)}
+.rupt-ver-mais:active{background:var(--bg)}
 /* Row actions bottom sheet */
 .ras-btn{display:flex;align-items:center;gap:14px;width:100%;padding:13px 6px;background:none;border:none;border-radius:12px;font-size:14px;font-weight:500;color:var(--tx);cursor:pointer;font-family:inherit;transition:background .1s;text-align:left}
 .ras-btn:active{background:var(--bg)}
@@ -952,6 +975,16 @@ button:focus:not(:focus-visible){outline:none}
         <div class="da-card da-purple" onclick="setView('financeiro')">
           <div class="da-num" id="dash-vencidas">—</div><div class="da-lbl">Contas vencidas</div>
         </div>
+      </div>
+
+      <!-- RUPTURA -->
+      <div class="rupt-wrap" id="rupt-wrap" style="display:none">
+        <div class="rupt-hd">
+          <span class="rupt-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Risco de ruptura</span>
+          <span style="font-size:11px;color:var(--mu)" id="rupt-sub"></span>
+        </div>
+        <div id="rupt-list"></div>
+        <span class="rupt-ver-mais" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin*3),50)">Ver todos os críticos →</span>
       </div>
 
       <!-- CONTAS -->
@@ -2019,6 +2052,32 @@ function renderDashAlerts(){
   const tcl=$('tf-criticos-lbl');if(tcl)tcl.textContent=`Críticos (≤${S.estoqueMin})`;
   const pend=$('pt-cnt-pen')?.textContent;
   set('dash-pendentes',pend&&!isNaN(+pend)?+pend:(typeof _pedidosCache!=='undefined'?_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length:0));
+  renderRupturaWidget();
+}
+function renderRupturaWidget(){
+  const wrap=$('rupt-wrap'),list=$('rupt-list');if(!wrap||!list)return;
+  const threshold=S.estoqueMin*3;
+  const at_risk=S.products.filter(p=>p.estoque>0&&p.estoque<=threshold)
+    .sort((a,b)=>a.estoque-b.estoque).slice(0,5);
+  if(!at_risk.length){wrap.style.display='none';return;}
+  wrap.style.display='';
+  const sub=$('rupt-sub');if(sub)sub.textContent=`${at_risk.length} produto${at_risk.length!==1?'s':''}`;
+  list.innerHTML=at_risk.map(p=>{
+    const ratio=S.estoqueMin>0?p.estoque/S.estoqueMin:1;
+    const cls=ratio<=1?'r-er':ratio<=2?'r-wa':'r-ok';
+    const barW=Math.min(100,Math.round((p.estoque/Math.max(threshold,1))*100));
+    const label=ratio<=1?`${p.estoque} un. — crítico`:ratio<=2?`${p.estoque} un. — baixo`:`${p.estoque} un.`;
+    const initials=p.nome.trim().split(/\s+/).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+    const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`:`<span>${esc(initials)}</span>`;
+    return`<div class="rupt-row" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)">
+      <div class="rupt-thumb">${thumb}</div>
+      <div class="rupt-info">
+        <div class="rupt-nome">${esc(p.nome)}</div>
+        <div class="rupt-track"><div class="rupt-fill ${cls}" style="width:${barW}%"></div></div>
+      </div>
+      <span class="rupt-badge ${cls}">${esc(label)}</span>
+    </div>`;
+  }).join('');
 }
 function renderContasList(elId,conta,tipo){
   const el=$(elId);if(!el)return;
