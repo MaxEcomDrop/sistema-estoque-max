@@ -61,6 +61,10 @@ const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
 const JWT_SECRET          = process.env.JWT_SECRET;
 const NODE_ENV            = process.env.NODE_ENV || 'development';
 
+const ML_CLIENT_ID     = process.env.ML_CLIENT_ID     || '';
+const ML_CLIENT_SECRET = process.env.ML_CLIENT_SECRET || '';
+const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
+
 // In-memory change log (resets on cold start)
 // TODO: Persistir em banco de dados em produção
 const changeLog = [];
@@ -315,6 +319,148 @@ app.get('/api/webhook/bling', async (req, res) => {
     console.error('[OAuth]', err.response?.data || err.message);
     res.redirect('/?error=token_exchange_failed');
   }
+});
+
+// ── OAuth Mercado Livre ───────────────────────────────────────────────
+
+// In-memory cache for ML access_token (TTL ~6h) to avoid Firestore round-trips
+let _mlTokenCache = { token: null, expiresAt: 0, sellerId: null };
+
+async function saveMLTokens(accessToken, refreshToken, sellerId, expiresIn) {
+  _mlTokenCache = { token: accessToken, expiresAt: Date.now() + (expiresIn - 60) * 1000, sellerId };
+  const admin = getAdmin();
+  if (!admin) return;
+  try {
+    await admin.firestore().collection('ml_auth').doc('tokens').set({
+      accessToken, refreshToken, sellerId: String(sellerId || ''),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) { console.error('[saveMLTokens]', e.message); }
+}
+
+async function refreshMLToken(refreshToken) {
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token', client_id: ML_CLIENT_ID,
+    client_secret: ML_CLIENT_SECRET, refresh_token: refreshToken,
+  });
+  const { data } = await axios.post('https://api.mercadolibre.com/oauth/token', params.toString(), {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+  });
+  return data;
+}
+
+async function ensureMLToken() {
+  if (_mlTokenCache.token && Date.now() < _mlTokenCache.expiresAt) return _mlTokenCache;
+  const admin = getAdmin();
+  if (!admin) return null;
+  try {
+    const doc = await admin.firestore().collection('ml_auth').doc('tokens').get();
+    if (!doc.exists) return null;
+    const { accessToken, refreshToken, sellerId } = doc.data();
+    if (!refreshToken) return null;
+    const data = await refreshMLToken(refreshToken);
+    await saveMLTokens(data.access_token, data.refresh_token || refreshToken, data.user_id || sellerId, data.expires_in || 21600);
+    return _mlTokenCache;
+  } catch (e) { console.error('[ensureMLToken]', e.message); return null; }
+}
+
+function mlHeaders(token) {
+  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+app.get('/api/ml/auth/url', requireAuthJson, (req, res) => {
+  if (!ML_CLIENT_ID) return res.status(400).json({ error: 'ML_CLIENT_ID não configurado' });
+  const params = new URLSearchParams({ response_type: 'code', client_id: ML_CLIENT_ID, redirect_uri: ML_REDIRECT_URI, state: 'estoque_max_ml' });
+  res.json({ authUrl: `https://auth.mercadolibre.com.br/authorization?${params}` });
+});
+
+app.get('/api/ml/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error) return res.redirect(`/dashboard.html?ml_error=${encodeURIComponent(error)}`);
+  if (!code) return res.redirect('/dashboard.html?ml_error=no_code');
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'authorization_code', client_id: ML_CLIENT_ID,
+      client_secret: ML_CLIENT_SECRET, code, redirect_uri: ML_REDIRECT_URI,
+    });
+    const { data } = await axios.post('https://api.mercadolibre.com/oauth/token', params.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+    });
+    await saveMLTokens(data.access_token, data.refresh_token, data.user_id, data.expires_in || 21600);
+    res.redirect('/dashboard.html?ml_connected=1');
+  } catch (err) {
+    console.error('[ML OAuth]', err.response?.data || err.message);
+    res.redirect('/dashboard.html?ml_error=token_exchange_failed');
+  }
+});
+
+app.get('/api/ml/status', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.json({ connected: false });
+  try {
+    const { data } = await axios.get('https://api.mercadolibre.com/users/me', { headers: mlHeaders(ml.token) });
+    res.json({ connected: true, sellerId: ml.sellerId, apelido: data.nickname, nome: data.first_name + ' ' + data.last_name, pontuacao: data.seller_reputation?.power_seller_status || null, pais: data.country_id || 'BR' });
+  } catch (e) { res.json({ connected: true, sellerId: ml.sellerId }); }
+});
+
+app.get('/api/ml/perguntas', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  try {
+    const { data } = await axios.get(`https://api.mercadolibre.com/questions/search?seller_id=${ml.sellerId}&status=UNANSWERED&limit=50&api_version=4`, { headers: mlHeaders(ml.token) });
+    const qs = (data.questions || []).map(q => ({
+      id: q.id, itemId: q.item_id, texto: q.text,
+      data: q.date_created, comprador: q.from?.nickname || '—',
+    }));
+    res.json({ perguntas: qs, total: data.total || qs.length });
+  } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar perguntas', e.message); }
+});
+
+app.post('/api/ml/perguntas/:id/responder', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  const { resposta } = req.body;
+  if (!resposta?.trim()) return res.status(400).json({ error: 'Resposta é obrigatória' });
+  try {
+    await axios.post('https://api.mercadolibre.com/answers', { question_id: Number(req.params.id), text: resposta.trim() }, { headers: mlHeaders(ml.token) });
+    res.json({ ok: true });
+  } catch (e) { sendErrorResponse(res, 500, 'Erro ao responder pergunta', e.message); }
+});
+
+app.get('/api/ml/anuncios', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  try {
+    const status = req.query.status || 'active';
+    const { data: searchData } = await axios.get(`https://api.mercadolibre.com/users/${ml.sellerId}/items/search?status=${status}&limit=50`, { headers: mlHeaders(ml.token) });
+    const ids = (searchData.results || []).slice(0, 20);
+    if (!ids.length) return res.json({ anuncios: [] });
+    const { data: itemsData } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}&attributes=id,title,price,available_quantity,status,thumbnail,permalink`, { headers: mlHeaders(ml.token) });
+    const anuncios = (itemsData || []).map(r => r.body || r).filter(Boolean).map(it => ({
+      id: it.id, titulo: it.title, preco: it.price, qtd: it.available_quantity,
+      situacao: it.status, thumb: it.thumbnail, link: it.permalink,
+    }));
+    res.json({ anuncios, total: searchData.paging?.total || anuncios.length });
+  } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar anúncios', e.message); }
+});
+
+app.get('/api/ml/metricas', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  try {
+    const [rep, orders] = await Promise.allSettled([
+      axios.get(`https://api.mercadolibre.com/users/${ml.sellerId}`, { headers: mlHeaders(ml.token) }),
+      axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&sort=date_desc&limit=10`, { headers: mlHeaders(ml.token) }),
+    ]);
+    const seller = rep.status === 'fulfilled' ? rep.value.data : {};
+    const recentOrders = orders.status === 'fulfilled' ? (orders.value.data?.results || []) : [];
+    res.json({
+      pontuacao: seller.seller_reputation?.power_seller_status || null,
+      nivelVendedor: seller.seller_reputation?.level_id || null,
+      vendas30d: seller.seller_reputation?.transactions?.completed || null,
+      ultimosPedidos: recentOrders.slice(0, 5).map(o => ({ id: o.id, total: o.total_amount, status: o.status, data: o.date_created })),
+    });
+  } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar métricas ML', e.message); }
 });
 
 // ── Produtos ─────────────────────────────────────────────────────────

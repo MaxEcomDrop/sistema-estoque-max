@@ -1639,6 +1639,33 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <!-- VIEW CONFIGURAÇÕES -->
     <!-- VIEW INTEGRAÇÕES -->
     <div class="view" id="view-integracoes">
+      <!-- MERCADO LIVRE DIRETO -->
+      <div class="cfg-card" id="ml-card">
+        <div class="cfg-title" style="display:flex;align-items:center;gap:10px">
+          <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">ML</span>
+          Mercado Livre — Integração direta
+          <span class="sb2 s-lo" id="ml-status-badge" style="margin-left:auto">Verificando…</span>
+        </div>
+        <div class="cfg-desc" id="ml-desc">Conecte sua conta do Mercado Livre para responder perguntas de clientes e monitorar anúncios diretamente aqui, sem precisar sair do sistema.</div>
+        <!-- NOT CONNECTED -->
+        <div id="ml-connect-area">
+          <button class="btp" id="ml-connect-btn" onclick="mlConectar()" style="margin-top:8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Conectar com Mercado Livre
+          </button>
+        </div>
+        <!-- CONNECTED CONTENT -->
+        <div id="ml-connected-area" style="display:none">
+          <div id="ml-seller-info" style="padding:10px 0;font-size:13px;color:var(--mu)"></div>
+          <!-- Tabs -->
+          <div class="ptabs" style="margin-top:8px">
+            <button class="ptab on" id="ml-tab-perg" onclick="mlTab('perguntas',this)">Perguntas sem resposta <span id="ml-perg-cnt" class="tab-cnt"></span></button>
+            <button class="ptab" id="ml-tab-anu" onclick="mlTab('anuncios',this)">Meus anúncios</button>
+          </div>
+          <div id="ml-perguntas-body" style="margin-top:8px"></div>
+          <div id="ml-anuncios-body" style="margin-top:8px;display:none"></div>
+        </div>
+      </div>
       <!-- Status do Bling -->
       <div class="cfg-card">
         <div class="cfg-title">Status das conexões</div>
@@ -2519,6 +2546,7 @@ const INT_CANAIS=[
   {id:'custom',nome:'Canal próprio',cor:'#6366f1',tc:'#fff',comissao:0,fixo:0},
 ];
 function loadIntegracoes(){
+  loadMLStatus();
   // Update Bling status badge
   const badge=$('bling-status-badge');
   if(badge){
@@ -2596,6 +2624,87 @@ function updateLucroCanais(){
   if(!rows){card.style.display='none';return;}
   card.style.display='';
   body.innerHTML=`<div class="cfg-row"><span class="cfg-row-lbl">Margem média (Bling)</span><span class="sb2 s-ok">${mPct}%</span></div>${rows}`;
+}
+
+// ── MERCADO LIVRE ─────────────────────────────────
+let _mlStatus=null;let _mlActiveTab='perguntas';
+async function loadMLStatus(){
+  const badge=$('ml-status-badge'),desc=$('ml-desc'),connArea=$('ml-connect-area'),connContent=$('ml-connected-area');
+  if(!badge)return;
+  badge.textContent='Verificando…';badge.className='sb2 s-lo';
+  try{
+    const r=await fetch('/api/ml/status'),d=await r.json();
+    _mlStatus=d;
+    if(d.connected){
+      badge.textContent='Conectado';badge.className='sb2 s-ok';
+      if(connArea)connArea.style.display='none';
+      if(connContent)connContent.style.display='';
+      const info=$('ml-seller-info');
+      if(info)info.innerHTML=`<strong>${esc(d.apelido||d.nome||'Vendedor')}</strong>${d.pontuacao?` · <span style="color:var(--ok-t)">${esc(d.pontuacao)}</span>`:''}`;
+      loadMLPerguntas();
+    } else {
+      badge.textContent='Não conectado';badge.className='sb2 s-out';
+      if(connArea)connArea.style.display='';
+      if(connContent)connContent.style.display='none';
+    }
+  }catch(e){badge.textContent='Erro';badge.className='sb2 s-out';}
+}
+async function mlConectar(){
+  const btn=$('ml-connect-btn');btn.disabled=true;btn.textContent='Redirecionando…';
+  try{const r=await fetch('/api/ml/auth/url'),d=await r.json();if(d.authUrl)window.location.href=d.authUrl;else{toast(d.error||'ML_CLIENT_ID não configurado nas variáveis de ambiente','err');btn.disabled=false;btn.textContent='Conectar com Mercado Livre';}}
+  catch(e){toast('Erro: '+e.message,'err');btn.disabled=false;btn.textContent='Conectar com Mercado Livre';}
+}
+function mlTab(tab,btn){
+  _mlActiveTab=tab;
+  document.querySelectorAll('#ml-card .ptab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  $('ml-perguntas-body').style.display=tab==='perguntas'?'':'none';
+  $('ml-anuncios-body').style.display=tab==='anuncios'?'':'none';
+  if(tab==='anuncios'&&!$('ml-anuncios-body').dataset.loaded)loadMLAnuncios();
+}
+async function loadMLPerguntas(){
+  const body=$('ml-perguntas-body');if(!body)return;
+  body.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Carregando perguntas…</p></div>';
+  try{
+    const r=await fetch('/api/ml/perguntas'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    const cnt=$('ml-perg-cnt');if(cnt)cnt.textContent=d.perguntas.length?`(${d.perguntas.length})`:'';
+    if(!d.perguntas.length){body.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Nenhuma pergunta sem resposta. 🎉</p></div>';return;}
+    body.innerHTML=d.perguntas.map(q=>`
+      <div class="cfg-card" style="margin:0 0 10px;padding:12px 14px" id="mlq-${q.id}">
+        <div style="font-size:12px;color:var(--mu);margin-bottom:6px"><strong style="color:var(--tx)">${esc(q.comprador)}</strong> · ${new Date(q.data).toLocaleString('pt-BR')} · <span style="font-size:10px">${esc(q.itemId)}</span></div>
+        <div style="font-size:13px;margin-bottom:10px">${esc(q.texto)}</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="mlr-${q.id}" placeholder="Digite sua resposta…" style="flex:1;height:36px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);outline:none" onkeydown="if(event.key==='Enter')mlResponder(${q.id})">
+          <button class="btp" style="height:36px;padding:0 14px;font-size:13px" onclick="mlResponder(${q.id})">Responder</button>
+        </div>
+      </div>`).join('');
+  }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:14px"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+async function mlResponder(id){
+  const inp=$(`mlr-${id}`);if(!inp)return;
+  const resposta=inp.value.trim();if(!resposta){toast('Digite uma resposta','wa');return;}
+  inp.disabled=true;
+  try{
+    const r=await fetch(`/api/ml/perguntas/${id}/responder`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resposta})});
+    if(!r.ok){const d=await r.json();throw new Error(d.error||'Erro');}
+    const card=$(`mlq-${id}`);if(card){card.style.opacity='.4';card.style.pointerEvents='none';card.querySelector('div:last-child').innerHTML='<span style="color:var(--ok-t);font-size:13px">✓ Respondida</span>';}
+    toast('Resposta enviada com sucesso!','ok');
+  }catch(e){toast('Erro: '+e.message,'err');inp.disabled=false;}
+}
+async function loadMLAnuncios(){
+  const body=$('ml-anuncios-body');if(!body)return;
+  body.dataset.loaded='1';
+  body.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Carregando anúncios…</p></div>';
+  const status=$('ml-anu-status')?.value||'active';
+  try{
+    const r=await fetch(`/api/ml/anuncios?status=${status}`),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    if(!d.anuncios.length){body.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Nenhum anúncio encontrado.</p></div>';return;}
+    const mlSitMap={active:'Ativo',paused:'Pausado',closed:'Encerrado',under_review:'Em revisão'};
+    body.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px"><select id="ml-anu-status" onchange="$('ml-anuncios-body').dataset.loaded='';loadMLAnuncios()" style="height:32px;padding:0 8px;background:var(--bg);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;color:var(--tx);font-family:inherit"><option value="active">Ativos</option><option value="paused">Pausados</option><option value="closed">Encerrados</option></select><span style="font-size:12px;color:var(--mu)">${d.total} anúncios</span></div>`+
+    `<table><thead><tr><th>Anúncio</th><th class="r">Preço</th><th class="r">Qtd</th><th>Status</th></tr></thead><tbody>${d.anuncios.map(a=>{const sc=a.situacao==='active'?'ok':a.situacao==='paused'?'lo':'out';return`<tr style="cursor:pointer" onclick="window.open('${esc(a.link||'')}','_blank')" title="Abrir no Mercado Livre"><td><div class="pinfo">${a.thumb?`<img src="${esc(a.thumb)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0" loading="lazy">`:'<span style="width:32px;height:32px;background:var(--bg);border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0;display:inline-block"></span>'}<span class="pname" style="max-width:180px">${esc(a.titulo)}</span></div></td><td class="r">${fmt(a.preco)}</td><td class="r">${fmtN(a.qtd)}</td><td><span class="sb2 s-${sc}">${mlSitMap[a.situacao]||esc(a.situacao)}</span></td></tr>`;}).join('')}</tbody></table>`;
+  }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:14px"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 
 // ── LOAD ──────────────────────────────────────────
@@ -4822,7 +4931,11 @@ function startVoiceSearch(){
   $('si-nome').textContent='↑';
   if(S.autoRefresh>0)setAutoRefresh(S.autoRefresh);
   setLayout(S.layout);
-  setView('inicio');
+  // Handle ML OAuth callback params
+  const _urlP=new URLSearchParams(window.location.search);
+  if(_urlP.get('ml_connected')){toast('Mercado Livre conectado com sucesso!','ok');setView('integracoes');history.replaceState({},'','/dashboard.html');}
+  else if(_urlP.get('ml_error')){toast('Erro ao conectar ML: '+_urlP.get('ml_error'),'err');setView('integracoes');history.replaceState({},'','/dashboard.html');}
+  else setView('inicio');
   loadProducts();
   setInterval(updateSyncTs,30000);
   // Service worker
