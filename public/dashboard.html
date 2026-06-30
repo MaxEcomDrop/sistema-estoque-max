@@ -1680,6 +1680,10 @@ button:focus:not(:focus-visible){outline:none}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     Copiar código SKU
   </button>
+  <button class="ras-btn" id="ras-share-btn" onclick="rasCompartilhar(_rasId)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Compartilhar produto
+  </button>
   <div class="ras-sep"></div>
   <button class="ras-btn" onclick="closeRowActions();rasDuplicar(_rasId)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -3693,10 +3697,33 @@ async function rasSaveStep(){
   }
 }
 function closeRowActions(){
+  const sh=$('ras-sheet');
+  if(sh)sh.style.transform='';
   $('ras-bdrop').classList.remove('open');
   $('ras-sheet').classList.remove('open');
   _rasId=null;
 }
+// Swipe-down to dismiss row actions sheet
+(function(){
+  const sh=$('ras-sheet');if(!sh)return;
+  let _sy=0,_dragging=false;
+  sh.addEventListener('touchstart',e=>{
+    if(!e.target.closest('.sh-hand,.sh-title'))return;
+    _sy=e.touches[0].clientY;_dragging=true;sh.style.transition='none';
+  },{passive:true});
+  sh.addEventListener('touchmove',e=>{
+    if(!_dragging)return;
+    const dy=Math.max(0,e.touches[0].clientY-_sy);
+    sh.style.transform=`translateY(${dy}px)`;
+  },{passive:true});
+  sh.addEventListener('touchend',e=>{
+    if(!_dragging)return;_dragging=false;
+    sh.style.transition='';
+    const dy=e.changedTouches[0].clientY-_sy;
+    if(dy>80){closeRowActions();}else{sh.style.transform='';}
+  },{passive:true});
+  sh.addEventListener('touchcancel',()=>{if(_dragging){_dragging=false;sh.style.transform='';sh.style.transition='';}},{passive:true});
+})();
 function rasMovimento(id){
   const p=S.products.find(x=>x.id===id);
   if(!p)return;
@@ -3714,6 +3741,16 @@ function rasExcluir(id){
   if(!p)return;
   editorId=id;editorProduct={nome:p.nome};
   excluirProdutoAtual();
+}
+function rasCompartilhar(id){
+  const p=S.products.find(x=>x.id===id);if(!p)return;
+  const txt=`${p.nome}\nSKU: ${p.codigo||'—'}\nPreço: ${fmt(p.preco)}\nEstoque: ${fmtN(p.estoque)} un.`;
+  if(navigator.share){
+    navigator.share({title:p.nome,text:txt}).then(()=>closeRowActions()).catch(()=>{});
+  } else {
+    navigator.clipboard?.writeText(txt).then(()=>{closeRowActions();toast('Dados copiados!','ok');})
+      .catch(()=>{closeRowActions();toast('Compartilhamento não suportado neste dispositivo','ok');});
+  }
 }
 function rasCopiarCodigo(id){
   const p=S.products.find(x=>x.id===id);if(!p)return;
