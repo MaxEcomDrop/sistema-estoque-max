@@ -1569,7 +1569,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
       <!-- Gráfico de vendas -->
       <div class="fin-chart-wrap">
-        <div class="fin-chart-title">Vendas por dia</div>
+        <div class="fin-chart-title">Receita diária (pedidos concluídos)</div>
         <div class="fin-chart-sub" id="fin-chart-range">Selecione um período e clique em Atualizar</div>
         <div id="fin-chart" style="min-height:140px"></div>
       </div>
@@ -2317,7 +2317,6 @@ async function loadDashboard(force=false){
   // Alertas de estoque vêm dos produtos já carregados
   renderDashAlerts();
   if(_dashLoaded&&!force)return;
-  _dashLoaded=true;
   const setTxt=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
   ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'…'));
   try{
@@ -2330,6 +2329,7 @@ async function loadDashboard(force=false){
       return;
     }
     if(!r.ok)throw new Error(d.error||'Erro');
+    _dashLoaded=true;
     const v=d.vendas||{};
     // Faturamento
     setTxt('dash-faturamento',fmt(v.faturamento));
@@ -2354,6 +2354,7 @@ async function loadDashboard(force=false){
     // KPIs
     setTxt('dash-vendas',fmtN(v.concluidos||0));
     setTxt('dash-vendas-sub',`${fmtN(v.totalPedidos||0)} pedidos no total`);
+    setTxt('dash-pendentes',fmtN(v.pendentes||0));
     setTxt('dash-ticket',fmt(v.ticketMedio));
     const cr=d.contasReceber||{},cp=d.contasPagar||{};
     setTxt('dash-receber',cr.ok?fmt(cr.total):'—');
@@ -2367,6 +2368,7 @@ async function loadDashboard(force=false){
     renderContasList('dash-receber-list',cr,'receber');
     renderContasList('dash-pagar-list',cp,'pagar');
   }catch(e){
+    _dashLoaded=false;
     ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
     toast('Erro ao carregar painel: '+e.message,'err');
   }
@@ -3169,7 +3171,7 @@ async function openPedidoDetalhe(id){
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Data</div><div style="font-size:13px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(totalPed)}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(fretePed)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px">${esc(p.transportadora)}</div>`:''}</div>
         <div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--bord)"><div style="font-size:10px;color:var(--mu)">Itens</div><div style="font-size:13px;font-weight:700">${fmtN(qtdItens)} un.</div></div>
       </div>
       ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:6px 10px;background:var(--bg);border-radius:8px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
@@ -3335,15 +3337,27 @@ function renderCurvaABC(){
   const ps=S.products.filter(p=>p.preco>0&&p.estoque>0).sort((a,b)=>(b.preco*b.estoque)-(a.preco*a.estoque));
   if(!ps.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
   const total=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
-  let cum=0;
+  let cum=0;const cumByIdx=[];
   const rows=ps.map((p,i)=>{
     const val=p.preco*p.estoque;cum+=val;const pct=(cum/total)*100;
+    cumByIdx[i]=pct;
     const cls=pct<=80?'ok':pct<=95?'lo':'out';
     const label=pct<=80?'A':pct<=95?'B':'C';
-    return`<tr><td style="font-weight:700;color:var(--mu)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(val)}</td><td class="r" style="color:var(--mu)">${((val/total)*100).toFixed(1)}%</td><td class="r">${(cum/total*100).toFixed(1)}%</td><td><span class="sb2 s-${cls}">${label}</span></td></tr>`;
+    return`<tr><td style="font-weight:700;color:var(--mu)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(val)}</td><td class="r" style="color:var(--mu)">${((val/total)*100).toFixed(1)}%</td><td class="r">${pct.toFixed(1)}%</td><td><span class="sb2 s-${cls}">${label}</span></td></tr>`;
   });
-  const countA=ps.filter((_,i)=>{let c=0;for(let j=0;j<=i;j++)c+=ps[j].preco*ps[j].estoque;return(c/total)*100<=80;}).length;
-  el.innerHTML=`<div style="display:flex;gap:20px;padding:14px 16px;border-bottom:1px solid var(--bord-l);font-size:12px"><span>🟢 Classe A: <strong>${countA} itens</strong> = 80% do valor</span><span>🟡 Classe B: 80–95%</span><span>🔴 Classe C: 95–100%</span></div><table><thead><tr><th>#</th><th>Produto</th><th class="r">Valor total</th><th class="r">% individual</th><th class="r">% acumulado</th><th>Classe</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const countA=cumByIdx.filter(v=>v<=80).length;
+  const countB=cumByIdx.filter(v=>v>80&&v<=95).length;
+  const countC=ps.length-countA-countB;
+  const valA=ps.slice(0,countA).reduce((a,p)=>a+p.preco*p.estoque,0);
+  el.innerHTML=
+    `<div style="display:flex;gap:16px;padding:12px 16px;border-bottom:1px solid var(--bord-l);font-size:12px;flex-wrap:wrap;align-items:center">`+
+    `<span style="color:var(--mu)">Total em estoque: <strong style="color:var(--tx)">${fmt(total)}</strong></span>`+
+    `<span style="margin-left:auto;display:flex;gap:12px">`+
+    `<span style="color:var(--ok-t)">🟢 A: <strong>${countA}</strong> itens (${fmt(valA)})</span>`+
+    `<span style="color:var(--wa-t)">🟡 B: <strong>${countB}</strong> itens</span>`+
+    `<span style="color:var(--er-t)">🔴 C: <strong>${countC}</strong> itens</span>`+
+    `</span></div>`+
+    `<table><thead><tr><th>#</th><th>Produto</th><th class="r">Valor estoque</th><th class="r">% individual</th><th class="r">% acumulado</th><th>Classe</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 
 // ── MODALS ───────────────────────────────────────
@@ -3885,18 +3899,22 @@ function renderDRE(d){
   const receita=d.receitaConcluida||0;
   const cancel=d.totalCancelado||0;
   const pend=d.totalPendente||0;
+  const frete=d.totalFrete||0;
+  const desconto=d.totalDesconto||0;
   const temCusto=margem>0;
   const custo=temCusto?receita*(1-margem):0;
   const lucro=temCusto?receita*margem:0;
   const mPct=Math.round(margem*100);
   const mCor=mPct<20?'var(--er-bg);color:var(--er-t)':mPct<40?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
-  const row=(op,lbl,val,cls='',extra='')=>`<div class="dre-row${cls?' '+cls:''}"><span class="dre-lbl"><span class="dre-op">${op}</span>${lbl}</span><span class="dre-val ${cls==='total'?'pos':''}">${val}${extra}</span></div>`;
+  const canN=d.cancelados||0,pedN=d.pendentes||0,conN=d.concluidos||0;
   el.innerHTML=
-    row('','Receita bruta (todos os pedidos)',fmt(d.totalBruto||0))+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos</span><span class="dre-val neg">− ${fmt(cancel)}</span></div>`+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Pendentes (ainda não recebidos)</span><span class="dre-val neg">− ${fmt(pend)}</span></div>`+
-    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada</span><span class="dre-val">${fmt(receita)}</span></div>`+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'− '+fmt(custo):'—'}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Receita bruta <span style="font-size:10px;color:var(--mu)">(${conN+canN+pedN} pedidos)</span></span><span class="dre-val">${fmt(d.totalBruto||0)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos <span style="font-size:10px;color:var(--mu)">(${canN} pedido${canN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(cancel)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Pendentes <span style="font-size:10px;color:var(--mu)">(${pedN} pedido${pedN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(pend)}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada <span style="font-size:10px;color:var(--mu)">(${conN} concluídos)</span></span><span class="dre-val">${fmt(receita)}</span></div>`+
+    (frete>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">+</span>Frete cobrado</span><span class="dre-val" style="color:var(--ok-t)">+&nbsp;${fmt(frete)}</span></div>`:'')+
+    (desconto>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Descontos concedidos</span><span class="dre-val neg">−&nbsp;${fmt(desconto)}</span></div>`:'')+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'−&nbsp;'+fmt(custo):'—'}</span></div>`+
     `<div class="dre-row total"><span class="dre-lbl">Lucro líquido estimado</span><span class="dre-val pos">${temCusto?fmt(lucro):'—'}${temCusto?`<span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
     (temCusto?'':`<p class="sh-note" style="margin-top:10px">Cadastre o <strong>custo</strong> dos produtos no editor para calcular o lucro real.</p>`);
 }

@@ -463,9 +463,9 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const prevReceita = sum(prevConcluidos, valorPedido);
     const variacao = prevReceita > 0 ? ((receitaConcluida - prevReceita) / prevReceita) * 100 : null;
 
-    // Série diária para gráfico
+    // Série diária para gráfico (apenas pedidos concluídos = receita real)
     const byDay = {};
-    allPedidos.forEach(p => {
+    concluidos.forEach(p => {
       const day = String(p.data || p.dataPedido || '').substring(0, 10);
       if (day) byDay[day] = (byDay[day] || 0) + valorPedido(p);
     });
@@ -478,7 +478,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
       concluidos: concluidos.length,
       cancelados: cancelados.length,
       pendentes: pendentes.length,
-      ticketMedio: allPedidos.length > 0 ? totalBruto / allPedidos.length : 0,
+      ticketMedio: concluidos.length > 0 ? receitaConcluida / concluidos.length : 0,
       comparativo: { receitaAnterior: prevReceita, variacao, inicio: prev.inicio, fim: prev.fim },
       byDay,
     });
@@ -758,8 +758,9 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       contatoTel:  p.contato?.celular || p.contato?.telefone || '',
       observacoes: p.observacoes || p.observacoesInternas || '',
       total:       Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
-      frete:       Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
-      desconto:    Number(p.desconto) || 0,
+      frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
+      transportadora:   p.transporte?.transportadora?.nome || p.transporte?.tipo || '',
+      desconto:         Number(p.desconto) || 0,
       itens,
     });
   } catch (err) {
