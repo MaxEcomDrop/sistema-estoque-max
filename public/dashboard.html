@@ -1099,7 +1099,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="da-card da-orange" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin),50)">
           <div class="da-num" id="dash-criticos">—</div><div class="da-lbl" id="dash-criticos-lbl">Estoque crítico (≤5)</div>
         </div>
-        <div class="da-card da-blue" onclick="setView('pedidos')">
+        <div class="da-card da-blue" onclick="viewPedidosFiltrado('pendente')">
           <div class="da-num" id="dash-pendentes">—</div><div class="da-lbl">Pedidos pendentes</div>
         </div>
         <div class="da-card da-purple" onclick="setView('financeiro')">
@@ -1163,7 +1163,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <div class="tf-num" id="tf-criticos">0</div>
             <div class="tf-lbl" id="tf-criticos-lbl">Críticos (≤5)</div>
           </div>
-          <div class="tf-card tf-blue" onclick="setView('pedidos')" title="Ver pedidos pendentes">
+          <div class="tf-card tf-blue" onclick="viewPedidosFiltrado('pendente')" title="Ver pedidos pendentes">
             <div class="tf-num" id="tf-pend-count">0</div>
             <div class="tf-lbl">Pedidos pend.</div>
           </div>
@@ -1340,7 +1340,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="view" id="view-relatorio">
       <div class="rep-grid">
         <div class="rep-card"><div class="rep-lbl">Produtos zerados</div><div class="rep-val" id="rep-parado">—</div></div>
-        <div class="rep-card"><div class="rep-lbl" id="rep-crit-lbl">Estoque crítico (≤3)</div><div class="rep-val" id="rep-crit">—</div></div>
+        <div class="rep-card"><div class="rep-lbl" id="rep-crit-lbl">Estoque crítico (≤5)</div><div class="rep-val" id="rep-crit">—</div></div>
         <div class="rep-card"><div class="rep-lbl">Valor imobilizado</div><div class="rep-val" id="rep-imob" style="font-size:16px">—</div></div>
         <div class="rep-card"><div class="rep-lbl">Preço médio</div><div class="rep-val" id="rep-ticket" style="font-size:16px">—</div></div>
       </div>
@@ -1616,7 +1616,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="toolbar">
           <div class="sw">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="sinp" id="cli-search" type="search" placeholder="Buscar nome, documento, cidade…" oninput="renderClientes()" autocomplete="off">
+            <input class="sinp" id="cli-search" type="search" placeholder="Buscar nome, doc., email, telefone, cidade…" oninput="renderClientes()" autocomplete="off">
           </div>
           <div class="dvv"></div>
           <select id="cli-uf" onchange="renderClientes()"><option value="">Todas UF</option></select>
@@ -3104,6 +3104,16 @@ function setTabPedidos(status,btn){
   if(btn)btn.classList.add('on');
   renderPedidosTable(_pedStatus);
 }
+function viewPedidosFiltrado(status){
+  _pedStatus=status;
+  setView('pedidos');
+  setTimeout(()=>{
+    const idx={all:0,pendente:1,concluido:2,cancelado:3}[status]??0;
+    const btns=document.querySelectorAll('.pt-btn');
+    btns.forEach((b,i)=>b.classList.toggle('on',i===idx));
+    renderPedidosTable(status);
+  },80);
+}
 async function loadPedidos(force=false){
   if(_pedidosLoaded&&!force){renderPedidosTable(_pedStatus);return;}
   return loadPedidosUrl('/api/pedidos');
@@ -3170,7 +3180,7 @@ function renderPedidosTable(status){
   const body=$('pedidos-body');
   let list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
   const q=($('ped-search')?.value||'').toLowerCase().trim();
-  if(q)list=list.filter(p=>`${p.numero} ${p.contato}`.toLowerCase().includes(q));
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao}`.toLowerCase().includes(q));
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${q?'encontrado para "'+esc(q)+'"':status==='all'?'encontrado':status}.</p></div>`;return;}
   const totalVal=list.reduce((a,p)=>a+(p.valor||0),0);
   const rows=list.map(p=>{
@@ -3215,7 +3225,7 @@ async function openPedidoDetalhe(id){
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Data</div><div style="font-size:13px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(totalPed)}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(totalPed)}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px">${esc(p.transportadora)}</div>`:''}</div>
         <div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--bord)"><div style="font-size:10px;color:var(--mu)">Itens</div><div style="font-size:13px;font-weight:700">${fmtN(qtdItens)} un.</div></div>
       </div>
@@ -3233,10 +3243,13 @@ async function openPedidoDetalhe(id){
 function exportPedidosCSV(){
   let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);
   const q=($('ped-search')?.value||'').toLowerCase().trim();
-  if(q)list=list.filter(p=>`${p.numero} ${p.contato}`.toLowerCase().includes(q));
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao}`.toLowerCase().includes(q));
   if(!list.length){toast('Nenhum pedido para exportar','err');return;}
-  const cols=['numero','data','contato','valor','situacao'];
-  const csv=[cols.join(','),...list.map(p=>cols.map(c=>{const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
+  const hdrs=['Número','Data','Cliente','Valor','Situação'];
+  const csv=[hdrs.join(','),...list.map(p=>['numero','data','contato','valor','situacao'].map(c=>{
+    if(c==='situacao')return pedSituacaoPT(p[c]);
+    const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';
+  }).join(','))].join('\r\n');
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`pedidos_${new Date().toISOString().slice(0,10)}.csv`;a.click();
   toast(`${list.length} pedido${list.length!==1?'s':''} exportado${list.length!==1?'s':''}`,'ok');
 }
@@ -3284,7 +3297,7 @@ function renderNotas(){
   const fStatus=$('nfe-f-status')?.value||'';
   let list=_notasCache.filter(n=>{
     if(fStatus&&notaSitClass(n.situacao)!==fStatus)return false;
-    if(q&&!`${n.numero} ${n.contato} ${n.chave}`.toLowerCase().includes(q))return false;
+    if(q&&!`${n.numero} ${n.contato} ${n.chave} ${n.situacao}`.toLowerCase().includes(q))return false;
     return true;
   });
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhuma nota encontrada${q?' para "'+esc(q)+'"':''}.</p></div>`;return;}
@@ -3579,7 +3592,7 @@ async function openEditor(id){
       <div class="edraw-sec">Outros</div>
       <div class="df-2">
         <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
-        <div class="df"><label>Categoria</label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||'')}"></div>
+        <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'—')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
       </div>
       <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
     `;
@@ -4081,14 +4094,17 @@ function renderClientes(){
     if(uf&&c.uf!==uf)return false;
     if(tipo&&c.tipo!==tipo)return false;
     if(_cliSemCompra&&c.totalGasto>0)return false;
-    if(q&&!`${c.nome} ${c.documento} ${c.municipio}`.toLowerCase().includes(q))return false;
+    if(q&&!`${c.nome} ${c.documento} ${c.municipio} ${c.email||''} ${c.telefone||''}`.toLowerCase().includes(q))return false;
     return true;
   });
   if(sort==='nome')list.sort((a,b)=>a.nome.localeCompare(b.nome));
   else if(sort==='pedidos')list.sort((a,b)=>b.numPedidos-a.numPedidos);
   else if(sort==='recente')list.sort((a,b)=>(b.ultimoPedido||'').localeCompare(a.ultimoPedido||''));
   else list.sort((a,b)=>b.totalGasto-a.totalGasto);
-  $('cli-total').textContent=fmtN(_clientesCache.length);
+  const total=_clientesCache.length;
+  const isFiltered=q||uf||tipo||_cliSemCompra;
+  $('cli-total').textContent=fmtN(isFiltered?list.length:total);
+  $('cli-total-sub').textContent=isFiltered?`de ${fmtN(total)} cadastrados`:'cadastrados no Bling';
   const compradores=_clientesCache.filter(c=>c.totalGasto>0);
   $('cli-ticket').textContent=fmt(compradores.length?compradores.reduce((a,c)=>a+c.totalGasto,0)/compradores.length:0);
   const top=[..._clientesCache].sort((a,b)=>b.totalGasto-a.totalGasto)[0];
@@ -4136,7 +4152,7 @@ function exportClientesCSV(){
     if(uf&&c.uf!==uf)return false;
     if(tipo&&c.tipo!==tipo)return false;
     if(_cliSemCompra&&c.totalGasto>0)return false;
-    if(q&&!`${c.nome} ${c.documento} ${c.municipio}`.toLowerCase().includes(q))return false;
+    if(q&&!`${c.nome} ${c.documento} ${c.municipio} ${c.email||''} ${c.telefone||''}`.toLowerCase().includes(q))return false;
     return true;
   });
   if(!list.length){toast('Nenhum cliente para exportar','err');return;}
