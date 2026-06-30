@@ -868,6 +868,12 @@ button:focus:not(:focus-visible){outline:none}
 #flt-active-bar{display:none;padding:5px 14px 5px 16px;background:var(--acc-bg);border-bottom:1px solid rgba(99,102,241,.12);font-size:12px;color:var(--acc-t);align-items:center;gap:6px;flex-wrap:wrap}
 #flt-active-bar .flt-clear-x{flex-shrink:0;background:none;border:1.5px solid currentColor;color:var(--acc-t);font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:1px 8px;border-radius:20px;font-family:inherit;transition:background .1s}
 #flt-active-bar .flt-clear-x:active{background:rgba(99,102,241,.15)}
+/* WWW – hide category column on very narrow screens */
+@media(max-width:480px){.col-cat{display:none!important}}
+/* WWW – table horizontal scroll shadow hint */
+#list-container{position:relative}
+@media(max-width:900px){#list-container::after{content:'';position:absolute;right:0;top:0;bottom:0;width:18px;background:linear-gradient(to right,transparent,rgba(0,0,0,.06));pointer-events:none;z-index:1;transition:opacity .2s}}
+#list-container.at-end::after{opacity:0!important}
 /* NNN – lightbox swipe-to-dismiss transition */
 #img-lbox-img{transition:transform .25s,opacity .25s}
 /* OOO – tap-to-copy SKU */
@@ -1248,7 +1254,7 @@ button:focus:not(:focus-visible){outline:none}
               <tr>
                 <th style="width:32px" onclick="toggleAllCb()"><input type="checkbox" id="cb-all"></th>
                 <th onclick="sortBy('nome')">Produto <span class="si" id="si-nome">↑</span></th>
-                <th onclick="sortBy('categoria')" style="width:120px">Categoria <span class="si" id="si-categoria"></span></th>
+                <th onclick="sortBy('categoria')" style="width:120px" class="col-cat">Categoria <span class="si" id="si-categoria"></span></th>
                 <th class="r" onclick="sortBy('preco')" style="width:130px">Preço <span class="si" id="si-preco"></span></th>
                 <th class="r" onclick="sortBy('estoque')" style="width:120px">Estoque <span class="si" id="si-estoque"></span></th>
                 <th style="width:130px">Status <span class="si" id="si-status"></span></th>
@@ -2646,7 +2652,7 @@ function renderTable(){
     html+=`<tr data-id="${p.id}" class="${isSel?'sel':''} ${isDup?'dup-row':''}">
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
       <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="${'pname-sub'+(p.codigo?' pname-sub-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${skuHl}</span></div></div></td>
-      <td><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
+      <td class="col-cat"><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
       <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmt(p.preco)}${arr}${editIco}</span></td>
       <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmtN(p.estoque)} un.${editIco}</span></td>
       <td>${statusBadge(p.estoque)}</td>
@@ -4191,6 +4197,14 @@ function rasCopiarCodigo(id){
     if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
     _swipeCard=null;
   },{passive:true});
+})();
+
+// ── WWW: TABLE SCROLL SHADOW ─────────────────────
+(function(){
+  const lc=$('list-container');if(!lc)return;
+  const upd=()=>{const atEnd=lc.scrollLeft+lc.clientWidth>=lc.scrollWidth-4;lc.classList.toggle('at-end',atEnd);};
+  lc.addEventListener('scroll',upd,{passive:true});
+  new ResizeObserver(upd).observe(lc);
 })();
 
 // ── UUU: FIRST-TIME SWIPE GESTURE HINT ───────────
