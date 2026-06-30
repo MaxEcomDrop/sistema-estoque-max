@@ -2363,8 +2363,9 @@ async function loadProducts(showToast=false){
     S.products.forEach(p=>{if(p.codigo)skuCount[p.codigo]=(skuCount[p.codigo]||0)+1;});
     S.dupSkus=new Set(Object.keys(skuCount).filter(k=>skuCount[k]>1&&k));
     const cats=[...new Set(S.products.map(p=>p.categoria).filter(Boolean))].sort();
+    const catCount={};S.products.forEach(p=>{if(p.categoria)catCount[p.categoria]=(catCount[p.categoria]||0)+1;});
     const fcat=$('f-cat');
-    fcat.innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    fcat.innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)} (${catCount[c]||0})</option>`).join('');
     updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
     if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();}
     if(showToast)toast('Produtos atualizados','ok');
