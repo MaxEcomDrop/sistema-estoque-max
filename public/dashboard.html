@@ -868,6 +868,14 @@ button:focus:not(:focus-visible){outline:none}
 #flt-active-bar{display:none;padding:5px 14px 5px 16px;background:var(--acc-bg);border-bottom:1px solid rgba(99,102,241,.12);font-size:12px;color:var(--acc-t);align-items:center;gap:6px;flex-wrap:wrap}
 #flt-active-bar .flt-clear-x{flex-shrink:0;background:none;border:1.5px solid currentColor;color:var(--acc-t);font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:1px 8px;border-radius:20px;font-family:inherit;transition:background .1s}
 #flt-active-bar .flt-clear-x:active{background:rgba(99,102,241,.15)}
+/* LLL – FAB: add product */
+.fab-add{display:none;position:fixed;bottom:calc(60px + env(safe-area-inset-bottom,0px) + 14px);right:74px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,.4);align-items:center;justify-content:center;z-index:200;transition:transform .18s,opacity .18s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
+.fab-add:active{transform:scale(.92);box-shadow:0 2px 8px rgba(99,102,241,.3)}
+.fab-add.fab-hide{opacity:0;transform:translateY(18px);pointer-events:none}
+@media(max-width:900px){.fab-add{display:flex}}
+/* MMM – long-press ring feedback */
+.lp-ring{position:fixed;pointer-events:none;border-radius:50%;background:rgba(99,102,241,.18);z-index:9999;animation:lpRingAnim 500ms ease-out forwards}
+@keyframes lpRingAnim{0%{transform:scale(0);opacity:.8}100%{transform:scale(1);opacity:0}}
 </style>
 </head>
 <body>
@@ -1786,6 +1794,8 @@ button:focus:not(:focus-visible){outline:none}
       <div class="sc-row"><span class="sc-lbl">Modo compacto</span><kbd class="kbd">K</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Desfazer edição</span><kbd class="kbd">Z</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Selecionar tudo</span><kbd class="kbd">A</kbd></div>
+      <div class="sc-row"><span class="sc-lbl">Novo produto</span><kbd class="kbd">N</kbd></div>
+      <div class="sc-row"><span class="sc-lbl">Busca por voz</span><kbd class="kbd">V</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Fechar / cancelar</span><kbd class="kbd">Esc</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Este painel</span><kbd class="kbd">?</kbd></div>
     </div>
@@ -1962,6 +1972,10 @@ button:focus:not(:focus-visible){outline:none}
   <button onclick="event.stopPropagation();closeImgLbox()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent" aria-label="Fechar">×</button>
 </div>
 
+<!-- LLL: FAB add product -->
+<button class="fab-add" id="fab-add" onclick="openCreate()" title="Novo produto (N)" aria-label="Novo produto">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
 <!-- FAB: scan rápido em mobile -->
 <button class="fab-scan" id="fab-scan" onclick="openScanner()" title="Escanear código" aria-label="Escanear código de barras">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="2" y="17" width="5" height="5" rx="1"/><rect x="17" y="2" width="5" height="5" rx="1"/><line x1="9" y1="3.5" x2="9" y2="6.5"/><line x1="12" y1="2" x2="12" y2="7"/><line x1="14.5" y1="3.5" x2="14.5" y2="6.5"/><line x1="9" y1="17.5" x2="9" y2="20.5"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="14.5" y1="17.5" x2="14.5" y2="20.5"/><line x1="17.5" y1="9" x2="20.5" y2="9"/><line x1="17" y1="12" x2="22" y2="12"/><line x1="17.5" y1="14.5" x2="20.5" y2="14.5"/><line x1="2" y1="9" x2="7" y2="9"/><line x1="2" y1="12" x2="7" y2="12"/><line x1="2" y1="14.5" x2="7" y2="14.5"/></svg>
@@ -2154,6 +2168,7 @@ function setView(v){
   if(v==='integracoes')loadIntegracoes();
   closeMaisMenu();
   const fab=$('fab-scan');if(fab)fab.style.display=v==='produtos'?'':'none';
+  const fab2=$('fab-add');if(fab2){fab2.style.display=v==='produtos'?'':'none';if(v==='produtos')fab2.classList.remove('fab-hide');}
 }
 
 // ── DASHBOARD / INÍCIO ───────────────────────────
@@ -2639,7 +2654,7 @@ function loadMore(){S.page++;renderTable();}
 function toggleRow(id,checked){if(checked)S.selected.add(id);else S.selected.delete(id);document.querySelector(`tr[data-id="${id}"]`)?.classList.toggle('sel',checked);updateBatchBar();}
 function toggleAllCb(){const checked=$('cb-all').checked;S.filtered.forEach(p=>{if(checked)S.selected.add(p.id);else S.selected.delete(p.id);});renderTable();updateBatchBar();}
 function clearSelection(){S.selected.clear();renderTable();updateBatchBar();}
-function updateBatchBar(){const cnt=S.selected.size;$('bbar').classList.toggle('vis',cnt>0);$('bbar-cnt').textContent=`${cnt} produto${cnt!==1?'s':''} selecionado${cnt!==1?'s':''}`;$('sh-note').textContent=`Esta edição afetará ${cnt} produto${cnt!==1?'s':''}.`;}
+function updateBatchBar(){const cnt=S.selected.size;$('bbar').classList.toggle('vis',cnt>0);$('bbar-cnt').textContent=`${cnt} produto${cnt!==1?'s':''} selecionado${cnt!==1?'s':''}`;$('sh-note').textContent=`Esta edição afetará ${cnt} produto${cnt!==1?'s':''}.`;const fab2=$('fab-add');if(fab2)fab2.classList.toggle('fab-hide',cnt>0);}
 
 // ── INLINE EDIT ──────────────────────────────────
 function editCell(span,field,id,current,nomeProd){
@@ -3904,6 +3919,7 @@ function closeImgLbox(){
 // ── ROW ACTIONS (LONG-PRESS) ──────────────────────
 let _rasId=null,_rasTimer=null,_rasStartPos={x:0,y:0};
 let _rasStepVal=0,_rasStepOrig=0;
+let _lpRingEl=null;
 function openRowActions(id){
   const p=S.products.find(x=>x.id===id);
   if(!p)return;
@@ -3980,6 +3996,23 @@ function closeRowActions(){
   $('ras-sheet').classList.remove('open');
   _rasId=null;
 }
+// MMM – long-press ring + LLL – FAB scroll hide
+function _showLpRing(x,y){
+  if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}
+  const ring=document.createElement('div');ring.className='lp-ring';
+  const s=90;ring.style.cssText=`width:${s}px;height:${s}px;left:${x-s/2}px;top:${y-s/2}px`;
+  document.body.appendChild(ring);return ring;
+}
+(function(){
+  let _fabLastY=0,_fabHid=false;
+  window.addEventListener('scroll',()=>{
+    const fab=$('fab-add');if(!fab||fab.style.display==='none')return;
+    const y=window.scrollY||window.pageYOffset;
+    if(y>_fabLastY+30&&!_fabHid){_fabHid=true;fab.classList.add('fab-hide');}
+    else if(y<_fabLastY-12&&_fabHid){_fabHid=false;fab.classList.remove('fab-hide');}
+    _fabLastY=y;
+  },{passive:true});
+})();
 function rasNav(dir){
   const idx=S.filtered?S.filtered.findIndex(p=>p.id===_rasId):-1;
   if(idx<0)return;
@@ -4049,16 +4082,17 @@ function rasCopiarCodigo(id){
     const tr=e.target.closest('tr[data-id]');if(!tr)return;
     _rasStartPos={x:e.touches[0].clientX,y:e.touches[0].clientY};
     _swipeTr=tr;
-    _rasTimer=setTimeout(()=>{_rasTimer=null;openRowActions(Number(tr.dataset.id));},480);
+    _lpRingEl=_showLpRing(e.touches[0].clientX,e.touches[0].clientY);
+    _rasTimer=setTimeout(()=>{_rasTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}openRowActions(Number(tr.dataset.id));},480);
   },{passive:true});
   tbody.addEventListener('touchmove',e=>{
     if(!_rasTimer)return;
     const dx=Math.abs(e.touches[0].clientX-_rasStartPos.x);
     const dy=Math.abs(e.touches[0].clientY-_rasStartPos.y);
-    if(dx>8||dy>8){clearTimeout(_rasTimer);_rasTimer=null;}
+    if(dx>8||dy>8){clearTimeout(_rasTimer);_rasTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
   },{passive:true});
   tbody.addEventListener('touchend',e=>{
-    if(_rasTimer){clearTimeout(_rasTimer);_rasTimer=null;}
+    if(_rasTimer){clearTimeout(_rasTimer);_rasTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
     if(_swipeTr){
       const dx=e.changedTouches[0].clientX-_rasStartPos.x;
       const dy=Math.abs(e.changedTouches[0].clientY-_rasStartPos.y);
@@ -4070,7 +4104,7 @@ function rasCopiarCodigo(id){
     _swipeTr=null;
   },{passive:true});
   tbody.addEventListener('touchcancel',()=>{
-    if(_rasTimer){clearTimeout(_rasTimer);_rasTimer=null;}
+    if(_rasTimer){clearTimeout(_rasTimer);_rasTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
     _swipeTr=null;
   },{passive:true});
 })();
@@ -4083,16 +4117,17 @@ function rasCopiarCodigo(id){
     const card=e.target.closest('[data-id]');if(!card)return;
     _cardPos={x:e.touches[0].clientX,y:e.touches[0].clientY};
     _swipeCard=card;
-    _cardTimer=setTimeout(()=>{_cardTimer=null;openRowActions(Number(card.dataset.id));},480);
+    _lpRingEl=_showLpRing(e.touches[0].clientX,e.touches[0].clientY);
+    _cardTimer=setTimeout(()=>{_cardTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}openRowActions(Number(card.dataset.id));},480);
   },{passive:true});
   cc.addEventListener('touchmove',e=>{
     if(!_cardTimer)return;
     const dx=Math.abs(e.touches[0].clientX-_cardPos.x);
     const dy=Math.abs(e.touches[0].clientY-_cardPos.y);
-    if(dx>8||dy>8){clearTimeout(_cardTimer);_cardTimer=null;}
+    if(dx>8||dy>8){clearTimeout(_cardTimer);_cardTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
   },{passive:true});
   cc.addEventListener('touchend',e=>{
-    if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;}
+    if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
     if(_swipeCard){
       const dx=e.changedTouches[0].clientX-_cardPos.x;
       const dy=Math.abs(e.changedTouches[0].clientY-_cardPos.y);
@@ -4101,7 +4136,7 @@ function rasCopiarCodigo(id){
     _swipeCard=null;
   },{passive:true});
   cc.addEventListener('touchcancel',()=>{
-    if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;}
+    if(_cardTimer){clearTimeout(_cardTimer);_cardTimer=null;if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}}
     _swipeCard=null;
   },{passive:true});
 })();
