@@ -2553,7 +2553,7 @@ function updateQChips(){
   if(cc){cc.classList.toggle('on',isCrit);cc.style.borderColor=isCrit?'':'transparent';cc.style.color=isCrit?'':'var(--mu)';};
   const ql=$('qchip-lo');if(ql)ql.textContent=`Estoque baixo (≤${S.estoqueMin})`;
   const cnt=$('qchip-count');
-  if(cnt){const tot=S.products.length,fil=S.filtered.length;cnt.textContent=fil<tot?`${fmtN(fil)} de ${fmtN(tot)}`:`${fmtN(tot)} produto${tot!==1?'s':''}`;}
+  if(cnt){const tot=S.products.length,fil=S.filtered.length;const val=S.filtered.reduce((a,p)=>a+(p.preco||0)*(p.estoque||0),0);const valStr=val>0?' · '+fmt(val):'';cnt.textContent=(fil<tot?`${fmtN(fil)} de ${fmtN(tot)}`:`${fmtN(tot)} produto${tot!==1?'s':''}`)+valStr;}
 }
 function toggleGroup(){S.grouped=!S.grouped;$('grp-lbl').textContent=S.grouped?'Desagrupar':'Agrupar';renderTable();}
 function applyCompact(){const lc=$('list-container');if(!lc)return;lc.classList.toggle('t-compact',S.compact);const btn=$('lt-compact');if(btn){btn.style.background=S.compact?'var(--acc-bg)':'';btn.style.borderColor=S.compact?'var(--acc)':'var(--bord)';btn.style.color=S.compact?'var(--acc-t)':'';}};
