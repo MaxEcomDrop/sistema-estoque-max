@@ -868,6 +868,12 @@ button:focus:not(:focus-visible){outline:none}
 #flt-active-bar{display:none;padding:5px 14px 5px 16px;background:var(--acc-bg);border-bottom:1px solid rgba(99,102,241,.12);font-size:12px;color:var(--acc-t);align-items:center;gap:6px;flex-wrap:wrap}
 #flt-active-bar .flt-clear-x{flex-shrink:0;background:none;border:1.5px solid currentColor;color:var(--acc-t);font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:1px 8px;border-radius:20px;font-family:inherit;transition:background .1s}
 #flt-active-bar .flt-clear-x:active{background:rgba(99,102,241,.15)}
+/* NNN – lightbox swipe-to-dismiss transition */
+#img-lbox-img{transition:transform .25s,opacity .25s}
+/* OOO – tap-to-copy SKU */
+.pname-sub-cp,.pcard-sku-cp{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pname-sub-cp:hover,.pcard-sku-cp:hover{color:var(--acc);text-decoration:underline dotted}
+.pname-sub-cp:active,.pcard-sku-cp:active{opacity:.55}
 /* LLL – FAB: add product */
 .fab-add{display:none;position:fixed;bottom:calc(60px + env(safe-area-inset-bottom,0px) + 14px);right:74px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(99,102,241,.4);align-items:center;justify-content:center;z-index:200;transition:transform .18s,opacity .18s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
 .fab-add:active{transform:scale(.92);box-shadow:0 2px 8px rgba(99,102,241,.3)}
@@ -2120,7 +2126,7 @@ function renderCards(){
       </div>
       <div class="pcard-body">
         <div class="pcard-name plink" title="Clique para editar" onclick="openEditor(${p.id})">${hl(p.nome,q)}</div>
-        <div class="pcard-sku">${hl(p.codigo||'—',q)}</div>
+        <div class="${'pcard-sku'+(p.codigo?' pcard-sku-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${hl(p.codigo||'—',q)}</div>
         ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
         <div class="pcard-meta">
           <span class="pcard-price">${fmt(p.preco)}</span>
@@ -2636,7 +2642,7 @@ function renderTable(){
     const nameHl=hl(p.nome,q);const skuHl=hl(p.codigo||'—',q);
     html+=`<tr data-id="${p.id}" class="${isSel?'sel':''} ${isDup?'dup-row':''}">
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
-      <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="pname-sub">${skuHl}</span></div></div></td>
+      <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="${'pname-sub'+(p.codigo?' pname-sub-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${skuHl}</span></div></div></td>
       <td><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
       <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmt(p.preco)}${arr}${editIco}</span></td>
       <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmtN(p.estoque)} un.${editIco}</span></td>
@@ -3912,9 +3918,47 @@ function openImgLbox(url){
 function closeImgLbox(){
   const el=$('img-lbox');if(!el)return;
   el.style.display='none';
-  const img=$('img-lbox-img');if(img)img.src='';
+  const img=$('img-lbox-img');if(img){img.src='';img.style.transform='';}
   document.body.style.overflow='';
 }
+// OOO – tap-to-copy SKU
+function copySku(sku){
+  if(!sku||sku==='—')return;
+  const cb=()=>toast('SKU copiado: '+sku,'ok');
+  if(navigator.clipboard){navigator.clipboard.writeText(sku).then(cb,()=>toast('Erro ao copiar','err'));}
+  else{const t=document.createElement('textarea');t.value=sku;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();try{document.execCommand('copy');cb();}catch{toast('Erro ao copiar','err');}t.remove();}
+  vibrate(15);
+}
+// NNN – lightbox swipe-to-dismiss
+(function(){
+  const lbox=$('img-lbox'),img=$('img-lbox-img');if(!lbox||!img)return;
+  let _sy=0,_drag=false;
+  lbox.addEventListener('touchstart',e=>{
+    if(e.touches.length>1||!e.target.closest('#img-lbox-img,#img-lbox'))return;
+    _sy=e.touches[0].clientY;_drag=true;img.style.transition='none';
+  },{passive:true});
+  lbox.addEventListener('touchmove',e=>{
+    if(!_drag||e.touches.length>1)return;
+    const dy=e.touches[0].clientY-_sy;
+    const prog=Math.min(Math.abs(dy)/200,1);
+    img.style.transform=`translateY(${dy}px) scale(${1-prog*0.12})`;
+    lbox.style.background=`rgba(0,0,0,${0.88*(1-prog*0.65)})`;
+  },{passive:true});
+  lbox.addEventListener('touchend',e=>{
+    if(!_drag)return;_drag=false;
+    img.style.transition='';
+    const dy=e.changedTouches[0].clientY-_sy;
+    if(Math.abs(dy)>100){
+      img.style.transform=`translateY(${dy>0?320:-320}px) scale(.65)`;
+      lbox.style.background='rgba(0,0,0,0)';
+      setTimeout(closeImgLbox,230);
+    }else{img.style.transform='';lbox.style.background='';}
+  },{passive:true});
+  lbox.addEventListener('touchcancel',()=>{
+    if(!_drag)return;_drag=false;
+    img.style.transform='';img.style.transition='';lbox.style.background='';
+  },{passive:true});
+})();
 
 // ── ROW ACTIONS (LONG-PRESS) ──────────────────────
 let _rasId=null,_rasTimer=null,_rasStartPos={x:0,y:0};
