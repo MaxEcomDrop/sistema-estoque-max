@@ -714,6 +714,8 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .pcard:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:var(--acc);transform:translateY(-1px)}
 .pcard{transition:box-shadow .15s,border-color .15s,transform .15s}
 .pcard-edit{position:absolute;top:7px;right:7px;width:26px;height:26px;background:var(--surf);border:1px solid var(--bord);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pcard-sbar{height:3px;width:100%;background:var(--bord-l);flex-shrink:0;overflow:hidden}
+.pcard-sfill{height:100%;transition:width .4s;border-radius:0}
 .pcard-img{position:relative}
 .pcard:hover .pcard-edit{opacity:1}
 .pcard-edit svg{width:12px;height:12px;color:var(--acc)}
@@ -2033,6 +2035,7 @@ function renderCards(){
         </div>
         ${badge}
       </div>
+      <div class="pcard-sbar"><div class="pcard-sfill" style="width:${(()=>{if(p.estoque<=0)return 0;const max=Math.max(S.estoqueMin*4,p.estoque,1);const pct=Math.min(100,Math.round((p.estoque/max)*100));return pct;})()}%;background:${p.estoque<=0?'var(--er)':p.estoque<=S.estoqueMin?'var(--wa)':'var(--ok)'}"></div></div>
     </div>`;
   }).join('');
 }
