@@ -1984,8 +1984,9 @@ function toast(msg,type=''){
   const stack=$('noti-stack');if(!stack)return;
   const id='n'+Date.now()+Math.random().toString(36).slice(2);
   const div=document.createElement('div');
-  div.className='noti '+(type||'info');div.id=id;
-  div.innerHTML=`<span class="noti-dot"></span><span style="flex:1">${esc(msg)}</span><button class="noti-x" onclick="dismissNoti('${id}')">×</button>`;
+  div.className='noti '+(type||'info');div.id=id;div.style.cursor='pointer';
+  div.innerHTML=`<span class="noti-dot"></span><span style="flex:1">${esc(msg)}</span><span class="noti-x" aria-hidden="true">×</span>`;
+  div.addEventListener('click',()=>dismissNoti(id));
   stack.appendChild(div);
   setTimeout(()=>dismissNoti(id),4500);
 }
