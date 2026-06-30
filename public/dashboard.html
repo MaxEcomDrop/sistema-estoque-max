@@ -3769,7 +3769,11 @@ function openRowActions(id){
   if(info){
     const chip=(lbl,val,cls='')=>`<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:var(--bg);border:1px solid var(--bord-l);color:${cls||'var(--mu)'}"><span style="color:var(--fa);font-weight:400">${lbl} </span>${esc(String(val))}</span>`;
     const stk=p.estoque<=0?'var(--er)':p.estoque<=S.estoqueMin?'var(--wa)':'var(--ok)';
-    info.innerHTML=chip('R$',fmt(p.preco).replace('R$ ',''))+chip('Estoque',fmtN(p.estoque)+' un.',stk)+(p.codigo?chip('SKU',p.codigo):'');
+    const ppOld=S.prevPrices&&S.prevPrices[p.id];
+    const arr=ppOld!==undefined&&ppOld!==p.preco?(p.preco>ppOld?'↑':'↓'):'';
+    const priceColor=arr==='↑'?'var(--ok)':arr==='↓'?'var(--er)':'';
+    const valorTotal=p.preco&&p.estoque>0?chip('Em estoque',fmt(p.preco*p.estoque).replace('R$ ','')): '';
+    info.innerHTML=chip('R$',(arr?arr+' ':'')+fmt(p.preco).replace('R$ ',''),priceColor)+chip('Estoque',fmtN(p.estoque)+' un.',stk)+(p.codigo?chip('SKU',p.codigo):'')+valorTotal;
   }
   const pb=$('ras-photo-btn');
   if(pb){if(p.imagemUrl){pb.style.display='';pb.onclick=()=>openImgLbox(p.imagemUrl);}else pb.style.display='none';}
