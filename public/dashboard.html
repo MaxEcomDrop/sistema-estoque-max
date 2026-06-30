@@ -937,6 +937,11 @@ button:focus:not(:focus-visible){outline:none}
     <button class="bts" onclick="setAutoRefresh(0)" style="height:24px;padding:0 8px;font-size:11px;margin-left:4px">Desativar</button>
   </div>
 
+  <div id="offline-bar" style="display:none;align-items:center;gap:8px;background:#374151;color:#f9fafb;padding:7px 16px;font-size:12px;font-weight:500">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3"/></svg>
+    Sem conexão — dados podem estar desatualizados
+  </div>
+
   <div id="ptr-ind" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
   </div>
@@ -3840,6 +3845,23 @@ document.addEventListener('touchend',()=>{
   }else{_ptrReset();}
   _ptrActive=false;
 },{passive:true});
+
+// ── OFFLINE INDICATOR ────────────────────────────
+(function(){
+  function upd(){const bar=$('offline-bar');if(bar)bar.style.display=navigator.onLine?'none':'flex';}
+  window.addEventListener('online',upd);
+  window.addEventListener('offline',upd);
+  upd();
+})();
+
+// ── AUTO LOAD MORE (IntersectionObserver) ────────
+(function(){
+  if(!window.IntersectionObserver)return;
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting&&$('lm-btn')?.style.display!=='none')loadMore();});
+  },{rootMargin:'0px 0px 120px 0px'});
+  const btn=$('lm-btn');if(btn)obs.observe(btn);
+})();
 
 // ── SCROLL-TO-TOP ────────────────────────────────
 (function(){
