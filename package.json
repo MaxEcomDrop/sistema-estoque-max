@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "keywords": [
     "estoque",
@@ -25,5 +25,9 @@
     "firebase-admin": "^12.7.0",
     "jsonwebtoken": "^9.0.3",
     "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "axios-mock-adapter": "^2.1.0",
+    "jest": "^30.4.2"
   }
 }
