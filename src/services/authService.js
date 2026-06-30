@@ -43,13 +43,21 @@ exports.getUserByBlingId = (blingUserId) => {
   });
 };
 
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error('JWT_SECRET environment variable must be at least 32 characters long for security reasons.');
+  }
+  return secret;
+};
+
 exports.generateJWT = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: '7d' });
 };
 
 exports.verifyJWT = (token) => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, getJwtSecret());
   } catch (error) {
     return null;
   }
