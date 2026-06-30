@@ -2010,7 +2010,7 @@ firebase.initializeApp({
 const S = {
   products:[], filtered:[], selected:new Set(),
   prevPrices:{}, prevStocks:{}, dupSkus:new Set(),
-  view:'produtos', sort:{field:'nome',dir:'asc'},
+  view:'produtos', sort:{field:localStorage.getItem('sf')||'nome',dir:localStorage.getItem('sd')||'asc'},
   grouped:false, page:0, PAGE:50,
   lastSync:null, autoRefresh:parseInt(localStorage.getItem('ar')||'0'),
   arTimer:null, arCountdown:0,
@@ -2386,6 +2386,9 @@ async function loadProducts(showToast=false){
     const catCount={};S.products.forEach(p=>{if(p.categoria)catCount[p.categoria]=(catCount[p.categoria]||0)+1;});
     const fcat=$('f-cat');
     fcat.innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)} (${catCount[c]||0})</option>`).join('');
+    (function(){try{const _f=JSON.parse(localStorage.getItem('flt')||'null');if(!_f)return;$('f-status').value=_f.s||'';if(_f.c&&fcat.querySelector('option[value="'+_f.c+'"]'))fcat.value=_f.c;['f-st-min','f-st-max','f-pr-min','f-pr-max'].forEach((id,ii)=>{const v=[_f.si,_f.sx,_f.pi,_f.px][ii];if(v)$(id).value=v;});}catch{}})();
+    const _sf=localStorage.getItem('sf')||'nome',_sd=localStorage.getItem('sd')||'asc';
+    ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{const el=$('si-'+f);if(!el)return;if(f===_sf){el.textContent=_sd==='asc'?'\u2191':'\u2193';el.closest('th')?.classList.add('srt');}else{el.textContent='';el.closest('th')?.classList.remove('srt');}});
     updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
     if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();}
     if(showToast)toast('Produtos atualizados','ok');
@@ -2486,6 +2489,7 @@ function applyFilters(){
   const status=$('f-status').value,cat=$('f-cat').value;
   const stMin=parseFloat($('f-st-min').value)||(-Infinity),stMax=parseFloat($('f-st-max').value)||Infinity;
   const prMin=parseFloat($('f-pr-min').value)||(-Infinity),prMax=parseFloat($('f-pr-max').value)||Infinity;
+  try{localStorage.setItem('flt',JSON.stringify({s:$('f-status').value,c:$('f-cat').value,si:$('f-st-min').value,sx:$('f-st-max').value,pi:$('f-pr-min').value,px:$('f-pr-max').value}));}catch{}
   let filtered=S.products.filter(p=>{
     if(q&&!p.nome.toLowerCase().includes(q)&&!p.codigo.toLowerCase().includes(q))return false;
     if(status==='out'&&p.estoque!==0)return false;
@@ -2504,6 +2508,7 @@ function applyFilters(){
 function sortBy(field){
   if(S.sort.field===field)S.sort.dir=S.sort.dir==='asc'?'desc':'asc';
   else{S.sort.field=field;S.sort.dir='asc';}
+  localStorage.setItem('sf',S.sort.field);localStorage.setItem('sd',S.sort.dir);
   ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{
     const el=$('si-'+f);if(!el)return;
     if(f===field){el.textContent=S.sort.dir==='asc'?'↑':'↓';el.closest('th').classList.add('srt');}
