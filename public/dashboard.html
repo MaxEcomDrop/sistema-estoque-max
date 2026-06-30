@@ -495,6 +495,11 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .pt-cnt-pen{background:#fff7ed;color:#ea580c}
 .pt-cnt-ok{background:#ecfdf5;color:#059669}
 .pt-cnt-can{background:#fef2f2;color:#dc2626}
+.ptabs{display:flex;gap:4px;border-bottom:1px solid var(--bord-l);margin-bottom:0}
+.ptab{padding:7px 14px;border:none;background:none;border-bottom:2px solid transparent;font-size:12.5px;font-weight:500;color:var(--mu);cursor:pointer;font-family:inherit;transition:all .12s;margin-bottom:-1px;white-space:nowrap;border-radius:6px 6px 0 0}
+.ptab.on{color:var(--acc-t);border-bottom-color:var(--acc);font-weight:600}
+.ptab:hover:not(.on){color:var(--tx)}
+.tab-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;font-size:10px;font-weight:700;margin-left:4px;background:#fff7ed;color:#ea580c;vertical-align:middle}
 /* NOTIFICAÇÕES VIEW */
 .notif-grid{display:grid;grid-template-columns:420px 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.notif-grid{grid-template-columns:1fr}}
