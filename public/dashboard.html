@@ -738,6 +738,11 @@ button:focus:not(:focus-visible){outline:none}
 }
 /* Scroll momentum no iOS */
 .conta-body,.qbody,.edraw-bd,.twrap,.sb-nav,.mbox{-webkit-overflow-scrolling:touch}
+/* Compact table mode */
+.t-compact tbody td{padding:5px 10px!important;font-size:12.5px!important}
+.t-compact .thumb{width:28px;height:28px;border-radius:6px}
+.t-compact .pname-sub{display:none}
+.t-compact thead th{padding:7px 10px}
 /* Row actions bottom sheet */
 .ras-btn{display:flex;align-items:center;gap:14px;width:100%;padding:13px 6px;background:none;border:none;border-radius:12px;font-size:14px;font-weight:500;color:var(--tx);cursor:pointer;font-family:inherit;transition:background .1s;text-align:left}
 .ras-btn:active{background:var(--bg)}
@@ -1032,6 +1037,7 @@ button:focus:not(:focus-visible){outline:none}
             <button class="lt-btn" id="lt-grid" onclick="setLayout('grid')" title="Grade (G)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
             <button class="lt-btn" id="lt-cat" onclick="setLayout('catalog')" title="Catálogo (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg></button>
           </div>
+          <button class="bti" id="lt-compact" onclick="toggleCompact()" title="Modo compacto (K)" style="margin-left:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button>
           <div class="tr">
             <button class="btp" onclick="openCreate()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Novo Produto</button>
             <button class="bts" onclick="openModal('im-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar</button>
@@ -1566,6 +1572,7 @@ button:focus:not(:focus-visible){outline:none}
       <div class="sc-row"><span class="sc-lbl">Entrada rápida</span><kbd class="kbd">Q</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Editar em massa</span><kbd class="kbd">B</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Modo escuro</span><kbd class="kbd">D</kbd></div>
+      <div class="sc-row"><span class="sc-lbl">Modo compacto</span><kbd class="kbd">K</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Desfazer edição</span><kbd class="kbd">Z</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Selecionar tudo</span><kbd class="kbd">A</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Fechar / cancelar</span><kbd class="kbd">Esc</kbd></div>
@@ -1787,6 +1794,7 @@ const S = {
   presets:JSON.parse(localStorage.getItem('presets')||'[]'),
   undoStack:[], undoTimeout:null, importData:[],
   estoqueMin:Math.max(0,parseInt(localStorage.getItem('em_min')||'5')),
+  compact:localStorage.getItem('compact')==='1',
 };
 
 // ── UTILS ──────────────────────────────────────────
@@ -2174,6 +2182,8 @@ function toggleFilters(){$('fpanel').classList.toggle('open');}
 function clearFilters(){$('f-status').value='';$('f-cat').value='';$('f-st-min').value='';$('f-st-max').value='';$('f-pr-min').value='';$('f-pr-max').value='';applyFilters();}
 function updateFilterBadge(){const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';}
 function toggleGroup(){S.grouped=!S.grouped;$('grp-lbl').textContent=S.grouped?'Desagrupar':'Agrupar';renderTable();}
+function applyCompact(){const lc=$('list-container');if(!lc)return;lc.classList.toggle('t-compact',S.compact);const btn=$('lt-compact');if(btn){btn.style.background=S.compact?'var(--acc-bg)':'';btn.style.borderColor=S.compact?'var(--acc)':'var(--bord)';btn.style.color=S.compact?'var(--acc-t)':'';}};
+function toggleCompact(){S.compact=!S.compact;localStorage.setItem('compact',S.compact?'1':'0');applyCompact();}
 
 // ── RENDER TABLE ──────────────────────────────────
 function renderTable(){
@@ -2612,6 +2622,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='l')  setLayout('list');
   else if(k==='g')  setLayout('grid');
   else if(k==='c')  setLayout('catalog');
+  else if(k==='k')  toggleCompact();
   else if(k==='z')  undoLast();
   else if(k==='a')  {$('cb-all').checked=true;toggleAllCb();}
   else if(k==='?')  openModal('sc-modal');
@@ -3408,6 +3419,7 @@ document.addEventListener('touchend',()=>{
   applyTheme();
   if(S.collapsed)$('sidebar').classList.add('col');
   const cfgMin=$('cfg-min-stock');if(cfgMin)cfgMin.value=S.estoqueMin;
+  applyCompact();
   renderPresets();
   $('si-nome').textContent='↑';
   if(S.autoRefresh>0)setAutoRefresh(S.autoRefresh);
