@@ -1536,22 +1536,22 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
       <!-- Row 1: main KPIs -->
       <div class="fk-grid" id="fin-kpis">
-        <div class="fk-card fk-blue">
+        <div class="fk-card fk-blue" onclick="setView('pedidos')">
           <div class="fk-top"><span class="fk-label">Vendas totais</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div></div>
           <div class="fk-val" id="fin-bruto">—</div>
           <div class="fk-sub" id="fin-sub-total">— pedidos no período</div>
         </div>
-        <div class="fk-card fk-green">
+        <div class="fk-card fk-green" onclick="viewPedidosFiltrado('concluido')">
           <div class="fk-top"><span class="fk-label">Aprovadas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
           <div class="fk-val" id="fin-rec">—</div>
           <div class="fk-sub" id="fin-sub-conc">— pedidos concluídos</div>
         </div>
-        <div class="fk-card fk-red">
+        <div class="fk-card fk-red" onclick="viewPedidosFiltrado('cancelado')">
           <div class="fk-top"><span class="fk-label">Canceladas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div></div>
           <div class="fk-val" id="fin-cancelado">—</div>
           <div class="fk-sub" id="fin-sub-canc">— pedidos cancelados</div>
         </div>
-        <div class="fk-card fk-orange">
+        <div class="fk-card fk-orange" onclick="viewPedidosFiltrado('pendente')">
           <div class="fk-top"><span class="fk-label">Pendentes</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
           <div class="fk-val" id="fin-pend-val">—</div>
           <div class="fk-sub" id="fin-sub-pend">— aguardando</div>
