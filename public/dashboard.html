@@ -1628,7 +1628,10 @@ button:focus:not(:focus-visible){outline:none}
 <div class="bdrop" id="ras-bdrop" onclick="closeRowActions()"></div>
 <div class="sheet" id="ras-sheet">
   <div class="sh-hand"></div>
-  <div class="sh-title" id="ras-name" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px"></div>
+  <div style="margin-bottom:12px">
+    <div class="sh-title" id="ras-name" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:4px"></div>
+    <div id="ras-info" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+  </div>
   <button class="ras-btn" onclick="closeRowActions();openEditor(_rasId)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     Editar produto
@@ -3576,6 +3579,12 @@ function openRowActions(id){
   if(!p)return;
   _rasId=id;
   $('ras-name').textContent=p.nome;
+  const info=$('ras-info');
+  if(info){
+    const chip=(lbl,val,cls='')=>`<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:var(--bg);border:1px solid var(--bord-l);color:${cls||'var(--mu)'}"><span style="color:var(--fa);font-weight:400">${lbl} </span>${esc(String(val))}</span>`;
+    const stk=p.estoque<=0?'var(--er)':p.estoque<=S.estoqueMin?'var(--wa)':'var(--ok)';
+    info.innerHTML=chip('R$',fmt(p.preco).replace('R$ ',''))+chip('Estoque',fmtN(p.estoque)+' un.',stk)+(p.codigo?chip('SKU',p.codigo):'');
+  }
   $('ras-bdrop').classList.add('open');
   $('ras-sheet').classList.add('open');
   vibrate(30);
