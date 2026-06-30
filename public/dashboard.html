@@ -865,6 +865,9 @@ button:focus:not(:focus-visible){outline:none}
 #ras-prev-btn:disabled,#ras-next-btn:disabled{opacity:.3;pointer-events:none}
 .voice-btn-listen{color:var(--er)!important;border-color:var(--er)!important;animation:micPulse 1.1s ease infinite}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3)}50%{box-shadow:0 0 0 5px rgba(239,68,68,0)}}
+#flt-active-bar{display:none;padding:5px 14px 5px 16px;background:var(--acc-bg);border-bottom:1px solid rgba(99,102,241,.12);font-size:12px;color:var(--acc-t);align-items:center;gap:6px;flex-wrap:wrap}
+#flt-active-bar .flt-clear-x{flex-shrink:0;background:none;border:1.5px solid currentColor;color:var(--acc-t);font-size:11px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:1px 8px;border-radius:20px;font-family:inherit;transition:background .1s}
+#flt-active-bar .flt-clear-x:active{background:rgba(99,102,241,.15)}
 </style>
 </head>
 <body>
@@ -1204,6 +1207,10 @@ button:focus:not(:focus-visible){outline:none}
         </div>
 
         </div><!-- .stick-head -->
+        <div id="flt-active-bar">
+          <span id="flt-active-txt" style="flex:1;line-height:1.5"></span>
+          <button class="flt-clear-x" onclick="clearFilters();clearSearch()">Limpar ×</button>
+        </div>
         <div class="fpanel" id="fpanel">
           <div class="fgrid">
             <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo" id="flt-lo-opt">Estoque baixo (≤5)</option><option value="out">Sem estoque</option></select></div>
@@ -2551,6 +2558,23 @@ function updateFilterBadge(){
   const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;
   const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';
   const cc=$('qchip-clear');if(cc)cc.style.display=cnt>1||($('f-cat').value||$('f-st-min').value||$('f-st-max').value||$('f-pr-min').value||$('f-pr-max').value)?'':'none';
+  // Active filter summary bar (KKK)
+  const bar=$('flt-active-bar'),txt=$('flt-active-txt');
+  if(bar&&txt){
+    const cat=$('f-cat').value,q=($('search').value||'').trim();
+    const hasAdv=cat||$('f-st-min').value||$('f-st-max').value||$('f-pr-min').value||$('f-pr-max').value||q;
+    if(hasAdv){
+      const parts=[];
+      const st=$('f-status').value;if(st)parts.push({ok:'Em estoque',lo:'Estoque baixo',out:'Sem estoque'}[st]||st);
+      if(cat)parts.push('Cat: '+cat.substring(0,18));
+      if($('f-st-min').value||$('f-st-max').value)parts.push('Est.'+($('f-st-min').value||'0')+'–'+($('f-st-max').value||'∞'));
+      if($('f-pr-min').value||$('f-pr-max').value)parts.push('R$'+($('f-pr-min').value||'0')+'–'+($('f-pr-max').value||'∞'));
+      if(q)parts.push('"'+q.substring(0,16)+(q.length>16?'…':'')+'"');
+      const n=S.filtered.length;
+      txt.textContent=parts.join(' · ')+' · '+fmtN(n)+' produto'+(n!==1?'s':'');
+      bar.style.display='flex';
+    }else{bar.style.display='none';}
+  }
 }
 function setQChip(el,v){$('f-status').value=v;vibrate(8);applyFilters();}
 function setQCat(v){
@@ -3388,7 +3412,17 @@ function _scanLoop(){
       const matched=S.filtered.length;
       if(matched===1){toast('Produto encontrado: '+S.filtered[0].nome,'ok');setTimeout(()=>openEditor(S.filtered[0].id),400);}
       else if(matched>1){toast(matched+' produtos para "'+code+'"','ok');}
-      else{toast('Nenhum produto com código "'+code+'"','wa');}
+      else{
+        toast('Nenhum produto com código "'+code+'"','wa');
+        setTimeout(()=>{
+          const _nid='n'+Date.now();
+          const _nd=document.createElement('div');
+          _nd.className='noti info';_nd.id=_nid;
+          _nd.innerHTML=`<span class="noti-dot" style="background:var(--acc)"></span><span style="flex:1;font-size:12.5px">Cadastrar produto com SKU <strong>${esc(code)}</strong>?</span><button style="background:var(--acc);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;-webkit-tap-highlight-color:transparent" onclick="dismissNoti('${_nid}');openCreateWithSku('${esc(code).replace(/'/g,'&#39;')}')">Criar →</button>`;
+          const stack=$('noti-stack');if(stack)stack.appendChild(_nd);
+          setTimeout(()=>dismissNoti(_nid),8000);
+        },300);
+      }
     }else{_scanRaf=requestAnimationFrame(_scanLoop);}
   }).catch(()=>{_scanRaf=requestAnimationFrame(_scanLoop);});
 }
@@ -3431,6 +3465,10 @@ function openCreate(){
   const crPrev=$('cr-img-prev');if(crPrev)crPrev.style.display='none';
   openModal('create-modal');
   setTimeout(()=>$('cr-nome')?.focus(),100);
+}
+function openCreateWithSku(sku){
+  openCreate();
+  setTimeout(()=>{const el=$('cr-codigo');if(el)el.value=sku;$('cr-nome')?.focus();},150);
 }
 async function saveCreate(){
   const nome=$('cr-nome').value.trim();
