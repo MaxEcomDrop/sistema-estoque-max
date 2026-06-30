@@ -3972,7 +3972,7 @@ function renderFinFromData(d){
     if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
     body.innerHTML=`<table><thead><tr><th>Produto</th><th class="r">Custo</th><th class="r">Preço venda</th><th class="r">Lucro unit.</th><th class="r">Margem</th></tr></thead><tbody>${
       prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
-      return`<tr><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
+      return`<tr style="cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto"><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
     }</tbody></table>`;
 }
 function renderFinTrend(d){
