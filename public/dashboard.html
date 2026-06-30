@@ -1042,7 +1042,7 @@ button:focus:not(:focus-visible){outline:none}
 
         <div class="fpanel" id="fpanel">
           <div class="fgrid">
-            <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo">Estoque baixo (≤3)</option><option value="out">Sem estoque</option></select></div>
+            <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo" id="flt-lo-opt">Estoque baixo (≤5)</option><option value="out">Sem estoque</option></select></div>
             <div class="fg"><label>Categoria</label><select id="f-cat" onchange="applyFilters()"><option value="">Todas</option></select></div>
             <div class="fg"><label>Estoque mín.</label><input type="number" id="f-st-min" placeholder="0" min="0" oninput="applyFilters()"></div>
             <div class="fg"><label>Estoque máx.</label><input type="number" id="f-st-max" placeholder="999" min="0" oninput="applyFilters()"></div>
@@ -1447,6 +1447,18 @@ button:focus:not(:focus-visible){outline:none}
         <div class="cfg-desc" style="margin-top:10px;margin-bottom:0">Resumos automáticos de lucro são enviados nos horários configurados (manhã, almoço, tarde e noite).</div>
       </div>
       <div class="cfg-card">
+        <div class="cfg-title">Estoque</div>
+        <div class="cfg-desc">Define o limite mínimo para alertas de estoque baixo em badges, filtros e relatórios.</div>
+        <div class="cfg-row" style="gap:12px">
+          <span class="cfg-row-lbl">Alerta abaixo de</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" id="cfg-min-stock" min="0" max="9999" step="1" style="width:80px;height:34px;padding:0 10px;background:var(--bg);border:1px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);outline:none" oninput="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--bord)'">
+            <span style="font-size:13px;color:var(--mu)">unidades</span>
+          </div>
+          <button class="btp" onclick="saveEstoqueMin()">Salvar</button>
+        </div>
+      </div>
+      <div class="cfg-card">
         <div class="cfg-title">Conta &amp; Integração</div>
         <div class="cfg-row"><span class="cfg-row-lbl">Integração Bling</span><button class="bts" onclick="window.location.href='/'">Reconectar</button></div>
         <div class="cfg-row"><span class="cfg-row-lbl">Sessão</span><button class="bts" onclick="logout()" style="color:var(--er-t)">Sair da conta</button></div>
@@ -1774,6 +1786,7 @@ const S = {
   collapsed:localStorage.getItem('sc')==='1',
   presets:JSON.parse(localStorage.getItem('presets')||'[]'),
   undoStack:[], undoTimeout:null, importData:[],
+  estoqueMin:Math.max(0,parseInt(localStorage.getItem('em_min')||'5')),
 };
 
 // ── UTILS ──────────────────────────────────────────
@@ -1782,7 +1795,7 @@ const fmt=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).fo
 const fmtN=n=>new Intl.NumberFormat('pt-BR').format(+n||0);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function hl(text,q){if(!q)return esc(text);const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');return esc(text).replace(re,'<mark>$1</mark>');}
-function statusBadge(s){if(s===0)return`<span class="sb2 s-out"><span class="sdot"></span>Sem estoque</span>`;if(s<=3)return`<span class="sb2 s-lo"><span class="sdot"></span>Estoque baixo</span>`;return`<span class="sb2 s-ok"><span class="sdot"></span>Em estoque</span>`;}
+function statusBadge(s){if(s===0)return`<span class="sb2 s-out"><span class="sdot"></span>Sem estoque</span>`;if(s>0&&s<=S.estoqueMin)return`<span class="sb2 s-lo"><span class="sdot"></span>Estoque baixo</span>`;return`<span class="sb2 s-ok"><span class="sdot"></span>Em estoque</span>`;}
 const editIco=`<span class="eh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>`;
 function toast(msg,type=''){
   const stack=$('noti-stack');if(!stack)return;
@@ -2113,7 +2126,7 @@ function updateKpis(){
   $('k-val').textContent=fmt(val);
   $('k-total-s').textContent=`${total} produto${total!==1?'s':''} no Bling`;
   $('k-out-s').textContent=`${out} produto${out!==1?'s':''} sem estoque`;
-  const lowList=ps.filter(p=>p.estoque>0&&p.estoque<=3).map(p=>p.nome).slice(0,5);
+  const lowList=ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).map(p=>p.nome).slice(0,5);
   $('k-ok-tip').textContent=lowList.length?`Estoque baixo:\n${lowList.join('\n')}`:'Todos os produtos com estoque normal.';
   const outList=ps.filter(p=>p.estoque===0).map(p=>p.nome).slice(0,5);
   $('k-out-tip').textContent=outList.length?`Zerados:\n${outList.join('\n')}`:'Nenhum produto zerado.';
@@ -2122,7 +2135,8 @@ function updateKpis(){
   if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
   link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>EM</text></svg>";
 }
-function updateLowBadge(){const cnt=S.products.filter(p=>p.estoque===0).length;$('badge-low').textContent=cnt>0?cnt:'';}
+function updateLowBadge(){const cnt=S.products.filter(p=>p.estoque<=S.estoqueMin).length;$('badge-low').textContent=cnt>0?cnt:'';const opt=$('flt-lo-opt');if(opt)opt.textContent=`Estoque baixo (≤${S.estoqueMin})`;}
+function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseInt(inp.value)||0);S.estoqueMin=v;localStorage.setItem('em_min',v);updateLowBadge();updateKpis();renderTable();toast(`Alerta de estoque: abaixo de ${v} un.`,'ok');}
 function updateSyncTs(){if(!S.lastSync)return;const diff=Math.round((Date.now()-S.lastSync)/1000);$('sync-ts').textContent=diff<60?'Atualizado agora':`Atualizado há ${Math.round(diff/60)} min`;}
 
 // ── FILTER/SORT ──────────────────────────────────
@@ -2134,7 +2148,7 @@ function applyFilters(){
   let filtered=S.products.filter(p=>{
     if(q&&!p.nome.toLowerCase().includes(q)&&!p.codigo.toLowerCase().includes(q))return false;
     if(status==='out'&&p.estoque!==0)return false;
-    if(status==='lo'&&(p.estoque===0||p.estoque>3))return false;
+    if(status==='lo'&&(p.estoque===0||p.estoque>S.estoqueMin))return false;
     if(status==='ok'&&p.estoque<=0)return false;
     if(cat&&p.categoria!==cat)return false;
     if(p.estoque<stMin||p.estoque>stMax)return false;
@@ -3393,6 +3407,7 @@ document.addEventListener('touchend',()=>{
 (function(){
   applyTheme();
   if(S.collapsed)$('sidebar').classList.add('col');
+  const cfgMin=$('cfg-min-stock');if(cfgMin)cfgMin.value=S.estoqueMin;
   renderPresets();
   $('si-nome').textContent='↑';
   if(S.autoRefresh>0)setAutoRefresh(S.autoRefresh);
