@@ -727,6 +727,8 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 #ptr-ind{position:fixed;top:calc(var(--th) + 8px);left:50%;transform:translateX(-50%) translateY(-52px) rotate(0deg);width:36px;height:36px;border-radius:50%;background:var(--surf);box-shadow:var(--sh-md);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;z-index:201}
 .fade-in{animation:fdin .3s ease both}
 @keyframes fdin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.row-flash td{animation:rowFlash 1s ease}
+@keyframes rowFlash{0%,100%{background:inherit}30%{background:rgba(16,185,129,.18)}}
 .create-box{width:520px;max-width:95vw}
 /* Cards hover */
 .pcard:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:var(--acc);transform:translateY(-1px)}
@@ -3788,11 +3790,18 @@ async function rasSaveStep(){
   try{
     const r=await fetch(`/api/produtos/${_rasId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estoque:_rasStepVal})});
     if(!r.ok)throw new Error(await r.text());
-    const p=S.products.find(x=>x.id===_rasId);
+    const savedId=_rasId;
+    const p=S.products.find(x=>x.id===savedId);
     if(p)p.estoque=_rasStepVal;
     applyFilters();renderDashAlerts();
     closeRowActions();
     toast(`Estoque atualizado: ${fmtN(_rasStepVal)} un.`,'ok');vibrate(30);
+    requestAnimationFrame(()=>{
+      const tr=document.querySelector(`tr[data-id="${savedId}"]`);
+      if(tr){tr.classList.add('row-flash');setTimeout(()=>tr.classList.remove('row-flash'),1000);}
+      const card=document.querySelector(`.pcard[data-id="${savedId}"]`);
+      if(card){card.classList.add('row-flash');setTimeout(()=>card.classList.remove('row-flash'),1000);}
+    });
   }catch(e){
     toast('Erro ao salvar: '+e.message,'err');
     if(ss){ss.disabled=false;ss.textContent=`Salvar: ${fmtN(_rasStepVal)} un.`;}
