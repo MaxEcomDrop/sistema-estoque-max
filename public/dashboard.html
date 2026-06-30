@@ -1128,6 +1128,7 @@ button:focus:not(:focus-visible){outline:none}
           <span class="qchip" data-s="ok" onclick="setQChip(this,'ok')">Em estoque</span>
           <span class="qchip" data-s="lo" onclick="setQChip(this,'lo')" id="qchip-lo">Estoque baixo</span>
           <span class="qchip" data-s="out" onclick="setQChip(this,'out')">Sem estoque</span>
+          <span id="qchip-count" style="margin-left:auto;font-size:11px;color:var(--fa);white-space:nowrap;align-self:center;padding-right:2px;flex-shrink:0"></span>
         </div>
 
         <div class="fpanel" id="fpanel">
@@ -2353,6 +2354,8 @@ function updateQChips(){
   const v=$('f-status').value;
   document.querySelectorAll('#qchips-bar .qchip').forEach(c=>c.classList.toggle('on',c.dataset.s===v));
   const ql=$('qchip-lo');if(ql)ql.textContent=`Estoque baixo (≤${S.estoqueMin})`;
+  const cnt=$('qchip-count');
+  if(cnt){const tot=S.products.length,fil=S.filtered.length;cnt.textContent=fil<tot?`${fmtN(fil)} de ${fmtN(tot)}`:`${fmtN(tot)} produto${tot!==1?'s':''}`;}
 }
 function toggleGroup(){S.grouped=!S.grouped;$('grp-lbl').textContent=S.grouped?'Desagrupar':'Agrupar';renderTable();}
 function applyCompact(){const lc=$('list-container');if(!lc)return;lc.classList.toggle('t-compact',S.compact);const btn=$('lt-compact');if(btn){btn.style.background=S.compact?'var(--acc-bg)':'';btn.style.borderColor=S.compact?'var(--acc)':'var(--bord)';btn.style.color=S.compact?'var(--acc-t)':'';}};
