@@ -61,9 +61,28 @@ const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
 const JWT_SECRET          = process.env.JWT_SECRET;
 const NODE_ENV            = process.env.NODE_ENV || 'development';
 
-// In-memory change log (resets on cold start)
-// TODO: Persistir em banco de dados em produção
-const changeLog = [];
+// Banco de dados
+const dbConfig = require('./config/database-vercel');
+const db = dbConfig.getDb();
+
+// Helper para log
+function addLog({ produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp }) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO changelog (produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [produto_id, produto_nome, campo, valor_anterior, valor_novo, timestamp || new Date().toISOString()],
+      function(err) {
+        if (err) {
+          console.error('[DB] Erro ao inserir log:', err);
+          resolve(null);
+        } else {
+          resolve(this.lastID);
+        }
+      }
+    );
+  });
+}
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;
@@ -210,7 +229,12 @@ app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
 app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
 app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
-app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
+app.get('/health', (req, res) => {
+  db.get('SELECT COUNT(*) as count FROM changelog', (err, row) => {
+    const history = row ? row.count : 0;
+    res.json({ status: 'OK', history, environment: NODE_ENV });
+  });
+});
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
@@ -362,11 +386,12 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
-    changeLog.push({
-      id: changeLog.length + 1, produto_id: criado?.id || '—',
-      produto_nome: req.body.nome || 'Novo produto', campo: 'criação',
-      valor_anterior: '—', valor_novo: req.body.nome || '—',
-      timestamp: new Date().toISOString(),
+    await addLog({
+      produto_id: criado?.id || '—',
+      produto_nome: req.body.nome || 'Novo produto',
+      campo: 'criação',
+      valor_anterior: '—',
+      valor_novo: req.body.nome || '—'
     });
     res.json(criado);
   } catch (err) {
@@ -494,11 +519,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      changeLog.push({
-        id: changeLog.length + 1, produto_id: id,
-        produto_nome: _fullUpdate.nome || `#${id}`, campo: 'edição completa',
-        valor_anterior: '—', valor_novo: 'campos atualizados',
-        timestamp: new Date().toISOString(),
+      await addLog({
+        produto_id: id,
+        produto_nome: _fullUpdate.nome || `#${id}`,
+        campo: 'edição completa',
+        valor_anterior: '—',
+        valor_novo: 'campos atualizados'
       });
       return res.json({ success: true });
     } catch (err) {
@@ -520,12 +546,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
-      changeLog.push({
-        id: changeLog.length + 1, produto_id: id,
-        produto_nome: nome_produto || `#${id}`, campo: 'preço',
+      await addLog({
+        produto_id: id,
+        produto_nome: nome_produto || `#${id}`,
+        campo: 'preço',
         valor_anterior: valor_anterior || '—',
-        valor_novo: `R$ ${Number(preco).toFixed(2)}`,
-        timestamp: new Date().toISOString(),
+        valor_novo: `R$ ${Number(preco).toFixed(2)}`
       });
     }
     if (estoque !== undefined) {
@@ -534,12 +560,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
-      changeLog.push({
-        id: changeLog.length + 1, produto_id: id,
-        produto_nome: nome_produto || `#${id}`, campo: 'estoque',
+      await addLog({
+        produto_id: id,
+        produto_nome: nome_produto || `#${id}`,
+        campo: 'estoque',
         valor_anterior: valor_anterior || '—',
-        valor_novo: `${Number(estoque)} un.`,
-        timestamp: new Date().toISOString(),
+        valor_novo: `${Number(estoque)} un.`
       });
     }
     res.json({ success: true });
@@ -577,14 +603,12 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      changeLog.push({
-        id: changeLog.length + 1,
+      await addLog({
         produto_id: p.id,
         produto_nome: p.nome || `#${p.id}`,
         campo: 'importação CSV',
         valor_anterior: '—',
-        valor_novo: `preço=${p.preco ?? '—'}, estoque=${p.estoque ?? '—'}`,
-        timestamp: new Date().toISOString(),
+        valor_novo: `preço=${p.preco ?? '—'}, estoque=${p.estoque ?? '—'}`
       });
       success++;
     } catch (err) {
@@ -1174,7 +1198,13 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 // ── Histórico ────────────────────────────────────────────────────
 
 app.get('/api/historico', requireAuthJson, (req, res) => {
-  res.json({ history: changeLog.slice().reverse().slice(0, 300) });
+  db.all('SELECT * FROM changelog ORDER BY id DESC LIMIT 300', (err, rows) => {
+    if (err) {
+      console.error('[DB] Erro ao buscar histórico:', err);
+      return res.status(500).json({ error: 'Erro ao buscar histórico' });
+    }
+    res.json({ history: rows || [] });
+  });
 });
 
 // ── Webhook (Bling notificações) ──────────────────────────────────────
