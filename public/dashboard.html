@@ -2084,8 +2084,9 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg><span>Produtos</span>
     <span class="bnav-badge" id="bnav-badge" style="display:none"></span>
   </button>
-  <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2V5a2 2 0 0 1 2-2h11"/></svg><span>Pedidos</span>
+  <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')" style="position:relative">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Pedidos</span>
+    <span class="bnav-badge" id="bnav-pend-badge" style="display:none"></span>
   </button>
   <button class="bnav-item" id="bn-financeiro" onclick="setView('financeiro')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Financeiro</span>
@@ -2310,7 +2311,7 @@ function setView(v){
 // ── DASHBOARD / INÍCIO ───────────────────────────
 let dashPeriod='30d';
 let _dashLoaded=false;
-let _dashFat=0,_dashTotalPedidos=0,_dashCancelados=0;
+let _dashFat=0,_dashTotalPedidos=0,_dashCancelados=0,_dashPendentes=null;
 function setDashPeriod(p,btn){
   dashPeriod=p;
   document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('on'));
@@ -2364,7 +2365,8 @@ async function loadDashboard(force=false){
     // KPIs
     setTxt('dash-vendas',fmtN(v.concluidos||0));
     setTxt('dash-vendas-sub',`${fmtN(v.totalPedidos||0)} pedidos no total`);
-    setTxt('dash-pendentes',fmtN(v.pendentes||0));
+    _dashPendentes=v.pendentes||0;
+    setTxt('dash-pendentes',fmtN(_dashPendentes));
     setTxt('dash-ticket',fmt(v.ticketMedio));
     const cr=d.contasReceber||{},cp=d.contasPagar||{};
     setTxt('dash-receber',cr.ok?fmt(cr.total):'—');
@@ -2430,7 +2432,11 @@ function renderDashAlerts(){
   const dcl=$('dash-criticos-lbl');if(dcl)dcl.textContent=`Estoque crítico (≤${S.estoqueMin})`;
   const tcl=$('tf-criticos-lbl');if(tcl)tcl.textContent=`Críticos (≤${S.estoqueMin})`;
   const pend=$('pt-cnt-pen')?.textContent;
-  set('dash-pendentes',pend&&!isNaN(+pend)?+pend:(typeof _pedidosCache!=='undefined'?_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length:0));
+  const pendN=pend&&!isNaN(+pend)?+pend:(_pedidosLoaded?_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length:null);
+  if(pendN!==null)set('dash-pendentes',pendN);
+  else if(_dashPendentes!==null)set('dash-pendentes',_dashPendentes);
+  const nb=$('bnav-pend-badge');
+  if(nb){const n=pendN??_dashPendentes??0;nb.textContent=n>0?String(n):'';nb.style.display=n>0?'':'none';}
   renderRupturaWidget();
 }
 function renderRupturaWidget(){
