@@ -1701,6 +1701,14 @@ button:focus:not(:focus-visible){outline:none}
     </div>
     <button class="ras-step-save" id="ras-step-save" onclick="rasSaveStep()" disabled>Salvar estoque</button>
   </div>
+  <button class="ras-btn" id="ras-photo-btn" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Ver foto do produto
+  </button>
+  <button class="ras-btn" id="ras-cat-btn" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+    Ver na categoria
+  </button>
   <button class="ras-btn" onclick="closeRowActions();openEditor(_rasId)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     Editar produto
@@ -3747,6 +3755,10 @@ function openRowActions(id){
     const stk=p.estoque<=0?'var(--er)':p.estoque<=S.estoqueMin?'var(--wa)':'var(--ok)';
     info.innerHTML=chip('R$',fmt(p.preco).replace('R$ ',''))+chip('Estoque',fmtN(p.estoque)+' un.',stk)+(p.codigo?chip('SKU',p.codigo):'');
   }
+  const pb=$('ras-photo-btn');
+  if(pb){if(p.imagemUrl){pb.style.display='';pb.onclick=()=>openImgLbox(p.imagemUrl);}else pb.style.display='none';}
+  const cb=$('ras-cat-btn');
+  if(cb){if(p.categoria){cb.style.display='';cb.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Ver em: ${esc(p.categoria)}`;cb.onclick=()=>{closeRowActions();$('f-cat').value=p.categoria;applyFilters();};}else cb.style.display='none';}
   _rasStepVal=_rasStepOrig=p.estoque||0;
   const sv=$('ras-step-val'),ss=$('ras-step-save');
   if(sv)sv.value=_rasStepVal;
