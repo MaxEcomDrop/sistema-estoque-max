@@ -376,13 +376,13 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    // Fetch up to 500 products (paginated)
+    // Fetch all products (paginated dynamically)
     const limit = 100;
     let page = 1;
     let allProducts = [];
     let hasMore = true;
 
-    while (hasMore && page <= 5) {
+    while (hasMore) {
       const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: limit, pagina: page },
@@ -457,7 +457,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
 });
 
 // Busca pedidos de venda num intervalo (paginado)
-async function fetchPedidos(token, inicio, fim, maxPg = 3) {
+async function fetchPedidos(token, inicio, fim, maxPg = Infinity) {
   let all = [];
   for (let pg = 1; pg <= maxPg; pg++) {
     const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
@@ -497,10 +497,10 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
     const prev = periodoAnterior(inicio, fim);
 
-    // Período atual (3 págs) + período anterior (2 págs) em paralelo
+    // Período atual + período anterior em paralelo
     const [allPedidos, prevPedidos] = await Promise.all([
-      fetchPedidos(token, inicio, fim, 3),
-      fetchPedidos(token, prev.inicio, prev.fim, 2).catch(() => []),
+      fetchPedidos(token, inicio, fim),
+      fetchPedidos(token, prev.inicio, prev.fim).catch(() => []),
     ]);
 
     const categorize = categorizePedido;
@@ -1018,8 +1018,8 @@ app.get('/api/cron/resumo', async (req, res) => {
     if (slot === 'manha') ref.setDate(ref.getDate() - 1);
     const dia = ref.toISOString().split('T')[0];
     const [pedidos, prod] = await Promise.all([
-      fetchPedidos(token, dia, dia, 2),
-      fetchResumoProdutos(token, 3).catch(() => ({ margem: 0, zerados: 0, criticos: 0 })),
+      fetchPedidos(token, dia, dia),
+      fetchResumoProdutos(token, Infinity).catch(() => ({ margem: 0, zerados: 0, criticos: 0 })),
     ]);
     const concl = pedidos.filter(p => categorizePedido(p.situacao) === 'concluido');
     const fat = concl.reduce((a, p) => a + valorPedido(p), 0);
@@ -1156,8 +1156,8 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     // Pedidos do período + período anterior + contas, em paralelo
     const prev = periodoAnterior(inicio, fim);
     const [pedRes, prevRes, receberRes, pagarRes] = await Promise.allSettled([
-      fetchPedidos(token, inicio, fim, 2),
-      fetchPedidos(token, prev.inicio, prev.fim, 1),
+      fetchPedidos(token, inicio, fim),
+      fetchPedidos(token, prev.inicio, prev.fim),
       fetchContas(token, 'receber'),
       fetchContas(token, 'pagar'),
     ]);
@@ -1246,7 +1246,7 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 
     const [contatos, pedidos] = await Promise.all([
       contatosPromise,
-      fetchPedidos(token, iso(ini), iso(hoje), 3).catch(() => []),
+      fetchPedidos(token, iso(ini), iso(hoje)).catch(() => []),
     ]);
 
     // Agrega gasto/pedidos por contato

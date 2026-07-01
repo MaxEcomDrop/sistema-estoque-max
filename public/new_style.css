@@ -15,10 +15,10 @@
   --border: #e2e8f0;
   --border-h: #cbd5e1;
   
-  --primary: #8b5cf6;
-  --primary-bg: #8b5cf6;
+  --primary: #6366f1;
+  --primary-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
   --primary-text: #ffffff;
-  --primary-h: #7c3aed;
+  --primary-h: linear-gradient(135deg, #4f46e5, #7c3aed);
   
   --accent: #6366f1;
   --accent-h: #4f46e5;
@@ -35,6 +35,11 @@
 
   --sb-bg: #ffffff;
   --sb-w: 250px;
+
+  --font-s: 'Inter', system-ui, sans-serif;
+  --rad: 13px;
+  --rad-s: 10px;
+  --tb-h: 64px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -62,12 +67,18 @@ button {
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Primary Button (White on Black) */
+/* Primary Button */
 .btp {
   background: var(--primary-bg); color: var(--primary-text);
-  border: 1px solid var(--primary-bg); box-shadow: 0 2px 8px rgba(255,255,255,0.1);
+  border: none; box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+  font-weight: 600; font-size: 14px; height: 38px; border-radius: var(--rad);
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.btp:hover:not(:disabled) { background: var(--primary-h); }
+.btp:hover:not(:disabled) {
+  opacity: 0.94; transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(99,102,241,0.48);
+}
+.btp:active:not(:disabled) { transform: translateY(0); }
 .btp svg { color: var(--primary-text); }
 
 /* Secondary Button (Bordered) */
@@ -80,8 +91,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Icon Button (Ghost) */
 .bti {
-  background: transparent; color: var(--text-m); border: none;
-  width: 32px; height: 32px; padding: 0; border-radius: var(--rad-s);
+  background: transparent; color: var(--text-m); border: none; cursor: pointer;
+  width: 34px; height: 34px; padding: 0; border-radius: var(--rad-s);
+  display: flex; align-items: center; justify-content: center;
 }
 .bti:hover:not(:disabled) { background: var(--bg-hover); color: var(--text); }
 .bti svg { width: 16px; height: 16px; stroke-width: 1.5; }

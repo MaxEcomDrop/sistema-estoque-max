@@ -23,8 +23,8 @@
   <!-- SIDEBAR (Desktop) -->
   <aside class="sb" id="sidebar">
     <div class="sb-head">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-      Estoque Max
+      <div class="logo-mark" style="width:28px;height:28px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.4);">EM</div>
+      <span style="font-size:15px;font-weight:700;color:#0f172a;letter-spacing:-.3px">Estoque Max</span>
     </div>
     <nav class="sb-nav">
       <a class="ni on" id="ni-inicio" onclick="setView('inicio')">
@@ -58,10 +58,18 @@
   <!-- CONTENT AREA -->
   <main class="content">
     
-    <!-- PWA Install Banner Pushed here, subtle -->
-    <div id="pwa-install-bar" style="display:none;">
-      <span>Instale o Estoque Max no dispositivo</span>
-      <button onclick="installApp()" class="btp">Instalar</button>
+    <!-- PWA Install Banner Premium -->
+    <div id="pwa-install-bar" style="display:none; padding:13px 16px; background:#ede9fe; border-radius:12px; margin: 20px 24px; align-items:center; justify-content:space-between; border:1px solid #ddd6fe;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:34px; height:34px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:9px; display:flex; align-items:center; justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; color:#fff;"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg>
+        </div>
+        <div>
+          <strong style="display:block; font-size:13px; font-weight:600; color:#3730a3;">Instalar como aplicativo</strong>
+          <span style="font-size:12px; color:#6d28d9;">Acesse pelo celular como app nativo</span>
+        </div>
+      </div>
+      <button onclick="installApp()" class="btp" style="height:32px; font-size:12px; padding:0 12px; margin:0;">Instalar</button>
     </div>
 
     <header class="topbar">
