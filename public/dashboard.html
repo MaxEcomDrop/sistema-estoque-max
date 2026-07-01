@@ -590,10 +590,10 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 [data-theme=dark] .da-purple{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:#c4b5fd}[data-theme=dark] .da-purple .da-num{color:#a78bfa}
 /* QUICK SHORTCUTS */
 .dash-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.qs-btn{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surf);border:1px solid var(--bord);border-radius:13px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left}
-.qs-btn:hover{border-color:var(--acc);background:var(--acc-bg);transform:translateY(-1px)}
-.qs-btn:active{transform:scale(.97)}
-.qs-ico{width:34px;height:34px;border-radius:9px;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qs-btn{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surf);border:1.5px solid var(--bord);border-radius:14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.qs-btn:hover{border-color:var(--acc);background:var(--acc-bg);transform:translateY(-2px);box-shadow:0 4px 14px rgba(99,102,241,.14)}
+.qs-btn:active{transform:scale(.97);box-shadow:none}
+.qs-ico{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#eef2ff,#f0e6ff);color:var(--acc-t);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(99,102,241,.12)}
 .qs-ico svg{width:17px;height:17px}
 /* CONTAS LIST */
 .dash-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -2723,33 +2723,39 @@ async function loadMLMetricas(){
   try{
     const r=await fetch('/api/ml/metricas'),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
-    const rep=d.reputacao||{};const nivel=rep.nivel||'—';const txCanc=rep.txCancelamentos||0;const txRec=rep.txReclamacoes||0;
-    const corNivel=nivel==='platinum'?'#059669':nivel==='gold'?'#d97706':nivel==='silver'?'#64748b':'#6366f1';
-    const pedStats=d.pedidos||{};
+    const nivelMap={'platinum':'Platinum','gold':'Gold','silver':'Silver','bronze':'Bronze'};
+    const nivel=d.pontuacao||'';const nivelPT=nivelMap[nivel]||nivel||'—';
+    const corNivel=nivel==='platinum'?'#9333ea':nivel==='gold'?'#d97706':nivel==='silver'?'#64748b':nivel==='bronze'?'#92400e':'var(--acc)';
+    const txCanc=d.txCancelamentos;const txRec=d.txReclamacoes;const avPct=d.avaliacaoPositiva;
+    const cards=[
+      `<div style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:8px">Nível</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:-.3px;color:${corNivel}">${esc(nivelPT||'—')}</div>
+        ${d.vendas30d!=null?`<div style="font-size:11px;color:var(--mu);margin-top:4px">${fmtN(d.vendas30d)} vendas concluídas</div>`:''}
+      </div>`,
+      avPct!=null?`<div style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:8px">Avaliações</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:-.3px;color:${avPct>=95?'var(--ok-t)':avPct>=80?'var(--wa-t)':'var(--er-t)'}">${avPct}%</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:4px">avaliações positivas</div>
+      </div>`:null,
+      txCanc!=null?`<div style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:8px">Cancelamentos</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:-.3px;color:${txCanc>5?'var(--er-t)':txCanc>2?'var(--wa-t)':'var(--ok-t)'}">${txCanc.toFixed(2)}%</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:4px">taxa de cancelamentos</div>
+      </div>`:null,
+      txRec!=null?`<div style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:8px">Envios atrasados</div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:-.3px;color:${txRec>5?'var(--er-t)':txRec>2?'var(--wa-t)':'var(--ok-t)'}">${txRec.toFixed(2)}%</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:4px">taxa de atraso no envio</div>
+      </div>`:null,
+    ].filter(Boolean);
+    const pedidos=d.ultimosPedidos||[];
     body.innerHTML=`
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:12px 0">
-        <div class="rep-card" style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
-          <div class="rep-lbl">Nível</div>
-          <div class="rep-val" style="color:${corNivel};text-transform:capitalize">${esc(nivel)}</div>
-          ${rep.pontos?`<div style="font-size:11px;color:var(--mu);margin-top:4px">${rep.pontos} pts</div>`:''}
-        </div>
-        <div class="rep-card" style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
-          <div class="rep-lbl">Cancelamentos</div>
-          <div class="rep-val" style="color:${txCanc>5?'var(--er-t)':'var(--ok-t)'}">${txCanc.toFixed(1)}%</div>
-          <div style="font-size:11px;color:var(--mu);margin-top:4px">últimos 60 dias</div>
-        </div>
-        <div class="rep-card" style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
-          <div class="rep-lbl">Reclamações</div>
-          <div class="rep-val" style="color:${txRec>2?'var(--er-t)':'var(--ok-t)'}">${txRec.toFixed(1)}%</div>
-          <div style="font-size:11px;color:var(--mu);margin-top:4px">últimos 60 dias</div>
-        </div>
-        ${pedStats.total!=null?`<div class="rep-card" style="background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px">
-          <div class="rep-lbl">Pedidos recentes</div>
-          <div class="rep-val">${pedStats.total}</div>
-          <div style="font-size:11px;color:var(--ok-t);margin-top:4px">${pedStats.concluidos||0} concluídos</div>
-        </div>`:''}
-      </div>
-      ${d.avaliacao?`<div style="padding:10px 0;font-size:12px;color:var(--mu)">Avaliação geral: <strong style="color:var(--tx)">${esc(String(d.avaliacao))}</strong></div>`:''}`;
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:10px 0 14px">${cards.join('')}</div>
+      ${pedidos.length?`<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:8px">Últimos pedidos</div>
+      <table><thead><tr><th>Pedido</th><th>Status</th><th class="r">Valor</th><th>Data</th></tr></thead><tbody>
+      ${pedidos.map(o=>{const sc=o.status==='paid'?'ok':o.status==='cancelled'?'out':'lo';return`<tr><td><span style="font-family:monospace;font-size:12px">#${o.id}</span></td><td><span class="sb2 s-${sc}">${esc(o.statusPT||o.status)}</span></td><td class="r">${fmt(o.total)}</td><td style="font-size:12px;color:var(--mu)">${new Date(o.data).toLocaleDateString('pt-BR')}</td></tr>`;}).join('')}
+      </tbody></table>`:''}`;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:14px"><p class="st-d">Erro ao carregar métricas: ${esc(e.message)}</p></div>`;}
 }
 

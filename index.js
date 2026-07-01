@@ -454,11 +454,27 @@ app.get('/api/ml/metricas', requireAuthJson, async (req, res) => {
     ]);
     const seller = rep.status === 'fulfilled' ? rep.value.data : {};
     const recentOrders = orders.status === 'fulfilled' ? (orders.value.data?.results || []) : [];
+    const repSeller = seller.seller_reputation || {};
+    const transactions = repSeller.transactions || {};
+    const ratings = transactions.ratings || {};
+    const totalRatings = (ratings.positive || 0) + (ratings.negative || 0) + (ratings.neutral || 0);
+    const txCancelamentos = repSeller.metrics?.claims?.rate != null
+      ? (repSeller.metrics.claims.rate * 100)
+      : null;
+    const txReclamacoes = repSeller.metrics?.delayed_handling_time?.rate != null
+      ? (repSeller.metrics.delayed_handling_time.rate * 100)
+      : null;
     res.json({
-      pontuacao: seller.seller_reputation?.power_seller_status || null,
-      nivelVendedor: seller.seller_reputation?.level_id || null,
-      vendas30d: seller.seller_reputation?.transactions?.completed || null,
-      ultimosPedidos: recentOrders.slice(0, 5).map(o => ({ id: o.id, total: o.total_amount, status: o.status, data: o.date_created })),
+      pontuacao: repSeller.power_seller_status || null,
+      nivelVendedor: repSeller.level_id || null,
+      vendas30d: transactions.completed || null,
+      avaliacaoPositiva: totalRatings ? Math.round((ratings.positive || 0) / totalRatings * 100) : null,
+      txCancelamentos,
+      txReclamacoes,
+      ultimosPedidos: recentOrders.slice(0, 5).map(o => ({
+        id: o.id, total: o.total_amount, status: o.status, data: o.date_created,
+        statusPT: { paid: 'Pago', pending: 'Pendente', cancelled: 'Cancelado', partially_refunded: 'Estornado' }[o.status] || o.status,
+      })),
     });
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar métricas ML', e.message); }
 });
