@@ -219,8 +219,9 @@ function resolvePeriodo(period, startDate, endDate) {
 // ── Páginas ──────────────────────────────────────────────────────────
 
 app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
-app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
-app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
+app.get('/', requireAuth, (req, res) => res.redirect('/dashboard.html'));
+app.get('/conectar.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/conectar.html'));
+
 app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
 app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
 

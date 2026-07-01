@@ -195,7 +195,7 @@
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         // Login OK → vai para a tela de conexão / dashboard
-        window.location.href = '/';
+        window.location.href = '/dashboard.html';
         return;
       }
       showErr(data.error || 'E-mail ou senha incorretos.');
