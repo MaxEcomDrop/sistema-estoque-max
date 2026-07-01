@@ -4,6 +4,30 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+
+// --- Cache e Retry ---
+const apiCache = new Map();
+async function fetchWithCache(key, ttlMs, fetchFn) {
+  const cached = apiCache.get(key);
+  if (cached && Date.now() < cached.exp) return cached.data;
+  let attempts = 0;
+  while(attempts < 3) {
+    try {
+      const data = await fetchFn();
+      apiCache.set(key, { data, exp: Date.now() + ttlMs });
+      return data;
+    } catch(err) {
+      if (err.response?.status === 429) {
+        attempts++;
+        await new Promise(r => setTimeout(r, 1000 * attempts));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Rate limit exceeded after retries');
+}
+
 const crypto = require('crypto');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────

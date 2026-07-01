@@ -743,6 +743,47 @@ button:focus:not(:focus-visible){outline:none}
   .tcard { width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
 }
 
+
+/* UI EXTREME MOBILE FIXES */
+@media (max-width: 768px) {
+  #card-container.vg, #card-container.vc {
+    grid-template-columns: 1fr !important;
+  }
+  .vc .pcard {
+    flex-direction: row;
+  }
+  .edraw {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    right: -100vw;
+  }
+  .edraw.open {
+    right: 0 !important;
+  }
+}
+/* Shimmer Animation for Skeletons */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg) 25%, var(--bord-l) 50%, var(--bg) 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+.skeleton-text { height: 16px; width: 60%; margin-bottom: 8px; }
+.skeleton-title { height: 24px; width: 40%; margin-bottom: 12px; }
+
+/* Dashboard VIP and Notifications adjustments */
+.vip-badge { background: gold; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
+.profit-badge { background: #dcfce7; color: #166534; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; border: 1px solid #bbf7d0; }
+.profit-badge.neg { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+/* Empty states */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--mu); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5; }
+
 </style>
 </head>
 <body>
@@ -1538,6 +1579,21 @@ button:focus:not(:focus-visible){outline:none}
   </button>
 </nav>
 
+
+<div class="view" id="view-integracoes" style="display:none">
+  <div class="toolbar">
+    <h1 class="t-title">Integrações</h1>
+  </div>
+  <div class="empty-state" style="margin-top: 40px">
+    <div style="width:64px;height:64px;background:#ffe600;border-radius:12px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2d3277" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;opacity:1"><path d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+    </div>
+    <h2 style="font-size:18px;color:var(--tx);margin-bottom:8px">Mercado Livre</h2>
+    <p style="font-size:14px;line-height:1.6">Integração nativa de alta velocidade com o Mercado Livre está em desenvolvimento.<br><br>Você poderá contornar os limites do Bling e sincronizar pedidos instantaneamente.</p>
+    <button class="btp" style="margin-top:24px;opacity:0.5;cursor:not-allowed">Em Breve</button>
+  </div>
+</div>
+
 <!-- MAIS MENU (bottom sheet) -->
 <div class="mais-ov" id="mais-ov" onclick="closeMaisMenu()"></div>
 <div class="mais-menu" id="mais-menu">
@@ -1711,7 +1767,7 @@ function setView(v){
   if(v==='pedidos')loadPedidos();
   if(v==='historico')loadHistorico();
   if(v==='financeiro')loadFinanceiro();
-  if(v==='notificacoes')loadNotificacoes();
+  if(v==='integracoes'){ /* no-op */ }
   closeMaisMenu();
 }
 
@@ -2161,20 +2217,39 @@ function categorizePed(s){
 function renderPedidosTable(status){
   const body=$('pedidos-body');
   const list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
-  if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${status==='all'?'encontrado':status}.</p></div>`;return;}
+  if(!list.length){
+    body.innerHTML=`
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <h3>Nenhum pedido</h3>
+        <p>Não há pedidos ${status==='all'?'encontrados':status} no período.</p>
+      </div>
+    `;
+    return;
+  }
   const rows=list.map(p=>{
     const cat=categorizePed(p.situacao);
-    const cls=cat==='concluido'?'o-ok':cat==='cancelado'?'o-can':'o-pen';
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+    
+    // Novas colunas financeiras
+    const bruto = p.valor || 0;
+    const descontosFrete = (p.frete || 0) + (p.desconto || 0);
+    const impostos = p.impostos || 0;
+    const lucro = p.lucro !== undefined ? p.lucro : bruto;
+    const margem = bruto > 0 ? (lucro / bruto * 100).toFixed(1) : 0;
+    
+    const profitBadgeClass = lucro > 0 ? 'profit-badge' : 'profit-badge neg';
+
     return`<tr>
-      <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
-      <td>${p.data?String(p.data).substring(0,10):'—'}</td>
+      <td><span class="sku">${esc(String(p.numero||p.id||'-'))}</span></td>
+      <td>${p.data?String(p.data).substring(0,10):'-'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
-      <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
+      <td class="r" style="color:var(--mu);font-size:12px">${fmt(bruto)}<br><span style="color:#ef4444;font-size:10px">-${fmt(descontosFrete+impostos)}</span></td>
+      <td class="r o-val" style="font-weight:700;color:var(--tx)">${fmt(lucro)} <span class="${profitBadgeClass}">${margem}%</span></td>
       <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
     </tr>`;
   }).join('');
-  body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
+  body.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th style="width:70px">#</th><th style="width:80px">Data</th><th>Cliente</th><th class="r" style="width:90px">Bruto / Taxas</th><th class="r" style="width:130px">Lucro Líquido</th><th style="width:110px">Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 async function loadHistorico(){
   const body=$('historico-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
