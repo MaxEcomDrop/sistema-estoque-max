@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,23 +8,19 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
   <link rel="stylesheet" href="new_style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Firebase Scripts -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 </head>
 <body>
 <div class="main">
-  <!-- PWA INSTALL BAR -->
-  <div id="pwa-install-bar" style="display:none; padding:12px; background:var(--primary); color:#fff; text-align:center; font-size:14px; z-index:999; justify-content:space-between; align-items:center;">
-    <span>Instale o Estoque Max (App Offline)</span>
-    <button onclick="installApp()" class="bts" style="padding:4px 12px; height:auto; margin-left:12px;">Instalar</button>
-  </div>
 
   <div id="lbar"></div>
 
   <!-- SIDEBAR (Desktop) -->
   <aside class="sb" id="sidebar">
     <div class="sb-head">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
       Estoque Max
     </div>
     <nav class="sb-nav">
@@ -41,7 +37,6 @@
       <a class="ni" id="ni-financeiro" onclick="setView('financeiro')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Financeiro
       </a>
-      <!-- New Integracoes Tab instead of Notificacoes -->
       <a class="ni" id="ni-integracoes" onclick="setView('integracoes')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Integrações
       </a>
@@ -59,149 +54,136 @@
 
   <!-- CONTENT AREA -->
   <main class="content">
+    
+    <!-- PWA Install Banner Pushed here, subtle -->
+    <div id="pwa-install-bar" style="display:none;">
+      <span>Instale o Estoque Max no dispositivo</span>
+      <button onclick="installApp()" class="btp">Instalar</button>
+    </div>
+
     <header class="topbar">
       <div class="tb-title" id="tb-title">Dashboard</div>
       <span id="sync-ts" style="display:none;"></span>
       <div class="tb-right">
         <!-- Notif Perm Button -->
         <button class="bti" onclick="askNotifPerm()" id="notif-btn" title="Ativar Notificações" style="display:none;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
         </button>
         <button class="bti" id="ar-btn" onclick="cycleAutoRefresh()" title="Auto Sync">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"></path></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"></path></svg>
         </button>
-        <button class="bti" onclick="toggleDark()">
-          <svg id="dm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <button class="bti" onclick="toggleDark()" title="Tema">
+          <svg id="dm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         </button>
         <button class="btp" id="sync-btn" onclick="sync()">
-          <svg id="sync-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.84"></path></svg>
+          <svg id="sync-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.84"></path></svg>
           Sincronizar
         </button>
       </div>
     </header>
 
-    <div class="ar-bar" id="ar-bar" style="display:none; padding:8px 32px; background:var(--primary); color:#fff; font-size:12px; font-weight:600;">
-      Auto-sync em <span id="ar-cd"></span>s
+    <div class="ar-bar" id="ar-bar" style="display:none; padding:6px 24px; background:var(--primary-bg); color:var(--primary-text); font-size:12px; font-weight:600;">
+      Próxima sincronização automática em <span id="ar-cd"></span>s
     </div>
 
     <!-- VIEW INÍCIO -->
     <div class="view on" id="view-inicio">
       <div class="dash-greet">
         <div>
-          <h2 id="dash-hello">Olá! 👋</h2>
-          <p id="dash-sub">Visão geral do negócio (Versão 2050).</p>
+          <h2 id="dash-hello">Dashboard</h2>
+          <p id="dash-sub">Visão executiva em tempo real</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="dp-btn" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
-          <button class="dp-btn" data-dp="7d" onclick="setDashPeriod('7d',this)">7d</button>
-          <button class="dp-btn on" data-dp="30d" onclick="setDashPeriod('30d',this)">30d</button>
+          <button class="bts" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
+          <button class="bts" data-dp="7d" onclick="setDashPeriod('7d',this)">7 dias</button>
+          <button class="bts on" data-dp="30d" onclick="setDashPeriod('30d',this)">30 dias</button>
         </div>
       </div>
 
       <div class="dash-hero">
         <div class="hero-card">
-          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Faturamento</div>
+          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Faturamento Líquido</div>
           <div class="hero-val" id="dash-faturamento">R$ 0,00</div>
           <div class="hero-sub" id="dash-fat-sub">no período</div>
         </div>
         <div class="hero-card">
           <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Lucro Estimado</div>
           <div class="hero-val" id="dash-lucro">R$ 0,00</div>
-          <div class="hero-sub" id="dash-luc-sub">margem média</div>
+          <div class="hero-sub" id="dash-luc-sub">margem média ponderada</div>
         </div>
       </div>
 
       <div class="dash-kpis">
-        <div class="dk-card dk-blue" onclick="setView('pedidos')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></div></div>
+        <div class="dk-card dk-blue" onclick="setView('pedidos')" style="cursor:pointer">
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></div></div>
           <div class="dk-val" id="dash-vendas">0</div>
           <div class="dk-lbl">Vendas concl.</div>
-          <div class="dk-sub" id="dash-vendas-sub">pedidos no período</div>
+          <div class="dk-sub" id="dash-vendas-sub">pedidos</div>
         </div>
-        <div class="dk-card dk-green" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div>
+        <div class="dk-card dk-green" onclick="setView('financeiro')" style="cursor:pointer">
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><line x1="12" y1="18" x2="12" y2="22"></line><line x1="12" y1="2" x2="12" y2="6"></line></svg></div></div>
           <div class="dk-val" id="dash-ticket">R$ 0,00</div>
           <div class="dk-lbl">Ticket Médio</div>
           <div class="dk-sub">por venda</div>
         </div>
-        <div class="dk-card dk-amber" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div>
+        <div class="dk-card dk-amber" onclick="setView('financeiro')" style="cursor:pointer">
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div>
           <div class="dk-val" id="dash-receber">R$ 0,00</div>
           <div class="dk-lbl">A Receber</div>
           <div class="dk-sub" id="dash-receber-sub">contas</div>
         </div>
-        <div class="dk-card dk-rose" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></div></div>
+        <div class="dk-card dk-rose" onclick="setView('financeiro')" style="cursor:pointer">
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></div></div>
           <div class="dk-val" id="dash-pagar">R$ 0,00</div>
           <div class="dk-lbl">A Pagar</div>
           <div class="dk-sub" id="dash-pagar-sub">contas</div>
         </div>
       </div>
 
-      <div class="dash-alerts">
-        <div class="da-card da-red" onclick="setView('produtos')">
-          <div class="da-num" id="dash-zerados">0</div><div class="da-lbl">Produtos Zerados</div>
-        </div>
-        <div class="da-card da-orange" onclick="setView('produtos')">
-          <div class="da-num" id="dash-criticos">0</div><div class="da-lbl">Estoque Crítico (≤5)</div>
-        </div>
-        <div class="da-card da-blue" onclick="setView('pedidos')">
-          <div class="da-num" id="dash-pendentes">0</div><div class="da-lbl">Pedidos Pendentes</div>
-        </div>
-        <div class="da-card da-purple" onclick="setView('financeiro')">
-          <div class="da-num" id="dash-vencidas">0</div><div class="da-lbl">Contas Vencidas</div>
-        </div>
+      <div class="dash-sec-t" style="display:flex; justify-content:space-between; align-items:center; border:none; margin-bottom:8px;">
+        Controle Operacional
+        <span class="text-m" style="font-size:12px; font-weight:400;">Atualizado em tempo real</span>
       </div>
-
       <div class="dash-two">
         <div class="conta-card">
           <div class="conta-hd">
-            <span class="conta-hd-t"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--bl)" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg> Últimos Pedidos</span>
+            <span class="conta-hd-t"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg> Últimos Pedidos</span>
           </div>
           <div class="conta-body" id="dash-receber-list"></div>
         </div>
         <div class="conta-card">
           <div class="conta-hd">
-            <span class="conta-hd-t"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--er)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg> Contas a Pagar</span>
+            <span class="conta-hd-t"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg> Contas a Pagar</span>
             <span class="conta-tot" id="dash-pagar-tot" style="color:var(--er)">R$ 0,00</span>
           </div>
           <div class="conta-body" id="dash-pagar-list"></div>
         </div>
       </div>
-      <div id="dash-receber-tot" style="display:none;"></div>
+      
+      <!-- hidden but needed for logic -->
+      <div style="display:none">
+        <div id="dash-receber-tot"></div>
+        <div id="dash-zerados">0</div><div id="dash-criticos">0</div>
+        <div id="dash-pendentes">0</div><div id="dash-vencidas">0</div>
+      </div>
     </div>
 
     <!-- VIEW PRODUTOS -->
     <div class="view" id="view-produtos">
-      <!-- Painel Tarefas -->
-      <div class="tarefas-panel" id="tarefas-panel" style="display:none; background:var(--wr-bg); border:1px solid rgba(245,158,11,0.3); padding:16px; border-radius:var(--rad-s); margin-bottom:24px;">
-        <div style="display:flex; align-items:center; gap:8px; color:var(--wr); font-weight:600; margin-bottom:12px;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> 
-          Atenção Necessária (<span id="tf-total-badge">0</span>)
-        </div>
-        <div style="display:flex; gap:16px; flex-wrap:wrap;">
-          <button class="bts" id="tf-zerados" onclick="filterByStock(0,0)">0 Zerados</button>
-          <button class="bts" id="tf-criticos" onclick="filterByStock(1,5)">0 Críticos</button>
-          <button class="bts" id="tf-pend-count" onclick="setView('pedidos')">0 Pedidos</button>
-          <button class="bts" id="tf-nfe-count" onclick="setView('notas')">0 NFs</button>
-        </div>
-      </div>
-
       <div class="toolbar">
         <div class="search-wrap">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="search" placeholder="Buscar produtos por nome ou SKU..." onkeyup="applyFilters()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="search" placeholder="Buscar produto ou SKU..." onkeyup="applyFilters()">
         </div>
-        <button class="bts" onclick="openCreate()">+ Novo Produto</button>
+        <button class="btp" onclick="openCreate()">+ Novo Produto</button>
       </div>
 
-      <div style="margin-bottom: 24px; display:flex; gap:16px; align-items:center;">
-        <span style="font-size:14px; color:var(--text-m)">Layout:</span>
-        <button class="bti" id="lt-grid" onclick="setLayout('grid')" title="Cards"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></button>
-        <button class="bti" id="lt-list" onclick="setLayout('list')" title="Lista"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
-        <button class="bts" id="cb-all" style="display:none"></button> <!-- Preserved for logic -->
+      <div style="margin-bottom: 24px; display:flex; gap:8px; align-items:center;">
+        <span class="text-m" style="margin-right:8px;">Visualização:</span>
+        <button class="bts on" id="lt-grid" onclick="setLayout('grid')">Cards</button>
+        <button class="bts" id="lt-list" onclick="setLayout('list')">Lista</button>
+        <button class="bts" id="cb-all" style="display:none"></button> 
         
-        <!-- HIDDEN BUT NEEDED IDs for logic -->
         <div style="display:none;">
           <div id="fa-cnt"></div><div id="grp-lbl"></div><div id="lt-cat"></div>
           <div id="fpanel"></div><div id="f-status"></div><div id="f-cat"></div>
@@ -221,12 +203,12 @@
         <table>
           <thead>
             <tr>
-              <th width="50">Img</th>
+              <th width="48">Img</th>
               <th>Nome & Categoria</th>
               <th>SKU</th>
               <th>Preço Base</th>
               <th>Estoque</th>
-              <th>Situação</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -240,12 +222,12 @@
 
     <!-- VIEW PEDIDOS -->
     <div class="view" id="view-pedidos">
-      <div class="dash-sec-t">Pedidos de Venda</div>
-      <div style="display:flex; gap:12px; margin-bottom:24px; overflow-x:auto; padding-bottom:8px;">
-        <button class="bts" onclick="setTabPedidos('all')">Todos (<span id="pt-cnt-all">0</span>)</button>
-        <button class="bts" onclick="setTabPedidos('pen')" style="color:var(--wr); border-color:var(--wr-bg)">Pendentes (<span id="pt-cnt-pen">0</span>)</button>
-        <button class="bts" onclick="setTabPedidos('ok')" style="color:var(--ok); border-color:var(--ok-bg)">Concluídos (<span id="pt-cnt-ok">0</span>)</button>
-        <button class="bts" onclick="setTabPedidos('can')" style="color:var(--er); border-color:var(--er-bg)">Cancelados (<span id="pt-cnt-can">0</span>)</button>
+      <div class="dash-sec-t" style="border:none">Pedidos de Venda</div>
+      <div style="display:flex; gap:8px; margin-bottom:24px; border-bottom: 1px solid var(--border); padding-bottom:12px; overflow-x:auto;">
+        <button class="bts on" onclick="setTabPedidos('all')">Todos (<span id="pt-cnt-all">0</span>)</button>
+        <button class="bts" onclick="setTabPedidos('pen')">Pendentes (<span id="pt-cnt-pen">0</span>)</button>
+        <button class="bts" onclick="setTabPedidos('ok')">Concluídos (<span id="pt-cnt-ok">0</span>)</button>
+        <button class="bts" onclick="setTabPedidos('can')">Cancelados (<span id="pt-cnt-can">0</span>)</button>
       </div>
       <div class="vtable-wrap">
         <table>
@@ -255,12 +237,9 @@
               <th>Data</th>
               <th>Cliente</th>
               <th>Situação</th>
-              <th>Itens</th>
               <th>Vlr Produtos</th>
-              <th>Frete Bling</th>
-              <th>Outras Despesas</th>
-              <th>Total Pedido</th>
-              <th>Lucro Liq. (Est.)</th>
+              <th>Total</th>
+              <th>Lucro (Est.)</th>
             </tr>
           </thead>
           <tbody id="pedidos-body"></tbody>
@@ -270,9 +249,8 @@
 
     <!-- VIEW FINANCEIRO -->
     <div class="view" id="view-financeiro">
-      <div class="dash-sec-t">Inteligência Financeira</div>
+      <div class="dash-sec-t" style="border:none">Inteligência Financeira</div>
       
-      <!-- Preserved IDs for logic -->
       <div style="display:none">
         <select id="fin-custom-range"></select>
         <input id="fin-dt-start">
@@ -283,12 +261,12 @@
 
       <div class="dash-hero" id="fin-kpis">
         <div class="hero-card">
-          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Bruto (Concluído)</div>
+          <div class="hero-top">Bruto (Concluído)</div>
           <div class="hero-val" id="fin-bruto">R$ 0,00</div>
           <div class="hero-sub" id="fin-sub-total">Apenas pedidos concluídos</div>
         </div>
-        <div class="hero-card" style="border-color: rgba(16,185,129,0.3);">
-          <div class="hero-top" style="color:var(--ok)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Lucro Líquido (Est.)</div>
+        <div class="hero-card">
+          <div class="hero-top" style="color:var(--ok)">Lucro Líquido (Est.)</div>
           <div class="hero-val" id="fin-rec" style="color:var(--ok)">R$ 0,00</div>
           <div class="hero-sub" id="fin-sub-conc">Receita Bruta - Custo Produtos - Despesas</div>
         </div>
@@ -307,7 +285,7 @@
         </div>
         <div class="dk-card">
           <div class="dk-lbl">Custo com Frete</div>
-          <div class="dk-val" id="fin-frete" style="color:var(--er); font-size:22px;">R$ 0,00</div>
+          <div class="dk-val" id="fin-frete" style="color:var(--text-m); font-size:22px;">R$ 0,00</div>
           <div class="dk-sub">Dos pedidos concluídos</div>
         </div>
         <div class="dk-card">
@@ -328,7 +306,7 @@
 
     <!-- OUTRAS VIEWS SIMPLIFICADAS PARA MANTER OS IDS -->
     <div class="view" id="view-clientes">
-      <div class="dash-sec-t">Clientes</div>
+      <div class="dash-sec-t" style="border:none">Clientes</div>
       <div style="display:none">
         <div id="cli-total"></div><div id="cli-total-sub"></div><div id="cli-ticket"></div>
         <div id="cli-top"></div><div id="cli-top-sub"></div><div id="cli-search"></div>
@@ -343,7 +321,7 @@
     </div>
     
     <div class="view" id="view-historico">
-      <div class="dash-sec-t">Histórico de Alterações</div>
+      <div class="dash-sec-t" style="border:none">Histórico de Alterações</div>
       <div class="vtable-wrap">
         <table>
           <thead><tr><th>Data</th><th>Ação</th><th>Item</th><th>De -> Para</th></tr></thead>
@@ -353,7 +331,7 @@
     </div>
     
     <div class="view" id="view-relatorio">
-      <div class="dash-sec-t">Relatórios Gerenciais</div>
+      <div class="dash-sec-t" style="border:none">Relatórios Gerenciais</div>
       <div style="display:none"><div id="rep-parado"></div><div id="rep-crit"></div><div id="rep-imob"></div><div id="rep-ticket"></div></div>
       <div class="vtable-wrap">
         <table>
@@ -364,7 +342,7 @@
     </div>
     
     <div class="view" id="view-notas">
-      <div class="dash-sec-t">Emissão de NF-e</div>
+      <div class="dash-sec-t" style="border:none">Emissão de NF-e</div>
       <div class="vtable-wrap">
         <table>
           <thead><tr><th>Nº / Série</th><th>Pedido</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Situação NF</th></tr></thead>
@@ -374,14 +352,14 @@
     </div>
 
     <div class="view" id="view-integracoes">
-      <div class="dash-sec-t">Integrações</div>
-      <div class="dash-hero">
-        <div class="hero-card" style="display:flex; align-items:center; gap:20px;">
-          <img src="https://logodownload.org/wp-content/uploads/2016/08/Mercado-Livre-logo-0.png" style="width:60px; filter:brightness(0) invert(1);">
+      <div class="dash-sec-t" style="border:none">Integrações</div>
+      <div class="dash-hero" style="grid-template-columns: 1fr; max-width: 400px;">
+        <div class="hero-card" style="display:flex; flex-direction:row; align-items:center; gap:20px;">
+          <img src="https://logodownload.org/wp-content/uploads/2016/08/Mercado-Livre-logo-0.png" style="width:60px; filter:brightness(0) invert(1); opacity:0.8;">
           <div>
-            <h3 style="font-family:var(--font-d); margin-bottom:4px;">Mercado Livre</h3>
-            <p style="color:var(--text-m); font-size:13px; margin-bottom:12px;">Conectado e sincronizando.</p>
-            <span class="sb2 s-ok">Sincronizado</span>
+            <h3 style="margin-bottom:4px; font-size: 16px;">Mercado Livre</h3>
+            <p style="color:var(--text-m); font-size:13px; margin-bottom:12px;">Sincronização em tempo real.</p>
+            <span class="sb2 s-ok" style="background:var(--ok-bg); color:var(--ok);">Sincronizado</span>
           </div>
         </div>
       </div>
@@ -421,45 +399,44 @@
 
 <!-- ── OVERLAYS & MODALS & UTILS ── -->
 <div id="toast">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ok)"><polyline points="20 6 9 17 4 12"></polyline></svg>
   <span id="undo-msg"></span>
-  <button id="undo-toast" class="bts" style="padding:4px 8px; font-size:12px; margin-left:auto; display:none;">Desfazer</button>
+  <button id="undo-toast" class="bts" style="padding:0 8px; height:24px; font-size:11px; margin-left:auto; display:none;">Desfazer</button>
 </div>
 
 <div class="edraw-ov" id="edraw-ov" onclick="closeEditor()"></div>
 <div class="edraw" id="edraw">
   <div class="edraw-hd">
     <div class="edraw-title" id="edraw-title">Editar Produto</div>
-    <button class="bti" onclick="closeEditor()" style="width:32px; height:32px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    <button class="bti" onclick="closeEditor()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
   </div>
   <div class="edraw-bd" id="edraw-bd">
-    <!-- Preserved IDs -->
     <div class="h-campo"><label>Situação</label><select id="ed-sit"><option value="A">Ativo</option><option value="I">Inativo</option></select></div>
     <div class="h-campo"><label>Tipo</label><select id="ed-tipo"><option value="P">Produto</option><option value="S">Serviço</option></select></div>
     <div class="h-campo"><label>Nome</label><input type="text" id="ed-nome"></div>
     <div class="dash-two">
-      <div class="h-campo"><label>Código (SKU)</label><input type="text" id="ed-codigo"></div>
+      <div class="h-campo"><label>SKU</label><input type="text" id="ed-codigo"></div>
       <div class="h-campo"><label>EAN</label><input type="text" id="ed-ean"></div>
     </div>
     <div class="h-campo"><label>URL da Imagem</label><input type="text" id="ed-img-url" oninput="updateImgPrev()"></div>
-    <div style="width:100%; height:120px; background:rgba(0,0,0,0.2); border-radius:var(--rad-s); display:flex; align-items:center; justify-content:center; overflow:hidden;"><img id="ed-img-prev" style="max-height:100%; max-width:100%; object-fit:contain; display:none;"></div>
+    <div style="width:100%; height:120px; background:var(--bg-hover); border-radius:var(--rad-s); display:flex; align-items:center; justify-content:center; overflow:hidden;"><img id="ed-img-prev" style="max-height:100%; max-width:100%; object-fit:contain; display:none;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2352525b%22 stroke-width=%221.5%22><rect x=%223%22 y=%223%22 width=%2218%22 height=%2218%22 rx=%222%22 ry=%222%22></rect><circle cx=%228.5%22 cy=%228.5%22 r=%221.5%22></circle><polyline points=%2221 15 16 10 5 21%22></polyline></svg>'"></div>
     <div class="dash-two">
       <div class="h-campo"><label>Preço (R$)</label><input type="number" id="ed-preco" step="0.01" oninput="updateMargem()"></div>
       <div class="h-campo"><label>Custo (R$)</label><input type="number" id="ed-custo" step="0.01" oninput="updateMargem()"></div>
     </div>
-    <div style="font-size:13px; color:var(--primary); font-weight:600; text-align:right;">Margem Estimada: <span id="df-margem">0%</span></div>
+    <div style="font-size:12px; color:var(--text-m); text-align:right;">Margem Estimada: <span id="df-margem" style="color:var(--text); font-weight:500;">0%</span></div>
     <div class="dash-two">
-      <div class="h-campo"><label>Estoque Atual</label><input type="number" id="ed-estoque"></div>
+      <div class="h-campo"><label>Estoque</label><input type="number" id="ed-estoque"></div>
       <div class="h-campo"><label>Unidade</label><input type="text" id="ed-unidade"></div>
     </div>
     <div class="dash-two">
       <div class="h-campo"><label>Peso (Kg)</label><input type="number" id="ed-peso" step="0.01"></div>
       <div class="h-campo"><label>Categoria</label><input type="text" id="ed-cat"></div>
     </div>
-    <div class="h-campo"><label>Descrição Curta</label><textarea id="ed-desc" rows="3"></textarea></div>
+    <div class="h-campo"><label>Descrição</label><textarea id="ed-desc" rows="3"></textarea></div>
   </div>
-  <div style="padding:24px 32px; border-top:1px solid var(--border-l); background:rgba(0,0,0,0.2);">
-    <button class="btp" id="edraw-save" style="width:100%; justify-content:center;" onclick="saveEditorFull()">Salvar e Sincronizar Bling</button>
+  <div style="padding:16px 24px; border-top:1px solid var(--border); background:var(--bg);">
+    <button class="btp" id="edraw-save" style="width:100%;" onclick="saveEditorFull()">Salvar e Sincronizar Bling</button>
   </div>
 </div>
 
@@ -467,42 +444,42 @@
 <div class="edraw" id="mais-menu" style="bottom:0; top:auto; height:auto; max-height:80vh; transform:translateY(100%);">
   <div class="edraw-hd" style="border:none; padding-bottom:0;">
     <div class="edraw-title">Mais opções</div>
-    <button class="bti" onclick="closeMaisMenu()">X</button>
+    <button class="bti" onclick="closeMaisMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
   </div>
   <div class="mais-grid">
     <button class="mais-item" onclick="setView('clientes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
       <span>Clientes</span>
     </button>
     <button class="mais-item" onclick="setView('relatorio')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       <span>Relatório</span>
     </button>
     <button class="mais-item" onclick="setView('historico')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span>Histórico</span>
     </button>
     <button class="mais-item" onclick="setView('notas')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       <span>NF-e</span>
     </button>
     <button class="mais-item" onclick="setView('integracoes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       <span>Integrações</span>
     </button>
   </div>
   <div class="mais-sep"></div>
   <div class="mais-actions">
     <button class="mais-row-item" onclick="setView('config')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Configurações
     </button>
     <button class="mais-row-item" onclick="window.location.href='/conectar.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
       Reconectar Bling
     </button>
     <button class="mais-row-item danger" onclick="logout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sair da conta
     </button>
   </div>
@@ -510,6 +487,7 @@
 
 <!-- HIDDEN MODALS & DIVS (ID preservation) -->
 <div style="display:none">
+  <div id="tarefas-panel"></div><div id="tf-total-badge"></div><div id="tf-zerados"></div><div id="tf-criticos"></div><div id="tf-pend-count"></div><div id="tf-nfe-count"></div>
   <div id="cli-modal"></div><div id="cli-ficha"></div>
   <div id="pw-modal"></div><div id="pw-title"></div><div id="pw-desc"></div><div id="pw-input"></div><div id="pw-err"></div><div id="pw-ok"></div>
   <div id="bbar"></div><div id="bbar-cnt"></div><div id="bdrop"></div><div id="sheet"></div>
