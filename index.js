@@ -643,7 +643,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
   let success = 0;
   const errors = [];
 
-  for (const p of produtos) {
+  await Promise.all(produtos.map(async (p) => {
     try {
       if (p.preco !== undefined && p.preco !== '') {
         await axios.put(`https://www.bling.com.br/Api/v3/produtos/${p.id}`,
@@ -671,7 +671,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
     } catch (err) {
       errors.push({ id: p.id, nome: p.nome, error: err.response?.data?.error?.message || err.message });
     }
-  }
+  }));
 
   res.json({ success, errors, total: produtos.length });
 });
