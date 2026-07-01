@@ -443,7 +443,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
   }
 });
 
-app.get('/api/webhook/bling', async (req, res) => {
+app.get(['/api/auth/callback', '/api/webhook/bling'], async (req, res) => {
   const { code, error } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
