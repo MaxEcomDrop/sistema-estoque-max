@@ -4,48 +4,6 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
-
-// --- Cache e Retry ---
-const apiCache = new Map();
-
-async function fetchWithRetry(fetchFn) {
-  let attempts = 0;
-  while (attempts < 4) {
-    try {
-      return await fetchFn();
-    } catch (err) {
-      if (err.response?.status === 429) {
-        attempts++;
-        await new Promise(r => setTimeout(r, 1000 * attempts));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error('Rate limit exceeded after retries');
-}
-
-async function fetchWithCache(key, ttlMs, fetchFn) {
-  const cached = apiCache.get(key);
-  if (cached && Date.now() < cached.exp) return cached.data;
-  let attempts = 0;
-  while(attempts < 3) {
-    try {
-      const data = await fetchFn();
-      apiCache.set(key, { data, exp: Date.now() + ttlMs });
-      return data;
-    } catch(err) {
-      if (err.response?.status === 429) {
-        attempts++;
-        await new Promise(r => setTimeout(r, 1000 * attempts));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error('Rate limit exceeded after retries');
-}
-
 const crypto = require('crypto');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
@@ -85,6 +43,8 @@ function getAdmin() {
 }
 
 const app = express();
+// Confia no 1º proxy da cadeia (Vercel/Render) para req.ip refletir o IP real do cliente
+app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -102,31 +62,24 @@ const ADMIN_EMAIL         = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD      = process.env.ADMIN_PASSWORD;
 const JWT_SECRET          = process.env.JWT_SECRET;
 const NODE_ENV            = process.env.NODE_ENV || 'development';
-const ML_CLIENT_ID        = process.env.ML_CLIENT_ID || '';
-const ML_CLIENT_SECRET    = process.env.ML_CLIENT_SECRET || '';
-const ML_REDIRECT_URI     = process.env.ML_REDIRECT_URI || '';
+
+const ML_CLIENT_ID     = process.env.ML_CLIENT_ID     || '';
+const ML_CLIENT_SECRET = process.env.ML_CLIENT_SECRET || '';
+const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 
 // In-memory change log (resets on cold start)
 // TODO: Persistir em banco de dados em produção
 const changeLog = [];
-// In-memory: eventos de calendário (resets on cold start)
-// TODO: Persistir em banco de dados em produção
+
+// In-memory contas customizadas (despesas, receitas extras)
+// TODO: Persistir em banco de dados ou Firestore em produção
+const customContas = [];
+let contaIdCounter = 1;
+
+// In-memory calendário (eventos, feriados, datas importantes)
+// TODO: Persistir em banco de dados ou Firestore em produção
 const calendarEvents = [];
 let eventIdCounter = 1;
-function pushLog(logData) {
-  const admin = getAdmin();
-  if (admin) {
-    admin.firestore().collection('historico').add({
-      ...logData,
-      timestamp: admin.firestore.FieldValue.serverTimestamp()
-    }).catch(console.error);
-  } else {
-    // Fallback seguro em memória
-    logData.timestamp = new Date().toISOString();
-    changeLog.push(logData);
-    console.log('[Historico Local]', logData);
-  }
-}
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;
@@ -153,6 +106,55 @@ function safeEqual(a, b) {
   } catch { return false; }
 }
 
+// Rate limit simples em memória para /api/auth/login (proteção contra brute force)
+const _loginAttempts = new Map(); // ip -> { count, firstAt }
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function loginRateLimit(req, res, next) {
+  const ip = req.ip;
+  if (!ip) return next(); // não conseguimos identificar o cliente — não bloqueia (evita lockout global)
+  const now = Date.now();
+  const entry = _loginAttempts.get(ip);
+  if (entry && now - entry.firstAt < LOGIN_WINDOW_MS) {
+    if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+      const waitMin = Math.ceil((LOGIN_WINDOW_MS - (now - entry.firstAt)) / 60000);
+      return sendErrorResponse(res, 429, `Muitas tentativas de login. Tente novamente em ${waitMin} minuto(s).`);
+    }
+  } else {
+    _loginAttempts.set(ip, { count: 0, firstAt: now });
+  }
+  next();
+}
+
+function registerLoginFailure(req) {
+  const ip = req.ip;
+  if (!ip) return;
+  const entry = _loginAttempts.get(ip) || { count: 0, firstAt: Date.now() };
+  entry.count += 1;
+  _loginAttempts.set(ip, entry);
+}
+
+function clearLoginFailures(req) {
+  const ip = req.ip;
+  if (!ip) return;
+  _loginAttempts.delete(ip);
+}
+
+// Input validation helpers
+function isValidNumericId(id) {
+  return /^\d+$/.test(String(id).trim());
+}
+
+function validateNumericId(id, fieldName = 'ID') {
+  if (!isValidNumericId(id)) {
+    const err = new Error(`${fieldName} inválido: esperado número`);
+    err.statusCode = 400;
+    throw err;
+  }
+  return Number(id);
+}
+
 function requireAuth(req, res, next) {
   try { jwt.verify(req.cookies?.system_token || '', JWT_SECRET); next(); }
   catch { res.clearCookie('system_token'); res.redirect('/login'); }
@@ -165,6 +167,22 @@ function requireAuthJson(req, res, next) {
 
 function blingHeaders(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+// Axios config with timeout to prevent hanging requests
+const AXIOS_TIMEOUT = 15000; // 15 segundos
+axios.defaults.timeout = AXIOS_TIMEOUT;
+
+// Handle common API errors
+function getApiErrorMessage(err) {
+  if (err.code === 'ECONNABORTED') return 'Requisição expirou - tente novamente';
+  if (err.code === 'ENOTFOUND') return 'Sem conexão com a internet';
+  if (err.response?.status === 401) return 'Token expirado';
+  if (err.response?.status === 403) return 'Acesso negado';
+  if (err.response?.status === 404) return 'Recurso não encontrado';
+  if (err.response?.status === 429) return 'Muitas requisições - tente novamente em alguns segundos';
+  if (err.response?.status === 500) return 'Erro no servidor - tente novamente';
+  return err.response?.data?.error?.message || err.message || 'Erro desconhecido';
 }
 
 // ── Bling token: renovação automática via refresh_token ──────────
@@ -248,6 +266,25 @@ function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
   res.status(statusCode).json(response);
 }
 
+const _SIT_PT_MAP = {
+  'pending':'Pendente','approved':'Aprovado','paid':'Pago','processing':'Em processamento',
+  'in_process':'Em processamento','shipped':'Enviado','delivered':'Entregue','completed':'Concluído',
+  'complete':'Concluído','cancelled':'Cancelado','canceled':'Cancelado','refunded':'Reembolsado',
+  'failed':'Falhou','open':'Em aberto','closed':'Encerrado','waiting':'Aguardando',
+  'waiting_payment':'Aguardando pagamento','ready_to_ship':'Pronto p/ envio',
+  'return':'Devolvido','returned':'Devolvido','partially_refunded':'Parcialmente devolvido',
+  'on_hold':'Em espera','suspended':'Suspenso','voided':'Cancelado','disputed':'Contestado',
+};
+const _TRANSP_TIPO = {
+  'R':'A cargo do destinatário','E':'A cargo do remetente','T':'A cargo de terceiros',
+  'D':'Sem frete','S':'Sem frete','own_account':'Conta própria','third_party':'Terceiros',
+  'recipient':'Destinatário','sender':'Remetente','free':'Frete grátis',
+};
+function situacaoPT(s) {
+  const raw = String(s || '—');
+  return _SIT_PT_MAP[raw.toLowerCase().replace(/\s+/g,'_')] || raw;
+}
+
 // Resolve intervalo de datas a partir do período (today | 7d | 30d | custom)
 function resolvePeriodo(period, startDate, endDate) {
   const hoje = new Date();
@@ -269,62 +306,49 @@ function resolvePeriodo(period, startDate, endDate) {
 
 // ── Páginas ──────────────────────────────────────────────────────────
 
-app.get('/login', (req, res) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.sendFile(__dirname + '/public/login.html');
-});
-app.get('/', requireAuth, (req, res) => res.redirect('/dashboard.html'));
-app.get('/conectar.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/conectar.html'));
-
-app.get('/dashboard.html', requireAuth, (req, res) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  res.set('Surrogate-Control', 'no-store');
-  res.sendFile(__dirname + '/public/dashboard.html');
-});
+app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
+app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
+app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
+app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
 app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
-// Service Worker — DEVE ser servido sem cache e com scope correto
-app.get('/sw.js', (req, res) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-  res.set('Service-Worker-Allowed', '/');
-  res.set('Content-Type', 'application/javascript');
-  res.sendFile(__dirname + '/public/sw.js');
-});
-
-// Manifest — precisa ser acessível publicamente
-app.get('/manifest.json', (req, res) => {
-  res.set('Cache-Control', 'no-cache');
-  res.sendFile(__dirname + '/public/manifest.json');
-});
-
-// Arquivos estáticos — usa __dirname para funcionar no Vercel Serverless
-app.use(express.static(__dirname + '/public', { index: false }));
+app.use(express.static('public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginRateLimit, (req, res) => {
   const { email, password } = req.body || {};
-  
+
   if (!email || !password) {
     return sendErrorResponse(res, 400, 'Email e senha são obrigatórios');
   }
-  
+
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !JWT_SECRET) {
+    return sendErrorResponse(res, 500,
+      'Configuração incompleta: variáveis de ambiente ADMIN_EMAIL, ADMIN_PASSWORD ou JWT_SECRET não definidas. ' +
+      'Acesse Vercel → Settings → Environment Variables e configure-as, depois faça um novo deploy.');
+  }
+
   if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
+    registerLoginFailure(req);
     return sendErrorResponse(res, 401, 'Email ou senha incorretos');
   }
 
-  const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('system_token', token, {
-    httpOnly: true, 
-    secure: NODE_ENV === 'production',
-    sameSite: 'lax', 
-    maxAge: 7 * 24 * 3600 * 1000,
-  });
-  res.json({ success: true });
+  try {
+    clearLoginFailures(req);
+    const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('system_token', token, {
+      httpOnly: true,
+      secure: NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 3600 * 1000,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    sendErrorResponse(res, 500, 'Erro ao gerar token. Verifique JWT_SECRET nas variáveis de ambiente.', e.message);
+  }
 });
 
 // Reconfirma a senha (para liberar áreas/ações sensíveis, estilo Shopee)
@@ -342,42 +366,6 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-// Login via Firebase Authentication (Google)
-app.post('/api/auth/firebase', async (req, res) => {
-  const { idToken, email } = req.body || {};
-
-  if (!idToken || !email) {
-    return sendErrorResponse(res, 400, 'ID token e email são obrigatórios');
-  }
-
-  if (!ADMIN_EMAIL || !JWT_SECRET) {
-    return sendErrorResponse(res, 500, 'Configuração incompleta: ADMIN_EMAIL ou JWT_SECRET não definidos');
-  }
-
-  const admin = getAdmin();
-  if (admin) {
-    try {
-      await admin.auth().verifyIdToken(idToken);
-    } catch (err) {
-      console.error('[Firebase Auth]', err.message);
-      return sendErrorResponse(res, 401, 'Token do Firebase inválido ou expirado');
-    }
-  }
-
-  if (!safeEqual(email, ADMIN_EMAIL)) {
-    return sendErrorResponse(res, 403, 'Email não autorizado. Entre em contato com o administrador.');
-  }
-
-  const token = jwt.sign({ email: ADMIN_EMAIL, provider: 'firebase' }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('system_token', token, {
-    httpOnly: true,
-    secure: NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 3600 * 1000,
-  });
-  res.json({ success: true });
-});
-
 // ── OAuth Bling ──────────────────────────────────────────────────────
 
 app.get('/api/auth/url', requireAuthJson, (req, res) => {
@@ -390,7 +378,72 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
   res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
 });
 
-app.get(['/api/auth/callback', '/api/webhook/bling'], async (req, res) => {
+app.get('/api/auth/google/url', (req, res) => {
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+  const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
+
+  if (!GOOGLE_CLIENT_ID) {
+    return res.json({ authUrl: null, error: 'Google OAuth não configurado' });
+  }
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    scope: 'openid email profile',
+    access_type: 'offline',
+  });
+  res.json({ authUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
+});
+
+app.get('/api/auth/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+  const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
+
+  if (error) return res.redirect(`/login?error=${encodeURIComponent(error)}`);
+  if (!code || !GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.redirect('/login?error=invalid_google_config');
+  }
+
+  try {
+    const { data } = await axios.post('https://oauth2.googleapis.com/token', {
+      grant_type: 'authorization_code',
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: GOOGLE_REDIRECT_URI,
+    });
+
+    if (!data.id_token) throw new Error('No ID token received');
+
+    const idToken = data.id_token;
+    res.cookie('auth_token', idToken, {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+
+    changeLog.push({
+      id: changeLog.length + 1,
+      produto_id: '—',
+      produto_nome: 'Login Google',
+      campo: 'autenticação',
+      valor_anterior: '—',
+      valor_novo: 'login_success',
+      timestamp: new Date().toISOString(),
+    });
+
+    res.redirect('/dashboard.html');
+  } catch (err) {
+    console.error('[Google OAuth]', err.message);
+    res.redirect('/login?error=google_auth_failed');
+  }
+});
+
+app.get('/api/webhook/bling', async (req, res) => {
   const { code, error } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
@@ -412,9 +465,55 @@ app.get(['/api/auth/callback', '/api/webhook/bling'], async (req, res) => {
   }
 });
 
-// ── OAuth Mercado Livre (dados 100% separados do Bling) ──────────────
+// Firebase Authentication endpoint
+app.post('/api/auth/firebase', async (req, res) => {
+  const { idToken, email } = req.body || {};
 
-// Cache em memória do access_token do ML (TTL ~6h) para evitar round-trips ao Firestore
+  if (!idToken || !email) {
+    return sendErrorResponse(res, 400, 'ID token e email são obrigatórios');
+  }
+
+  if (!ADMIN_EMAIL || !JWT_SECRET) {
+    return sendErrorResponse(res, 500, 'Configuração incompleta: ADMIN_EMAIL ou JWT_SECRET não definidos');
+  }
+
+  try {
+    // Try to verify Firebase token with Admin SDK
+    const admin = getAdmin();
+    let firebaseUser = null;
+
+    if (admin) {
+      try {
+        firebaseUser = await admin.auth().verifyIdToken(idToken);
+      } catch (err) {
+        console.error('[Firebase Auth]', err.message);
+        return sendErrorResponse(res, 401, 'Token do Firebase inválido ou expirado');
+      }
+    }
+
+    // Check if email matches authorized user
+    if (!safeEqual(email, ADMIN_EMAIL)) {
+      return sendErrorResponse(res, 403, 'Email não autorizado. Entre em contato com o administrador.');
+    }
+
+    // Create JWT token for app
+    clearLoginFailures(req);
+    const token = jwt.sign({ email: ADMIN_EMAIL, provider: 'firebase' }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('system_token', token, {
+      httpOnly: true,
+      secure: NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 3600 * 1000,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao autenticar', err.message);
+  }
+});
+
+// ── OAuth Mercado Livre ───────────────────────────────────────────────
+
+// In-memory cache for ML access_token (TTL ~6h) to avoid Firestore round-trips
 let _mlTokenCache = { token: null, expiresAt: 0, sellerId: null };
 
 async function saveMLTokens(accessToken, refreshToken, sellerId, expiresIn) {
@@ -462,7 +561,7 @@ function mlHeaders(token) {
 app.get('/api/ml/auth/url', requireAuthJson, (req, res) => {
   if (!ML_CLIENT_ID) return res.status(400).json({ error: 'ML_CLIENT_ID não configurado' });
   const params = new URLSearchParams({ response_type: 'code', client_id: ML_CLIENT_ID, redirect_uri: ML_REDIRECT_URI, state: 'estoque_max_ml' });
-  res.json({ authUrl: `https://auth.mercadolivre.com.br/authorization?${params}` });
+  res.json({ authUrl: `https://auth.mercadolibre.com.br/authorization?${params}` });
 });
 
 app.get('/api/ml/callback', async (req, res) => {
@@ -570,54 +669,6 @@ app.get('/api/ml/metricas', requireAuthJson, async (req, res) => {
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar métricas ML', e.message); }
 });
 
-// ── Calendário (Eventos, Feriados, Datas Importantes) ────────────────
-
-app.get('/api/calendario', requireAuthJson, (req, res) => {
-  const mes = req.query.mes; // filtrar por mês (YYYY-MM)
-  let filtered = calendarEvents;
-  if (mes) filtered = filtered.filter(e => e.data.startsWith(mes));
-  res.json({ eventos: filtered });
-});
-
-app.post('/api/calendario', requireAuthJson, (req, res) => {
-  const { tipo, titulo, descricao, data, contaId } = req.body;
-
-  if (!tipo || !['feriado', 'comemorativo', 'vencimento', 'recebimento', 'evento'].includes(tipo)) {
-    return sendErrorResponse(res, 400, 'Tipo de evento inválido');
-  }
-  if (!titulo || !data) {
-    return sendErrorResponse(res, 400, 'Título e data são obrigatórios');
-  }
-
-  const id = eventIdCounter++;
-  const evento = {
-    id,
-    tipo,
-    titulo,
-    descricao: descricao || '',
-    data,
-    contaId: contaId || null,
-    criado_em: new Date().toISOString(),
-  };
-
-  calendarEvents.push(evento);
-  res.json(evento);
-});
-
-app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    const idx = calendarEvents.findIndex(e => e.id === id);
-
-    if (idx === -1) return res.status(404).json({ error: 'Evento não encontrado' });
-
-    calendarEvents.splice(idx, 1);
-    res.json({ success: true });
-  } catch (err) {
-    sendErrorResponse(res, 500, 'Erro ao deletar evento', err.message);
-  }
-});
-
 // ── Produtos ─────────────────────────────────────────────────────────
 
 app.get('/api/produtos', requireAuthJson, async (req, res) => {
@@ -673,11 +724,13 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${req.params.id}`, {
+    const produtoId = validateNumericId(req.params.id, 'ID do produto');
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${produtoId}`, {
       headers: blingHeaders(token),
     });
     res.json(data?.data || {});
   } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     if (err.response?.status === 404) return res.status(404).json({ error: 'Produto não encontrado' });
     sendErrorResponse(res, 500, 'Erro ao buscar produto', err.message);
   }
@@ -692,7 +745,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
-    pushLog({
+    changeLog.push({
       id: changeLog.length + 1, produto_id: criado?.id || '—',
       produto_nome: req.body.nome || 'Novo produto', campo: 'criação',
       valor_anterior: '—', valor_novo: req.body.nome || '—',
@@ -721,9 +774,10 @@ async function fetchPedidos(token, inicio, fim, maxPg = 3) {
 }
 
 const categorizePedido = s => {
-  const n = String(s?.nome || s?.valor || s || '').toLowerCase();
-  if (n.includes('cancel')) return 'cancelado';
-  if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
+  const raw = String(s?.nome || s?.valor || s || '');
+  const n = (situacaoPT(raw)).toLowerCase();
+  if (n.includes('cancel') || n.includes('devolv') || n.includes('reembolsad') || n.includes('suspenso') || n.includes('falhou')) return 'cancelado';
+  if (n.includes('atend') || n.includes('conclui') || n.includes('entregue') || n.includes('faturad') || n.includes('despachad') || n.includes('enviado') || n.includes('encerrad')) return 'concluido';
   return 'pendente';
 };
 const valorPedido = p => p.totalVenda || p.totalProdutos || 0;
@@ -762,17 +816,17 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const receitaConcluida = sum(concluidos,  valorPedido);
     const totalCancelado   = sum(cancelados,  valorPedido);
     const totalPendente    = sum(pendentes,   valorPedido);
-    const totalFrete       = sum(allPedidos, p => p.transporte?.frete || p.frete || 0);
-    const totalDesconto    = sum(allPedidos, p => p.desconto?.valor || p.totalDescontos || 0);
+    const totalFrete       = sum(allPedidos, p => p.totalFrete || p.frete);
+    const totalDesconto    = sum(allPedidos, p => p.desconto);
 
     // Comparativo com período anterior (faturamento concluído)
     const prevConcluidos = prevPedidos.filter(p => categorize(p.situacao) === 'concluido');
     const prevReceita = sum(prevConcluidos, valorPedido);
     const variacao = prevReceita > 0 ? ((receitaConcluida - prevReceita) / prevReceita) * 100 : null;
 
-    // Série diária para gráfico
+    // Série diária para gráfico (apenas pedidos concluídos = receita real)
     const byDay = {};
-    allPedidos.forEach(p => {
+    concluidos.forEach(p => {
       const day = String(p.data || p.dataPedido || '').substring(0, 10);
       if (day) byDay[day] = (byDay[day] || 0) + valorPedido(p);
     });
@@ -785,7 +839,7 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
       concluidos: concluidos.length,
       cancelados: cancelados.length,
       pendentes: pendentes.length,
-      ticketMedio: allPedidos.length > 0 ? totalBruto / allPedidos.length : 0,
+      ticketMedio: concluidos.length > 0 ? receitaConcluida / concluidos.length : 0,
       comparativo: { receitaAnterior: prevReceita, variacao, inicio: prev.inicio, fim: prev.fim },
       byDay,
     });
@@ -802,12 +856,13 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
 
-  const { id } = req.params;
-  const { estoque, preco, nome_produto, valor_anterior, _fullUpdate } = req.body;
+  try {
+    const id = validateNumericId(req.params.id, 'ID do produto');
+    const { estoque, preco, precoCusto, nome_produto, valor_anterior, _fullUpdate } = req.body;
 
-  // Atualização completa via drawer editor
-  if (_fullUpdate) {
-    try {
+    // Atualização completa via drawer editor
+    if (_fullUpdate) {
+      try {
       // Converte imagemUrl (campo frontend) para formato Bling
       const payload = { ..._fullUpdate };
       if (payload.imagemUrl !== undefined) {
@@ -824,7 +879,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      pushLog({
+      changeLog.push({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: _fullUpdate.nome || `#${id}`, campo: 'edição completa',
         valor_anterior: '—', valor_novo: 'campos atualizados',
@@ -850,11 +905,30 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
-      pushLog({
+      changeLog.push({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'preço',
         valor_anterior: valor_anterior || '—',
         valor_novo: `R$ ${Number(preco).toFixed(2)}`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    if (precoCusto !== undefined) {
+      const { data: current } = await axios.get(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { headers: blingHeaders(token) }
+      );
+      const prod = current?.data || {};
+      await axios.put(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { ...prod, precoCusto: Number(precoCusto) },
+        { headers: blingHeaders(token) }
+      );
+      changeLog.push({
+        id: changeLog.length + 1, produto_id: id,
+        produto_nome: nome_produto || `#${id}`, campo: 'custo',
+        valor_anterior: valor_anterior || '—',
+        valor_novo: `R$ ${Number(precoCusto).toFixed(2)}`,
         timestamp: new Date().toISOString(),
       });
     }
@@ -864,19 +938,82 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
-      pushLog({
+      const { motivo } = req.body;
+      changeLog.push({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'estoque',
         valor_anterior: valor_anterior || '—',
-        valor_novo: `${Number(estoque)} un.`,
+        valor_novo: `${Number(estoque)} un.${motivo ? ' — ' + motivo : ''}`,
         timestamp: new Date().toISOString(),
       });
     }
     res.json({ success: true });
+    } catch (err) {
+      console.error('[Update]', err.response?.data || err.message);
+      const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+      sendErrorResponse(res, 500, 'Erro ao atualizar produto', detail);
+    }
   } catch (err) {
-    console.error('[Update]', err.response?.data || err.message);
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    console.error('[Update]', err.message);
+    sendErrorResponse(res, 500, 'Erro ao processar requisição', err.message);
+  }
+});
+
+app.delete('/api/produtos/:id', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  try {
+    const id = validateNumericId(req.params.id, 'ID do produto');
+    const nomeProduto = req.body?.nome_produto || `#${id}`;
+    await axios.delete(`https://www.bling.com.br/Api/v3/produtos/${id}`, { headers: blingHeaders(token) });
+    changeLog.push({
+      id: changeLog.length + 1, produto_id: id,
+      produto_nome: nomeProduto, campo: 'exclusão',
+      valor_anterior: 'produto ativo', valor_novo: 'excluído',
+      timestamp: new Date().toISOString(),
+    });
+    res.json({ success: true });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
-    sendErrorResponse(res, 500, 'Erro ao atualizar produto', detail);
+    sendErrorResponse(res, 500, 'Erro ao excluir produto', detail);
+  }
+});
+
+app.post('/api/produtos/:id/duplicar', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  try {
+    const id = validateNumericId(req.params.id, 'ID do produto');
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${id}`, { headers: blingHeaders(token) });
+    const prod = data?.data || {};
+    const payload = { ...prod };
+    delete payload.id;
+    payload.nome = `${prod.nome || 'Produto'} (cópia)`;
+    payload.codigo = prod.codigo ? `${prod.codigo}-COPIA${Date.now().toString().slice(-5)}` : undefined;
+    const { data: created } = await axios.post('https://www.bling.com.br/Api/v3/produtos', payload, { headers: blingHeaders(token) });
+    changeLog.push({
+      id: changeLog.length + 1, produto_id: created?.data?.id || '—',
+      produto_nome: payload.nome, campo: 'duplicação',
+      valor_anterior: `origem #${id}`, valor_novo: 'produto criado',
+      timestamp: new Date().toISOString(),
+    });
+    res.json({ success: true, id: created?.data?.id });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+    sendErrorResponse(res, 500, 'Erro ao duplicar produto', detail);
   }
 });
 
@@ -907,7 +1044,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      pushLog({
+      changeLog.push({
         id: changeLog.length + 1,
         produto_id: p.id,
         produto_nome: p.nome || `#${p.id}`,
@@ -932,58 +1069,26 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    const pedidosBling = await fetchWithCache(`pedidos_recentes_${token.substring(0,10)}`, 45000, async () => {
-      let all = [];
-      for (let pg = 1; pg <= 2; pg++) {
-        const { data } = await fetchWithRetry(() => axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: { limite: 100, pagina: pg },
-        }));
-        const items = Array.isArray(data?.data) ? data.data : [];
-        all = all.concat(items);
-        if (items.length < 100) break;
-      }
+    const { inicio, fim } = req.query;
+    let raw;
+    if (inicio && fim) {
+      raw = await fetchPedidos(token, inicio, fim, 5);
+    } else {
+      const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: 1 },
+      });
+      raw = Array.isArray(data?.data) ? data.data : [];
+    }
 
-      // Fetch deeper details for the first 12 orders
-      const top12 = all.slice(0, 12);
-      for (let i = 0; i < top12.length; i += 3) {
-        const batch = top12.slice(i, i + 3);
-        await Promise.all(batch.map(async (p) => {
-          try {
-            const { data: detailData } = await fetchWithRetry(() => axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${p.id}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            }));
-            const d = detailData?.data || {};
-            p.transporte = d.transporte || p.transporte;
-            p.desconto = d.desconto || p.desconto;
-            p.tributos = d.tributos || {};
-          } catch(e) { }
-        }));
-        if (i + 3 < top12.length) await new Promise(r => setTimeout(r, 1100)); 
-      }
-      return all;
-    });
-
-    const pedidos = pedidosBling.map(p => {
-      const valorBruto = p.totalProdutos || p.totalVenda || p.total || 0;
-      const frete = p.transporte?.fretePorConta || p.transporte?.frete || p.frete || 0;
-      const desconto = p.desconto?.valor || p.totalDescontos || p.desconto || 0;
-      const impostosEstimados = p.tributos?.total || (valorBruto * 0.06);
-      let lucroLiquido = valorBruto - frete - desconto - impostosEstimados;
-      
-      return {
-        id:        p.id,
-        numero:    p.numero,
-        data:      p.data,
-        valor:     valorBruto,
-        frete,
-        desconto,
-        impostos: impostosEstimados,
-        lucro:     lucroLiquido,
-        situacao:  String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
-        contato:   p.contato?.nome || '—',
-      };
-    });
+    const pedidos = raw.map(p => ({
+      id:        p.id,
+      numero:    p.numero,
+      data:      p.data,
+      valor:     Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
+      situacao:  situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      contato:   p.contato?.nome || '—',
+    }));
 
     res.json({ total: pedidos.length, pedidos });
   } catch (err) {
@@ -992,6 +1097,49 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, 500, 'Erro ao buscar pedidos', err.message);
+  }
+});
+
+app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  try {
+    const id = validateNumericId(req.params.id, 'ID do pedido');
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const p = data?.data || data || {};
+    const itens = (Array.isArray(p.itens) ? p.itens : []).map(it => ({
+      codigo:    it.codigo || it.produto?.codigo || '',
+      descricao: it.descricao || it.produto?.nome || 'Item',
+      qtd:       Number(it.quantidade) || 0,
+      valor:     Number(it.valor) || 0,
+      total:     (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
+    }));
+
+    res.json({
+      id:          p.id,
+      numero:      p.numero,
+      data:        p.data,
+      situacao:    situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      contato:     p.contato?.nome || '—',
+      contatoDoc:  p.contato?.numeroDocumento || '',
+      contatoTel:  p.contato?.celular || p.contato?.telefone || '',
+      observacoes: p.observacoes || p.observacoesInternas || '',
+      total:       Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
+      frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
+      transportadora:   p.transporte?.transportadora?.nome || _TRANSP_TIPO[p.transporte?.tipo] || '',
+      desconto:         Number(p.desconto) || 0,
+      itens,
+    });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar detalhe do pedido', err.message);
   }
 });
 
@@ -1022,6 +1170,69 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, 500, 'Erro ao buscar NF-e', err.message);
+  }
+});
+
+app.get('/api/nfe/:id/detalhe', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const id = validateNumericId(req.params.id, 'ID da NF-e');
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/nfe/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const n = data?.data || data || {};
+    const itens = (Array.isArray(n.itens) ? n.itens : []).map(it => ({
+      descricao: it.descricao || it.produto?.nome || 'Item',
+      codigo: it.codigo || it.produto?.codigo || '',
+      qtd: Number(it.quantidade) || 0,
+      valor: Number(it.valor) || 0,
+      total: (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
+    }));
+    res.json({
+      id: n.id,
+      numero: n.numero,
+      serie: n.serie || '1',
+      dataEmissao: n.dataEmissao || n.data || '',
+      total: n.totalProdutos || n.total || n.valor || 0,
+      totalFrete: Number(n.totalFrete || 0),
+      totalDesconto: Number(n.totalDesconto || 0),
+      situacao: String(n.situacao?.nome || n.situacao?.valor || n.situacao || '—'),
+      chave: n.chaveAcesso || n.chave || '',
+      contato: n.contato?.nome || '—',
+      contatoDoc: n.contato?.numeroDocumento || '',
+      natureza: n.naturezaOperacao || '',
+      modelo: n.modelo || '55',
+      itens,
+    });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar NF-e', err.message);
+  }
+});
+
+app.get('/api/nfe/:id/danfe', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const id = validateNumericId(req.params.id, 'ID da NF-e');
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/nfe/${id}/danfe`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const link = data?.data?.link || data?.link;
+    if (!link) return res.status(404).json({ error: 'Link da DANFE não disponível' });
+    res.json({ link });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, err.response?.status || 500, 'Erro ao buscar DANFE', err.message);
   }
 });
 
@@ -1276,7 +1487,7 @@ app.get('/api/cron/resumo', async (req, res) => {
     const { title, body } = montaResumo(slot, { fat, lucro: fat * prod.margem, nv: concl.length, zerados: prod.zerados, brl, temMargem: prod.margem > 0 });
     const sent = await pushParaTodos(admin, { title, body, tipo: 'resumo' });
     res.json({ ok: true, slot, sent, fat, nv: concl.length });
-  } catch (e) { res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Cron: alerta de estoque zerado/crítico
@@ -1292,11 +1503,12 @@ app.get('/api/cron/estoque', async (req, res) => {
     const body = `${prod.zerados} produto(s) zerado(s)` + (prod.criticos ? ` e ${prod.criticos} crítico(s) (≤5)` : '') + '. Toque para repor.';
     const sent = await pushParaTodos(admin, { title: '⚠️ Alerta de estoque', body, tipo: 'estoque' });
     res.json({ ok: true, sent, zerados: prod.zerados, criticos: prod.criticos });
-  } catch (e) { res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
 app.get('/api/cron/push', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   const admin = getAdmin();
   if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
   try {
@@ -1323,7 +1535,7 @@ app.get('/api/cron/push', async (req, res) => {
         batch.update(doc.ref, { status: 'sent', sent: successCount, sentAt: admin.firestore.FieldValue.serverTimestamp() });
         sent++;
       } catch (e) {
-        batch.update(doc.ref, { status: 'error', error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message });
+        batch.update(doc.ref, { status: 'error', error: e.message });
       }
     }
     await batch.commit();
@@ -1394,12 +1606,7 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
 
   const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
 
-  const categorize = s => {
-    const n = String(s?.nome || s?.valor || s || '').toLowerCase();
-    if (n.includes('cancel')) return 'cancelado';
-    if (n.includes('atend') || n.includes('conclui') || n.includes('entregue')) return 'concluido';
-    return 'pendente';
-  };
+  const categorize = s => categorizePedido(s);
 
   try {
     // Pedidos do período + período anterior + contas, em paralelo
@@ -1430,6 +1637,10 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     const totalBruto  = sum(allPedidos);
     const aReceberPedidos = sum(pendentes);
 
+    // Custos detalhados (frete, descontos) dos pedidos concluídos
+    const freteTotal = concluidos.reduce((a, p) => a + (Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0), 0);
+    const descontoTotal = concluidos.reduce((a, p) => a + (Number(p.desconto) || 0), 0);
+
     // Comparativo de faturamento com o período anterior
     const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
     const prevFat = prevPedidos.filter(p => categorize(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
@@ -1456,6 +1667,8 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
         ticketMedio: concluidos.length ? faturamento / concluidos.length : 0,
         variacao,
         byDay,
+        freteTotal,
+        descontoTotal,
       },
       contasReceber: { total: receber.total, count: receber.count, vencidas: receber.vencidas, vencidasValor: receber.vencidasValor || 0, ok: receber.ok, itens: receber.itens || [] },
       contasPagar:   { total: pagar.total,   count: pagar.count,   vencidas: pagar.vencidas,   vencidasValor: pagar.vencidasValor || 0,   ok: pagar.ok,   itens: pagar.itens || [] },
@@ -1546,6 +1759,161 @@ app.get('/api/historico', requireAuthJson, (req, res) => {
   res.json({ history: changeLog.slice().reverse().slice(0, 300) });
 });
 
+// ── Contas Customizadas (Despesas, Receitas, Controle de Caixa) ──────
+
+app.get('/api/contas/custom', requireAuthJson, (req, res) => {
+  const tipo = req.query.tipo; // 'pagar', 'receber', ou undefined para todas
+  let filtered = customContas;
+  if (tipo) filtered = filtered.filter(c => c.tipo === tipo);
+  res.json({ contas: filtered });
+});
+
+app.post('/api/contas/custom', requireAuthJson, (req, res) => {
+  const { tipo, descricao, valor, dataVencimento, categoria, observacao } = req.body;
+
+  if (!tipo || !['pagar', 'receber'].includes(tipo)) {
+    return sendErrorResponse(res, 400, 'Tipo inválido: use "pagar" ou "receber"');
+  }
+  if (!descricao || !valor) {
+    return sendErrorResponse(res, 400, 'Descrição e valor são obrigatórios');
+  }
+
+  const id = contaIdCounter++;
+  const conta = {
+    id,
+    tipo,
+    descricao,
+    valor: Number(valor),
+    dataVencimento: dataVencimento || new Date().toISOString().split('T')[0],
+    categoria: categoria || 'Outras',
+    observacao: observacao || '',
+    status: 'pendente',
+    criada_em: new Date().toISOString(),
+    atualizada_em: new Date().toISOString(),
+  };
+
+  customContas.push(conta);
+  changeLog.push({
+    id: changeLog.length + 1,
+    produto_id: `conta_${id}`,
+    produto_nome: descricao,
+    campo: `conta ${tipo}`,
+    valor_anterior: '—',
+    valor_novo: `${tipo === 'pagar' ? '-' : '+'}R$ ${valor}`,
+    timestamp: new Date().toISOString(),
+  });
+
+  res.json(conta);
+});
+
+app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const conta = customContas.find(c => c.id === id);
+
+    if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+
+    const { descricao, valor, dataVencimento, categoria, observacao, status } = req.body;
+
+    if (descricao) conta.descricao = descricao;
+    if (valor !== undefined) conta.valor = Number(valor);
+    if (dataVencimento) conta.dataVencimento = dataVencimento;
+    if (categoria) conta.categoria = categoria;
+    if (observacao !== undefined) conta.observacao = observacao;
+    if (status) conta.status = status;
+
+    conta.atualizada_em = new Date().toISOString();
+
+    changeLog.push({
+      id: changeLog.length + 1,
+      produto_id: `conta_${id}`,
+      produto_nome: conta.descricao,
+      campo: 'edição de conta',
+      valor_anterior: '—',
+      valor_novo: `status: ${status || conta.status}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json(conta);
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao atualizar conta', err.message);
+  }
+});
+
+app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const idx = customContas.findIndex(c => c.id === id);
+
+    if (idx === -1) return res.status(404).json({ error: 'Conta não encontrada' });
+
+    const conta = customContas[idx];
+    customContas.splice(idx, 1);
+
+    changeLog.push({
+      id: changeLog.length + 1,
+      produto_id: `conta_${id}`,
+      produto_nome: conta.descricao,
+      campo: 'exclusão de conta',
+      valor_anterior: conta.status,
+      valor_novo: 'excluída',
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao deletar conta', err.message);
+  }
+});
+
+// ── Calendário (Eventos, Feriados, Datas Importantes) ──────────────────
+
+app.get('/api/calendario', requireAuthJson, (req, res) => {
+  const mes = req.query.mes; // filtrar por mês (YYYY-MM)
+  let filtered = calendarEvents;
+  if (mes) filtered = filtered.filter(e => e.data.startsWith(mes));
+  res.json({ eventos: filtered });
+});
+
+app.post('/api/calendario', requireAuthJson, (req, res) => {
+  const { tipo, titulo, descricao, data, contaId } = req.body;
+
+  if (!tipo || !['feriado', 'comemorativo', 'vencimento', 'recebimento', 'evento'].includes(tipo)) {
+    return sendErrorResponse(res, 400, 'Tipo de evento inválido');
+  }
+  if (!titulo || !data) {
+    return sendErrorResponse(res, 400, 'Título e data são obrigatórios');
+  }
+
+  const id = eventIdCounter++;
+  const evento = {
+    id,
+    tipo,
+    titulo,
+    descricao: descricao || '',
+    data,
+    contaId: contaId || null,
+    criado_em: new Date().toISOString(),
+  };
+
+  calendarEvents.push(evento);
+  res.json(evento);
+});
+
+app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const idx = calendarEvents.findIndex(e => e.id === id);
+
+    if (idx === -1) return res.status(404).json({ error: 'Evento não encontrado' });
+
+    calendarEvents.splice(idx, 1);
+    res.json({ success: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao deletar evento', err.message);
+  }
+});
+
 // ── Webhook (Bling notificações) ──────────────────────────────────────
 
 app.post('/api/webhook/bling', async (req, res) => {
@@ -1568,6 +1936,245 @@ app.post('/api/webhook/bling', async (req, res) => {
     }
     await pushParaTodos(admin, { title, body, url: '/dashboard.html', tipo: 'evento' });
   } catch (e) { console.error('[webhook bling]', e.message); }
+});
+
+// ── Enhanced Order Sync (Real-time Status) ───────────────────────────
+
+app.get('/api/pedidos/sync/status', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  try {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limite: 150, pagina: 1 },
+    });
+    const raw = Array.isArray(data?.data) ? data.data : [];
+
+    const pedidos = raw.map(p => ({
+      id:         p.id,
+      numero:     p.numero,
+      data:       p.data,
+      valor:      Number(p.totalVenda || p.totalProdutos || 0),
+      situacao:   situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      contato:    p.contato?.nome || '—',
+      status:     p.situacao?.valor || p.situacao,
+      frete:      Number(p.transporte?.frete || p.frete || 0),
+      desconto:   Number(p.desconto || 0),
+      observ:     p.observacoes || '',
+      lastSync:   new Date().toISOString(),
+    }));
+
+    res.json({
+      total: pedidos.length,
+      pedidos,
+      sincronizado: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao sincronizar pedidos', err.message);
+  }
+});
+
+// ── Enhanced Invoice Sync ────────────────────────────────────────────
+
+app.get('/api/notas-fiscais/sync/status', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  try {
+    let all = [];
+    for (let pg = 1; pg <= 3; pg++) {
+      const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfes', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: pg },
+      });
+      const items = Array.isArray(data?.data) ? data.data : [];
+      all = all.concat(items);
+      if (items.length < 100) break;
+    }
+
+    const notas = all.map(n => ({
+      id:         n.id,
+      numero:     n.numero,
+      serie:      n.serie || '1',
+      data:       n.dataEmissao || n.data,
+      valor:      Number(n.totalNota || n.total || 0),
+      situacao:   n.situacao?.nome || n.situacao || '—',
+      contato:    n.destinatario?.nome || n.cliente?.nome || '—',
+      chave:      n.chave || n.numeroNFe || '—',
+      status:     n.situacao?.valor || n.situacao,
+      lastSync:   new Date().toISOString(),
+    }));
+
+    res.json({
+      total: notas.length,
+      notas,
+      sincronizado: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao sincronizar notas', err.message);
+  }
+});
+
+// ── Financial Forecasting ────────────────────────────────────────────
+
+app.get('/api/financeiro/previsao', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  try {
+    const hoje = new Date();
+    const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+    const fimProxMes = new Date(hoje.getFullYear(), hoje.getMonth() + 2, 0);
+
+    const [recRes, pagRes] = await Promise.allSettled([
+      fetchContas(token, 'receber'),
+      fetchContas(token, 'pagar'),
+    ]);
+
+    const receber = recRes.status === 'fulfilled' ? recRes.value : { total: 0, vencidas: 0, vencidasValor: 0, count: 0 };
+    const pagar = pagRes.status === 'fulfilled' ? pagRes.value : { total: 0, vencidas: 0, vencidasValor: 0, count: 0 };
+
+    const fluxoLiquido = receber.total - pagar.total;
+
+    res.json({
+      proximos30dias: {
+        aReceber: receber.total,
+        aPagar: pagar.total,
+        fluxoLiquido,
+      },
+      alertas: {
+        recebedoresVencidas: receber.vencidas,
+        recebedoresVencinValor: receber.vencidasValor,
+        pagadoresVencidas: pagar.vencidas,
+        pagadoresVencidoValor: pagar.vencidasValor,
+      },
+      recomendacoes: [
+        receber.vencidas > 0 ? `⚠️ ${receber.vencidas} conta(s) a receber vencida(s)` : null,
+        pagar.vencidas > 0 ? `⚠️ ${pagar.vencidas} conta(s) a pagar vencida(s)` : null,
+        fluxoLiquido < 0 ? '⚠️ Fluxo de caixa negativo nos próximos 30 dias' : null,
+      ].filter(Boolean),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao prever financeiro', err.message);
+  }
+});
+
+// ── Integrations Management ──────────────────────────────────────────
+
+app.get('/api/integracoes/status', requireAuthJson, async (req, res) => {
+  const blingToken = req.cookies?.bling_token || req.session?.bling_token;
+  const mlToken = req.cookies?.ml_token || req.session?.ml_token;
+
+  res.json({
+    bling: {
+      conectado: !!blingToken,
+      tipo: 'ERP',
+      descricao: 'Integração com Bling ERP v3',
+      status: blingToken ? 'ativo' : 'inativo',
+      features: ['Pedidos', 'NFe', 'Estoque', 'Clientes'],
+    },
+    mercadoLivre: {
+      conectado: !!mlToken,
+      tipo: 'Marketplace',
+      descricao: 'Integração com Mercado Livre',
+      status: mlToken ? 'ativo' : 'inativo',
+      features: ['Anúncios', 'Pedidos', 'Perguntas', 'Métricas'],
+    },
+    firebase: {
+      conectado: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+      tipo: 'Notificações',
+      descricao: 'Firebase Admin SDK',
+      status: process.env.FIREBASE_SERVICE_ACCOUNT ? 'ativo' : 'inativo',
+      features: ['Push Notifications', 'Histórico'],
+    },
+  });
+});
+
+// ── Enhanced Dashboard ───────────────────────────────────────────────
+
+app.get('/api/dashboard/enhanced', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
+
+  try {
+    const prev = periodoAnterior(inicio, fim);
+
+    const [pedRes, prevRes, receberRes, pagarRes, prodRes] = await Promise.allSettled([
+      fetchPedidos(token, inicio, fim, 2),
+      fetchPedidos(token, prev.inicio, prev.fim, 1),
+      fetchContas(token, 'receber'),
+      fetchContas(token, 'pagar'),
+      fetchResumoProdutos(token, 1),
+    ]);
+
+    const allPedidos = pedRes.status === 'fulfilled' ? (pedRes.value || []) : [];
+    const valorOf = p => p.totalVenda || p.totalProdutos || 0;
+    const concluidos = allPedidos.filter(p => categorizePedido(p.situacao) === 'concluido');
+    const pendentes = allPedidos.filter(p => categorizePedido(p.situacao) === 'pendente');
+    const cancelados = allPedidos.filter(p => categorizePedido(p.situacao) === 'cancelado');
+
+    const sum = arr => arr.reduce((a, p) => a + valorOf(p), 0);
+    const faturamento = sum(concluidos);
+    const margem = concluidos.reduce((a, p) => a + ((Number(p.totalProdutos) || 0) - (Number(p.totalCusto) || 0)), 0);
+
+    const receber = receberRes.status === 'fulfilled' ? receberRes.value : { total: 0, count: 0, vencidas: 0 };
+    const pagar = pagarRes.status === 'fulfilled' ? pagarRes.value : { total: 0, count: 0, vencidas: 0 };
+    const produtos = prodRes.status === 'fulfilled' ? prodRes.value : { margem: 0, zerados: 0, criticos: 0 };
+
+    const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
+    const fatAnterior = prevPedidos.filter(p => categorizePedido(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
+    const variacao = fatAnterior > 0 ? ((faturamento - fatAnterior) / fatAnterior) * 100 : null;
+
+    res.json({
+      periodo: { inicio, fim, period },
+      vendas: {
+        total: sum(allPedidos),
+        faturamento,
+        pendente: sum(pendentes),
+        cancelado: sum(cancelados),
+        ticket_medio: concluidos.length > 0 ? faturamento / concluidos.length : 0,
+        quantidade: allPedidos.length,
+      },
+      margens: {
+        bruta: margem,
+        percentual: faturamento > 0 ? (margem / faturamento) * 100 : 0,
+        media: produtos.margem ? (produtos.margem * 100) : 0,
+      },
+      contas: {
+        aReceber: { total: receber.total, quantidade: receber.count, vencidas: receber.vencidas },
+        aPagar: { total: pagar.total, quantidade: pagar.count, vencidas: pagar.vencidas },
+        fluxoLiquido: receber.total - pagar.total,
+      },
+      estoque: {
+        zerados: produtos.zerados,
+        criticos: produtos.criticos,
+      },
+      comparativo: {
+        fatAnterior,
+        variacao,
+      },
+      custom: {
+        contasTotal: customContas.length,
+        eventosAgendados: calendarEvents.length,
+      },
+    });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao buscar dashboard', err.message);
+  }
 });
 
 // ── 404 ──────────────────────────────────────────────────────────────
