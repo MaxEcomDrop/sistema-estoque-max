@@ -2137,6 +2137,59 @@ app.get('/api/dashboard/enhanced', requireAuthJson, async (req, res) => {
   }
 });
 
+// ── Integração Mercado Livre Avançada ────────────────────────────────
+app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  try {
+    const from = new Date(); from.setDate(from.getDate() - 30);
+    const fromStr = from.toISOString();
+    // Buscar ordens recentes
+    const { data: orders } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}`, { headers: mlHeaders(ml.token) });
+    res.json(orders.results || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+
+  const days = parseInt(req.query.period) || 30;
+  const from = new Date(); from.setDate(from.getDate() - days);
+  const fromStr = from.toISOString();
+
+  try {
+    const { data: ordersData } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}`, { headers: mlHeaders(ml.token) });
+
+    let faturamento = 0;
+    let taxas = 0;
+    let concluidoCount = 0;
+
+    (ordersData.results || []).forEach(o => {
+      if (o.status === 'paid' || o.status === 'closed' || o.status === 'delivered' || o.status === 'shipped') {
+        concluidoCount++;
+        faturamento += o.total_amount || 0;
+        // A taxa geralmente fica em order_items -> sale_fee
+        if (o.order_items) {
+          o.order_items.forEach(it => { taxas += it.sale_fee || 0; });
+        }
+      }
+    });
+
+    res.json({
+      periodo: days,
+      faturamento,
+      taxas,
+      lucroBruto: faturamento - taxas,
+      pedidosConcluidos: concluidoCount,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── 404 ──────────────────────────────────────────────────────────────
 
 app.use((req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
@@ -2156,65 +2209,5 @@ if (require.main === module) {
     console.log(`📝 Ambiente: ${NODE_ENV}`);
   });
 }
-
-
-// ── Integração Mercado Livre Avançada ────────────────────────────────
-app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
-  const ml = await ensureMLToken();
-  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
-  try {
-    const from = new Date(); from.setDate(from.getDate() - 30);
-    const fromStr = from.toISOString();
-    // Buscar ordens recentes
-    const { data: orders } = await axios.get(https://api.mercadolibre.com/orders/search?seller= + ml.sellerId + &order.date_created.from= + fromStr, { headers: mlHeaders(ml.token) });
-    
-    // Obter todos os detalhes e taxas não é trivial com 1 req, mas orders.results tem .total_amount e .paid_amount
-    // Para simplificar, retornaremos a lista basica e processaremos no dashboard
-    res.json(orders.results || []);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
-  const ml = await ensureMLToken();
-  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
-  
-  const days = parseInt(req.query.period) || 30;
-  const from = new Date(); from.setDate(from.getDate() - days);
-  const fromStr = from.toISOString();
-
-  try {
-    const { data: ordersData } = await axios.get(https://api.mercadolibre.com/orders/search?seller= + ml.sellerId + &order.date_created.from= + fromStr, { headers: mlHeaders(ml.token) });
-    
-    let faturamento = 0;
-    let taxas = 0;
-    let freteCobrado = 0;
-    let concluidoCount = 0;
-    
-    (ordersData.results || []).forEach(o => {
-      if (o.status === 'paid' || o.status === 'closed' || o.status === 'delivered' || o.status === 'shipped') {
-        concluidoCount++;
-        faturamento += o.total_amount || 0;
-        // The fee is usually stored in order_items -> sale_fee
-        if (o.order_items) {
-           o.order_items.forEach(it => {
-              taxas += it.sale_fee || 0;
-           });
-        }
-      }
-    });
-
-    res.json({
-      periodo: days,
-      faturamento,
-      taxas,
-      lucroBruto: faturamento - taxas,
-      pedidosConcluidos: concluidoCount
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = app;
