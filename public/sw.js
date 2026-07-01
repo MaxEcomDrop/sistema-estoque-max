@@ -1,53 +1,38 @@
-// Estoque Max — Service Worker v3 + Firebase Messaging
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
+// Estoque Max — Service Worker v5 — Cache Busting Forçado
+// IMPORTANT: Increment version on every deploy to force cache invalidation
+const SW_VERSION = 'em-v5-' + Date.now();
 
-firebase.initializeApp({
-  apiKey: "AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
-  authDomain: "erp-max-sistema.firebaseapp.com",
-  projectId: "erp-max-sistema",
-  storageBucket: "erp-max-sistema.firebasestorage.app",
-  messagingSenderId: "1023327647246",
-  appId: "1:1023327647246:web:7c35c5dd88d7aeef9dae5f",
-});
-const messaging = firebase.messaging();
+// Precache apenas o manifest (HTML será servido sempre da rede)
+const PRECACHE = ['/manifest.json'];
 
-// Notificações em background via FCM
-messaging.onBackgroundMessage(payload => {
-  const { title = 'Estoque Max', body = 'Nova notificação', url = '/dashboard.html', tag = 'em' } = payload.notification || payload.data || {};
-  return self.registration.showNotification(title, {
-    body, icon: '/favicon.ico', badge: '/favicon.ico',
-    data: { url }, vibrate: [150, 50, 150], tag, renotify: true,
-  });
-});
-
-// Cache
-const CACHE = 'em-v3';
-const SHELL = ['/login.html', '/dashboard.html', '/manifest.json'];
-
+// Install: limpa TUDO e precacheia apenas o essencial
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+    .then(() => caches.open(SW_VERSION).then(c => c.addAll(PRECACHE)))
+    .then(() => self.skipWaiting())
   );
 });
 
+// Activate: elimina qualquer cache antigo e toma controle imediato
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== SW_VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
       .then(() => {
-        // Notify all clients that a new version is available
         return self.clients.matchAll({ type: 'window' }).then(clients => {
-          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
+          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: SW_VERSION }));
         });
       })
   );
 });
 
+// Fetch: NETWORK FIRST para tudo. Cache é apenas fallback offline.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Always fetch API calls from network
+
+  // API calls: sempre rede, nunca cache
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(
       fetch(e.request).catch(() =>
@@ -59,19 +44,28 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // For app shell: network first, fallback to cache
+
+  // HTML pages: SEMPRE buscar da rede. Nunca servir do cache.
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Outros assets (JS, CSS, fontes): network first, cache fallback
   e.respondWith(
     fetch(e.request).then(res => {
       if (res.ok && e.request.method === 'GET') {
         const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        caches.open(SW_VERSION).then(c => c.put(e.request, clone));
       }
       return res;
     }).catch(() => caches.match(e.request))
   );
 });
 
-// Clique na notificação
+// Click em notificação
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = e.notification.data?.url || '/dashboard.html';
