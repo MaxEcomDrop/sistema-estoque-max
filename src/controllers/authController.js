@@ -65,32 +65,44 @@ async function syncProductosAposLogin(userId, accessToken) {
         db.run('BEGIN TRANSACTION', (err) => {
           if (err) return reject(err);
 
-          let processed = 0;
+          const BATCH_SIZE = 100;
           let errors = 0;
+          let processed = 0;
+          const numBatches = Math.ceil(produtos.length / BATCH_SIZE);
+          let completedBatches = 0;
 
-          produtos.forEach((produto) => {
-            db.run(
-              `INSERT OR REPLACE INTO products
-               (user_id, bling_product_id, nome, codigo, preco, estoque, situacao, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-              [
+          for (let i = 0; i < produtos.length; i += BATCH_SIZE) {
+            const batch = produtos.slice(i, i + BATCH_SIZE);
+            const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
+            const values = [];
+
+            batch.forEach((produto) => {
+              values.push(
                 userId,
                 produto.id,
                 produto.nome,
                 produto.codigo,
                 produto.preco || 0,
                 produto.estoque || 0,
-                produto.situacao || 'A',
-              ],
+                produto.situacao || 'A'
+              );
+            });
+
+            db.run(
+              `INSERT OR REPLACE INTO products
+               (user_id, bling_product_id, nome, codigo, preco, estoque, situacao, updated_at)
+               VALUES ${placeholders}`,
+              values,
               (err) => {
+                completedBatches++;
                 if (err) {
-                  console.error(`[AUTO-SYNC] Erro ao sincronizar produto ${produto.id}:`, err);
-                  errors++;
+                  console.error(`[AUTO-SYNC] Erro ao sincronizar lote:`, err);
+                  errors += batch.length;
                 } else {
-                  processed++;
+                  processed += batch.length;
                 }
 
-                if (processed + errors === produtos.length) {
+                if (completedBatches === numBatches) {
                   db.run('COMMIT', (commitErr) => {
                     if (commitErr) {
                       console.error('[AUTO-SYNC] Erro ao fazer commit:', commitErr);
@@ -102,7 +114,7 @@ async function syncProductosAposLogin(userId, accessToken) {
                 }
               }
             );
-          });
+          }
         });
       });
     });
