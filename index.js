@@ -378,71 +378,6 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
   res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
 });
 
-app.get('/api/auth/google/url', (req, res) => {
-  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-  const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
-
-  if (!GOOGLE_CLIENT_ID) {
-    return res.json({ authUrl: null, error: 'Google OAuth não configurado' });
-  }
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_REDIRECT_URI,
-    scope: 'openid email profile',
-    access_type: 'offline',
-  });
-  res.json({ authUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
-});
-
-app.get('/api/auth/google/callback', async (req, res) => {
-  const { code, error } = req.query;
-  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-  const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
-
-  if (error) return res.redirect(`/login?error=${encodeURIComponent(error)}`);
-  if (!code || !GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-    return res.redirect('/login?error=invalid_google_config');
-  }
-
-  try {
-    const { data } = await axios.post('https://oauth2.googleapis.com/token', {
-      grant_type: 'authorization_code',
-      code,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      redirect_uri: GOOGLE_REDIRECT_URI,
-    });
-
-    if (!data.id_token) throw new Error('No ID token received');
-
-    const idToken = data.id_token;
-    res.cookie('auth_token', idToken, {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      secure: NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
-
-    changeLog.push({
-      id: changeLog.length + 1,
-      produto_id: '—',
-      produto_nome: 'Login Google',
-      campo: 'autenticação',
-      valor_anterior: '—',
-      valor_novo: 'login_success',
-      timestamp: new Date().toISOString(),
-    });
-
-    res.redirect('/dashboard.html');
-  } catch (err) {
-    console.error('[Google OAuth]', err.message);
-    res.redirect('/login?error=google_auth_failed');
-  }
-});
-
 app.get(['/api/auth/callback', '/api/webhook/bling'], async (req, res) => {
   const { code, error } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
@@ -2074,8 +2009,9 @@ app.get('/api/financeiro/previsao', requireAuthJson, async (req, res) => {
 // ── Integrations Management ──────────────────────────────────────────
 
 app.get('/api/integracoes/status', requireAuthJson, async (req, res) => {
-  const blingToken = req.cookies?.bling_token || req.session?.bling_token;
-  const mlToken = req.cookies?.ml_token || req.session?.ml_token;
+  const blingToken = await ensureBlingToken(req, res);
+  const ml = await ensureMLToken();
+  const mlToken = ml?.token || null;
 
   res.json({
     bling: {

@@ -12,7 +12,3 @@ services:
         value: 3000
     autoDeploy: true
     healthCheckPath: /health
-    disk:
-      name: estoque_storage
-      mountPath: /data
-      sizeGB: 1
