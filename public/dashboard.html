@@ -1649,7 +1649,6 @@ function setLayout(l){
   if(h > 0) $('view-produtos').style.minHeight = h + 'px';
   S.layout=l;localStorage.setItem('layout',l);
   ['list','grid','cat'].forEach(k=>{const el=$('lt-'+k);if(el)el.classList.toggle('on',k===l||(k==='cat'&&l==='catalog'));});
-  const cc=$('card-container'),lc=$('list-container');
   if(l==='list'){cc.className='';cc.style.display='none';lc.style.display='';}
   else{lc.style.display='none';cc.className='card-grid '+(l==='grid'?'vg':'vc');renderCards();}
   setTimeout(()=>{$('view-produtos').style.minHeight='';}, 50);
