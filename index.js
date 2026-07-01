@@ -224,6 +224,10 @@ async function ensureBlingToken(req, res) {
   }
 }
 
+function getErrorMessage(e) {
+  return process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message;
+}
+
 // ── Error Response Helper ────────────────────────────────────────────
 function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
   const response = { error: errorMessage };
@@ -1027,7 +1031,7 @@ app.get('/api/cron/resumo', async (req, res) => {
     const { title, body } = montaResumo(slot, { fat, lucro: fat * prod.margem, nv: concl.length, zerados: prod.zerados, brl, temMargem: prod.margem > 0 });
     const sent = await pushParaTodos(admin, { title, body, tipo: 'resumo' });
     res.json({ ok: true, slot, sent, fat, nv: concl.length });
-  } catch (e) { res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message }); }
+  } catch (e) { res.status(500).json({ error: getErrorMessage(e) }); }
 });
 
 // Cron: alerta de estoque zerado/crítico
@@ -1043,7 +1047,7 @@ app.get('/api/cron/estoque', async (req, res) => {
     const body = `${prod.zerados} produto(s) zerado(s)` + (prod.criticos ? ` e ${prod.criticos} crítico(s) (≤5)` : '') + '. Toque para repor.';
     const sent = await pushParaTodos(admin, { title: '⚠️ Alerta de estoque', body, tipo: 'estoque' });
     res.json({ ok: true, sent, zerados: prod.zerados, criticos: prod.criticos });
-  } catch (e) { res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message }); }
+  } catch (e) { res.status(500).json({ error: getErrorMessage(e) }); }
 });
 
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
@@ -1074,7 +1078,7 @@ app.get('/api/cron/push', async (req, res) => {
         batch.update(doc.ref, { status: 'sent', sent: successCount, sentAt: admin.firestore.FieldValue.serverTimestamp() });
         sent++;
       } catch (e) {
-        batch.update(doc.ref, { status: 'error', error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message });
+        batch.update(doc.ref, { status: 'error', error: getErrorMessage(e) });
       }
     }
     await batch.commit();
