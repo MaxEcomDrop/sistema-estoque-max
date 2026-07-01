@@ -2,45 +2,39 @@
 
 /* ── DESIGN SYSTEM (LINEAR/STRIPE STANDARD) ── */
 :root {
-  /* Colors */
-  --bg: #000000;
-  --bg-card: #0a0a0a;
-  --bg-hover: #141414;
-  --bg-active: #1a1a1a;
+  /* Premium Light Theme */
+  --bg: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
+  --bg-active: #e2e8f0;
   
-  --text: #ededed;
-  --text-m: #a1a1aa;
-  --text-d: #52525b;
+  --text: #0f172a;
+  --text-m: #475569;
+  --text-d: #94a3b8;
   
-  --border: rgba(255, 255, 255, 0.08);
-  --border-h: rgba(255, 255, 255, 0.15);
+  --border: #e2e8f0;
+  --border-h: #cbd5e1;
   
   --primary: #8b5cf6;
   --primary-bg: #8b5cf6;
   --primary-text: #ffffff;
-  --primary-h: #a78bfa;
+  --primary-h: #7c3aed;
   
   --accent: #6366f1;
-  --accent-h: #8b5cf6;
-  --accent-light: rgba(79, 70, 229, 0.15);
+  --accent-h: #4f46e5;
 
-  /* Status */
-  --ok: #22c55e; --ok-bg: rgba(34,197,94,0.1);
-  --wr: #eab308; --wr-bg: rgba(234,179,8,0.1);
-  --er: #ef4444; --er-bg: rgba(239,68,68,0.1);
-  --bl: #3b82f6; --bl-bg: rgba(59,130,246,0.1);
+  --ok: #10b981; --ok-t: #059669;
+  --wa: #f59e0b; --wa-t: #d97706;
+  --er: #ef4444; --er-t: #dc2626;
 
-  /* Typography */
-  --font-s: 'Inter', -apple-system, sans-serif;
-  
-  /* Geometry */
-  --rad: 8px;
-  --rad-s: 4px;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-  
-  /* Layout */
-  --sb-w: 240px;
-  --tb-h: 60px;
+  --bord: var(--border);
+  --bord-l: var(--bg-hover);
+  --tx: var(--text);
+  --mu: var(--text-m);
+  --fa: var(--text-d);
+
+  --sb-bg: #ffffff;
+  --sb-w: 250px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

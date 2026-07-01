@@ -546,7 +546,7 @@ function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.classNam
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
 
 // ── THEME/SIDEBAR ──────────────────────────────────
-function effectiveDark(){return true;}
+function effectiveDark(){return false;}
 function applyTheme(){document.documentElement.setAttribute('data-theme',effectiveDark()?'dark':'light');updateThemeButtons();}
 function setTheme(t){S.theme=t;localStorage.setItem('theme',t);applyTheme();}
 function toggleDark(){setTheme(effectiveDark()?'light':'dark');}
