@@ -639,12 +639,21 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 100, pagina: 1 },
+    const pedidosBling = await fetchWithCache(`pedidos_recentes_${token.substring(0,10)}`, 30000, async () => {
+      let all = [];
+      for (let pg = 1; pg <= 2; pg++) {
+        const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limite: 100, pagina: pg },
+        });
+        const items = Array.isArray(data?.data) ? data.data : [];
+        all = all.concat(items);
+        if (items.length < 100) break;
+      }
+      return all;
     });
 
-    const pedidos = (Array.isArray(data?.data) ? data.data : []).map(p => {
+    const pedidos = pedidosBling.map(p => {
       const valorBruto = p.totalProdutos || p.totalVenda || p.total || 0;
       const frete = p.frete || p.transporte?.fretePorConta || 0;
       const desconto = p.desconto?.valor || p.desconto || 0;
@@ -664,31 +673,6 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
         contato:   p.contato?.nome || '—',
       };
     });
-
-    res.json({ total: pedidos.length, pedidos });
-  } catch (err) {
-    if (err.response?.status === 401) {
-      res.clearCookie('bling_token');
-      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
-    }
-    sendErrorResponse(res, 500, 'Erro ao buscar pedidos', err.message);
-  }
-});
-
-  try {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 50, pagina: 1 },
-    });
-
-    const pedidos = (Array.isArray(data?.data) ? data.data : []).map(p => ({
-      id:        p.id,
-      numero:    p.numero,
-      data:      p.data,
-      valor:     p.totalProdutos || p.totalVenda || 0,
-      situacao:  String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
-      contato:   p.contato?.nome || '—',
-    }));
 
     res.json({ total: pedidos.length, pedidos });
   } catch (err) {
