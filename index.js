@@ -104,7 +104,6 @@ const JWT_SECRET          = process.env.JWT_SECRET;
 const NODE_ENV            = process.env.NODE_ENV || 'development';
 
 // In-memory change log (resets on cold start)
-// TODO: Persistir em banco de dados em produção
 const changeLog = [];
 function pushLog(logData) {
   const admin = getAdmin();
@@ -276,7 +275,19 @@ app.get('/dashboard.html', requireAuth, (req, res) => {
   res.set('Surrogate-Control', 'no-store');
   res.sendFile(__dirname + '/public/dashboard.html');
 });
-app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
+app.get('/health', async (req, res) => {
+  let historyCount = changeLog.length;
+  try {
+    const admin = getAdmin();
+    if (admin) {
+      const snap = await admin.firestore().collection('historico').count().get();
+      historyCount = snap.data().count;
+    }
+  } catch (err) {
+    console.error('[Health API]', err);
+  }
+  res.json({ status: 'OK', history: historyCount, environment: NODE_ENV });
+});
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
@@ -1293,7 +1304,20 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 
 // ── Histórico ────────────────────────────────────────────────────
 
-app.get('/api/historico', requireAuthJson, (req, res) => {
+app.get('/api/historico', requireAuthJson, async (req, res) => {
+  try {
+    const admin = getAdmin();
+    if (admin) {
+      const snapshot = await admin.firestore().collection('historico')
+        .orderBy('timestamp', 'desc')
+        .limit(300)
+        .get();
+      const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return res.json({ history });
+    }
+  } catch (err) {
+    console.error('[Historico API]', err);
+  }
   res.json({ history: changeLog.slice().reverse().slice(0, 300) });
 });
 
