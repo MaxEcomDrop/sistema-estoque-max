@@ -419,6 +419,28 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
   }
 });
 
+// Função auxiliar para evitar vulnerabilidade de Mass Assignment
+const buildProdutoPayload = (body) => {
+  const allowed = [
+    'nome', 'codigo', 'preco', 'precoCusto', 'pesoBruto',
+    'unidade', 'situacao', 'tipo', 'descricaoComplementar'
+  ];
+  const payload = {};
+  for (const field of allowed) {
+    if (body[field] !== undefined) {
+      payload[field] = body[field];
+    }
+  }
+  if (body.imagemUrl !== undefined) {
+    if (body.imagemUrl) {
+      payload.imagem = { link: body.imagemUrl };
+    } else {
+      payload.imagem = { link: "" };
+    }
+  }
+  return payload;
+};
+
 // Busca produto completo (para editor)
 app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
@@ -439,7 +461,8 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
+    const payload = buildProdutoPayload(req.body);
+    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', payload, {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
@@ -560,11 +583,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   if (_fullUpdate) {
     try {
       // Converte imagemUrl (campo frontend) para formato Bling
-      const payload = { ..._fullUpdate };
-      if (payload.imagemUrl !== undefined) {
-        if (payload.imagemUrl) payload.imagem = { link: payload.imagemUrl };
-        delete payload.imagemUrl;
-      }
+      const payload = buildProdutoPayload(_fullUpdate);
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
