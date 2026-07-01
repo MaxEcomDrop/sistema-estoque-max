@@ -292,14 +292,23 @@ function resolvePeriodo(period, startDate, endDate) {
   let inicio, fim;
   if (period === 'today') {
     inicio = fim = iso(hoje);
+  } else if (period === 'yesterday') {
+    const d = new Date(hoje); d.setDate(d.getDate() - 1);
+    inicio = fim = iso(d);
   } else if (period === '7d') {
     const d = new Date(hoje); d.setDate(d.getDate() - 6);
     inicio = iso(d); fim = iso(hoje);
+  } else if (period === '90d') {
+    const d = new Date(hoje); d.setDate(d.getDate() - 89);
+    inicio = iso(d); fim = iso(hoje);
+  } else if (period === 'year') {
+    inicio = `${hoje.getFullYear()}-01-01`; fim = iso(hoje);
   } else if (period === 'custom' && startDate && endDate) {
     inicio = startDate; fim = endDate;
   } else {
     const d = new Date(hoje); d.setDate(d.getDate() - 29);
     inicio = iso(d); fim = iso(hoje);
+    period = '30d';
   }
   return { inicio, fim, period: period || '30d' };
 }
