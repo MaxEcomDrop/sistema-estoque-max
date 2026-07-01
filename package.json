@@ -23,6 +23,11 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "firebase-admin": "^12.7.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
   }
 }
