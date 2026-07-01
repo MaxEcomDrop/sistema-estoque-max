@@ -30,29 +30,57 @@ exports.syncProdutos = async (req, res) => {
               return res.status(500).json({ error: 'Erro ao limpar produtos antigos' });
             }
 
-            let inserted = 0;
-            produtos.forEach((produto) => {
-              db.run(
-                `INSERT INTO products (user_id, bling_product_id, nome, codigo, preco, estoque, situacao)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [
-                  userId,
-                  produto.id,
-                  produto.nome,
-                  produto.codigo,
-                  produto.preco || 0,
-                  produto.estoque || 0,
-                  produto.situacao || 'A',
-                ],
-                function (insertErr) {
-                  if (!insertErr) inserted++;
-                }
-              );
-            });
+            if (produtos.length === 0) {
+              return res.json({
+                message: 'Produtos sincronizados com sucesso',
+                total: 0,
+              });
+            }
 
-            res.json({
-              message: 'Produtos sincronizados com sucesso',
-              total: produtos.length,
+            db.serialize(() => {
+              db.run('BEGIN TRANSACTION');
+
+              const chunkSize = 100;
+              const chunks = [];
+              for (let i = 0; i < produtos.length; i += chunkSize) {
+                chunks.push(produtos.slice(i, i + chunkSize));
+              }
+
+              chunks.forEach((chunk) => {
+                const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(',');
+                const params = [];
+                chunk.forEach((produto) => {
+                  params.push(
+                    userId,
+                    produto.id,
+                    produto.nome,
+                    produto.codigo,
+                    produto.preco || 0,
+                    produto.estoque || 0,
+                    produto.situacao || 'A'
+                  );
+                });
+
+                db.run(
+                  `INSERT INTO products (user_id, bling_product_id, nome, codigo, preco, estoque, situacao) VALUES ${placeholders}`,
+                  params,
+                  (err) => {
+                    if (err) {
+                      console.error('Erro ao inserir lote de produtos:', err);
+                    }
+                  }
+                );
+              });
+
+              db.run('COMMIT', (commitErr) => {
+                if (commitErr) {
+                   return res.status(500).json({ error: 'Erro ao salvar produtos em lote' });
+                }
+                res.json({
+                  message: 'Produtos sincronizados com sucesso',
+                  total: produtos.length,
+                });
+              });
             });
           });
         });
