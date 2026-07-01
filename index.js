@@ -436,10 +436,29 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
 
 // Criar produto novo
 app.post('/api/produtos', requireAuthJson, async (req, res) => {
+  const {
+    nome, codigo, preco, precoCusto, tipo, unidade, situacao, descricaoComplementar, imagemUrl
+  } = req.body;
+
+  if (!nome) {
+    return res.status(400).json({ error: 'O campo "nome" é obrigatório.' });
+  }
+
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  const payload = { nome };
+  if (codigo !== undefined) payload.codigo = codigo;
+  if (preco !== undefined) payload.preco = preco;
+  if (precoCusto !== undefined) payload.precoCusto = precoCusto;
+  if (tipo !== undefined) payload.tipo = tipo;
+  if (unidade !== undefined) payload.unidade = unidade;
+  if (situacao !== undefined) payload.situacao = situacao;
+  if (descricaoComplementar !== undefined) payload.descricaoComplementar = descricaoComplementar;
+  if (imagemUrl) payload.imagem = { link: imagemUrl };
+
   try {
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
+    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', payload, {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
