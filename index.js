@@ -260,7 +260,22 @@ app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.len
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
-app.use(express.static('public', { index: false }));
+// Service Worker — DEVE ser servido sem cache e com scope correto
+app.get('/sw.js', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Service-Worker-Allowed', '/');
+  res.set('Content-Type', 'application/javascript');
+  res.sendFile(__dirname + '/public/sw.js');
+});
+
+// Manifest — precisa ser acessível publicamente
+app.get('/manifest.json', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(__dirname + '/public/manifest.json');
+});
+
+// Arquivos estáticos — usa __dirname para funcionar no Vercel Serverless
+app.use(express.static(__dirname + '/public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
