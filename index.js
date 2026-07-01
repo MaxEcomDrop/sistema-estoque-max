@@ -61,8 +61,14 @@ function validateEnvironment() {
   
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
-    console.warn('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
-    console.warn('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
+    console.error('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
+    console.error('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
+    process.exit(1);
+  }
+
+  if (process.env.JWT_SECRET.length < 32) {
+    console.error('⚠️  JWT_SECRET muito curto. A chave deve ter pelo menos 32 caracteres para garantir a segurança.');
+    process.exit(1);
   }
 }
 
