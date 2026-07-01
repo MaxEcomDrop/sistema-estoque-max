@@ -1902,6 +1902,77 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
     </div>
 
+    <!-- MERCADO LIVRE (Dados Separados) -->
+    <div class="view" id="view-mercado-livre">
+      <div class="cfg-card">
+        <div class="cfg-title" style="display:flex;align-items:center;gap:10px">
+          <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">ML</span>
+          Mercado Livre — Dashboard Independente
+          <span class="sb2 s-lo" id="ml-dash-badge" style="margin-left:auto">Verificando…</span>
+        </div>
+        <div class="cfg-desc">Visualize vendas, perguntas e métricas do Mercado Livre separadas do Bling.</div>
+      </div>
+
+      <!-- SELLER INFO -->
+      <div class="cfg-card">
+        <div class="cfg-title">Perfil do Vendedor</div>
+        <div id="ml-seller-detail" style="padding:12px 0;font-size:13px;color:var(--mu)">Carregando dados…</div>
+      </div>
+
+      <!-- VENDAS ML -->
+      <div class="cfg-card">
+        <div class="cfg-title">Vendas no Mercado Livre (últimas 30 dias)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
+          <div style="background:var(--bg);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Total de vendas</div>
+            <div style="font-size:18px;font-weight:700;color:var(--ok-t)" id="ml-sales-count">—</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Faturamento</div>
+            <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-sales-total">—</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Ticket médio</div>
+            <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-sales-avg">—</div>
+          </div>
+        </div>
+        <div id="ml-sales-list" style="margin-top:12px"></div>
+      </div>
+
+      <!-- PERGUNTAS -->
+      <div class="cfg-card">
+        <div class="cfg-title">Perguntas de Clientes (Sem Resposta)</div>
+        <div id="ml-questions-list" style="margin-top:8px"></div>
+      </div>
+
+      <!-- ANÚNCIOS ATIVOS -->
+      <div class="cfg-card">
+        <div class="cfg-title">Anúncios Ativos</div>
+        <div id="ml-listings-list" style="margin-top:8px"></div>
+      </div>
+
+      <!-- MÉTRICAS -->
+      <div class="cfg-card">
+        <div class="cfg-title">Métricas de Desempenho</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+          <div style="background:linear-gradient(135deg,var(--ok-bg),var(--bg));border-radius:10px;padding:12px;border-left:3px solid var(--ok)">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Taxa de resposta</div>
+            <div style="font-size:16px;font-weight:700" id="ml-response-rate">—</div>
+          </div>
+          <div style="background:linear-gradient(135deg,var(--ok-bg),var(--bg));border-radius:10px;padding:12px;border-left:3px solid var(--ok)">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Tempo médio de resposta</div>
+            <div style="font-size:16px;font-weight:700" id="ml-response-time">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AVISO DE SINCRONIZAÇÃO -->
+      <div style="margin-top:12px;padding:12px 14px;background:var(--bg);border-radius:10px;font-size:12px;color:var(--mu);line-height:1.6;border-left:3px solid var(--acc)">
+        <strong style="color:var(--tx)">ℹ️ Dados Separados do Bling:</strong><br>
+        Este dashboard exibe dados exclusivos do Mercado Livre. Vendas do Bling aparecem apenas na aba Pedidos. Não há sincronização automática entre plataformas aqui — cada uma mantém seus próprios dados independentes.
+      </div>
+    </div>
+
     <div class="view" id="view-config">
       <div class="cfg-card">
         <div class="cfg-title">Aparência</div>
@@ -2499,8 +2570,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',calendario:'Calendário',notificacoes:'Notificações Push',integracoes:'Integrações',config:'Configurações'};
-const MAIS_VIEWS=['clientes','relatorio','notas','historico','calendario','notificacoes','integracoes','config'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',calendario:'Calendário','mercado-livre':'Mercado Livre',notificacoes:'Notificações Push',integracoes:'Integrações',config:'Configurações'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','calendario','mercado-livre','notificacoes','integracoes','config'];
 // Gate de senha para a aba Notas Fiscais
 let _nfeUnlocked=false;
 function setView(v){
@@ -2531,6 +2602,7 @@ function setView(v){
   if(v==='calendario')loadCalendario();
   if(v==='notificacoes')loadNotificacoes();
   if(v==='integracoes')loadIntegracoes();
+  if(v==='mercado-livre')loadMercadoLivre();
   closeMaisMenu();
   const fab=$('fab-scan');if(fab)fab.style.display=v==='produtos'?'':'none';
   const fab2=$('fab-add');if(fab2){fab2.style.display=v==='produtos'?'':'none';if(v==='produtos')fab2.classList.remove('fab-hide');}
@@ -3127,6 +3199,34 @@ async function loadMLMetricas(){
       ${pedidos.map(o=>{const sc=o.status==='paid'?'ok':o.status==='cancelled'?'out':'lo';return`<tr><td><span style="font-family:monospace;font-size:12px">#${o.id}</span></td><td><span class="sb2 s-${sc}">${esc(o.statusPT||o.status)}</span></td><td class="r">${fmt(o.total)}</td><td style="font-size:12px;color:var(--mu)">${new Date(o.data).toLocaleDateString('pt-BR')}</td></tr>`;}).join('')}
       </tbody></table>`:''}`;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:14px"><p class="st-d">Erro ao carregar métricas: ${esc(e.message)}</p></div>`;}
+}
+
+// ── MERCADO LIVRE (Dados Separados) ─────────────────
+async function loadMercadoLivre(){
+  const badge=$('ml-dash-badge');
+  if(badge){badge.textContent='Verificando…';badge.className='sb2 s-lo';}
+  try{
+    const mlStatus=await fetch('/api/ml/status').then(r=>r.json());
+    if(!mlStatus.connected){
+      if(badge){badge.textContent='Não conectado';badge.className='sb2 s-out';}
+      return;
+    }
+    if(badge){badge.textContent='Conectado';badge.className='sb2 s-ok';}
+    const[mlQuestions,mlListings,mlMetrics]=await Promise.all([fetch('/api/ml/perguntas').then(r=>r.json()),fetch('/api/ml/anuncios').then(r=>r.json()),fetch('/api/ml/metricas').then(r=>r.json())]);
+    const sellerInfo=$('ml-seller-detail');
+    if(sellerInfo)sellerInfo.innerHTML=`<div style="display:flex;gap:12px"><div style="width:36px;height:36px;border-radius:9px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#333;flex-shrink:0">ML</div><div><div style="font-size:13px;font-weight:700">${esc(mlStatus.apelido||'Vendedor ML')}</div><div style="font-size:11px;color:var(--mu);margin-top:1px">🔗 Independente do Bling</div></div></div>`;
+    const qtdVendas=(mlMetrics.ultimosPedidos||[]).length||0;
+    const totalVendas=(mlMetrics.ultimosPedidos||[]).reduce((a,p)=>a+(p.total||0),0)||0;
+    $('ml-sales-count').textContent=fmtN(qtdVendas);
+    $('ml-sales-total').textContent=fmt(totalVendas);
+    $('ml-sales-avg').textContent=fmt(qtdVendas>0?totalVendas/qtdVendas:0);
+    const questionsList=$('ml-questions-list');
+    if(mlQuestions.perguntas?.length){questionsList.innerHTML=mlQuestions.perguntas.slice(0,3).map(q=>`<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid var(--acc)"><div style="font-size:12px;font-weight:600">${esc(q.comprador)}</div><div style="font-size:12px;margin:4px 0">${esc(q.texto)}</div><div style="font-size:11px;color:var(--wa-t)">⏳ Pendente</div></div>`).join('');}else{questionsList.innerHTML='<div style="padding:14px;text-align:center;color:var(--mu);font-size:12px">✓ Sem perguntas</div>';}
+    const listingsList=$('ml-listings-list');
+    const listings=(mlListings.anuncios||[]).slice(0,3);
+    if(listings.length){listingsList.innerHTML=listings.map(a=>`<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border:1px solid var(--bord-l)" onclick="window.open('${esc(a.link||'')}','_blank')"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.titulo)}</div><div style="font-size:11px;color:var(--mu);margin-top:2px">${fmt(a.preco)} • ${fmtN(a.qtd)} un</div></div>`).join('');}else{listingsList.innerHTML='<div style="padding:14px;text-align:center;color:var(--mu);font-size:12px">Sem anúncios ativos</div>';}
+    $('ml-response-rate').textContent=mlMetrics.avaliacaoPositiva?`${mlMetrics.avaliacaoPositiva}%`:'—';
+  }catch(e){if(badge)badge.className='sb2 s-out';$('ml-seller-detail').innerHTML=`<div style="color:var(--er-t);font-size:12px">Erro: ${esc(e.message)}</div>`;}
 }
 
 // ── LOAD ──────────────────────────────────────────
