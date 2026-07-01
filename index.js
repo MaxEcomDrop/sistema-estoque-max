@@ -43,6 +43,8 @@ function getAdmin() {
 }
 
 const app = express();
+// Confia no 1º proxy da cadeia (Vercel/Render) para req.ip refletir o IP real do cliente
+app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -100,7 +102,8 @@ const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 function loginRateLimit(req, res, next) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const ip = req.ip;
+  if (!ip) return next(); // não conseguimos identificar o cliente — não bloqueia (evita lockout global)
   const now = Date.now();
   const entry = _loginAttempts.get(ip);
   if (entry && now - entry.firstAt < LOGIN_WINDOW_MS) {
@@ -115,14 +118,16 @@ function loginRateLimit(req, res, next) {
 }
 
 function registerLoginFailure(req) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const ip = req.ip;
+  if (!ip) return;
   const entry = _loginAttempts.get(ip) || { count: 0, firstAt: Date.now() };
   entry.count += 1;
   _loginAttempts.set(ip, entry);
 }
 
 function clearLoginFailures(req) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const ip = req.ip;
+  if (!ip) return;
   _loginAttempts.delete(ip);
 }
 
