@@ -363,7 +363,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 /* EDITOR DRAWER */
 .edraw-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
 .edraw-ov.open{opacity:1;pointer-events:all}
-.edraw{position:fixed;right:-100%;top:0;bottom:0;width:440px;max-width:97vw;background:var(--surf);border-left:1px solid var(--bord);z-index:900;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
+.edraw{position:fixed;right:-100%;top:0;bottom:0;width:480px;max-width:97vw;background:var(--surf);border-left:1px solid var(--bord);z-index:900;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
 .edraw.open{right:0}
 .edraw-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bord);flex-shrink:0}
 .edraw-title{font-size:14px;font-weight:600;color:var(--tx);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -395,7 +395,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 @keyframes nto{to{opacity:0;transform:translateX(16px)}}
 /* FINANCIAL VIEW — UpSeller style */
 .fin-period-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-.fin-periods{display:flex;gap:4px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:4px}
+.fin-periods{display:flex;flex-wrap:wrap;gap:4px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:4px}
 .fp-btn{padding:6px 16px;border:none;background:none;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);cursor:pointer;transition:all .12s;font-family:inherit;white-space:nowrap}
 .fp-btn.on{background:var(--surf);color:var(--acc-t);box-shadow:0 1px 4px rgba(0,0,0,.08);font-weight:600}
 .fp-btn:hover:not(.on){color:var(--tx)}
@@ -537,7 +537,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .dash-greet{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .dash-greet h2{font-size:22px;font-weight:800;letter-spacing:-.6px;color:var(--tx)}
 .dash-greet p{font-size:13px;color:var(--mu);margin-top:3px}
-.dash-period{display:flex;gap:3px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:3px}
+.dash-period{display:flex;flex-wrap:wrap;gap:3px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:3px}
 .dp-btn{padding:6px 14px;border:none;background:none;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--mu);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
 .dp-btn.on{background:var(--surf);color:var(--acc-t);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .dp-btn:hover:not(.on){color:var(--tx)}
@@ -982,10 +982,6 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       <span class="ni-label">Notas Fiscais</span>
     </button>
-    <button class="ni" id="ni-notificacoes" onclick="setView('notificacoes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="ni-label">Notificações</span>
-    </button>
     <button class="ni" id="ni-financeiro" onclick="setView('financeiro')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       <span class="ni-label">Financeiro</span>
@@ -1071,9 +1067,19 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
         <div class="dash-period">
           <button class="dp-btn" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
+          <button class="dp-btn" data-dp="yesterday" onclick="setDashPeriod('yesterday',this)">Ontem</button>
           <button class="dp-btn" data-dp="7d" onclick="setDashPeriod('7d',this)">7 dias</button>
           <button class="dp-btn on" data-dp="30d" onclick="setDashPeriod('30d',this)">30 dias</button>
+          <button class="dp-btn" data-dp="90d" onclick="setDashPeriod('90d',this)">90 dias</button>
+          <button class="dp-btn" data-dp="year" onclick="setDashPeriod('year',this)">Este ano</button>
+          <button class="dp-btn" data-dp="custom" onclick="setDashPeriod('custom',this)">Personalizado</button>
         </div>
+      </div>
+      <div class="fin-custom-range" id="dash-custom-range" style="display:none;margin-bottom:16px">
+        <input type="date" id="dash-dt-start">
+        <span style="color:var(--mu)">—</span>
+        <input type="date" id="dash-dt-end">
+        <button class="btp" onclick="loadDashboard(true)">Aplicar</button>
       </div>
 
       <!-- HERO: Faturamento + Lucro -->
@@ -1415,7 +1421,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
     <!-- MODAL DETALHE DO PEDIDO -->
     <div class="modal" id="ped-modal" onclick="if(event.target===this)closeModal('ped-modal')">
-      <div class="mbox" style="width:480px;max-width:95vw">
+      <div class="mbox" style="width:94vw;max-width:640px">
         <div id="ped-detalhe"></div>
         <div class="m-foot"><button class="bts" onclick="closeModal('ped-modal')">Fechar</button></div>
       </div>
@@ -1490,7 +1496,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
     <!-- MODAL DETALHE NF-e -->
     <div class="modal" id="nfe-detail-modal" onclick="if(event.target===this)closeModal('nfe-detail-modal')">
-      <div class="mbox" style="width:500px;max-width:95vw">
+      <div class="mbox" style="width:94vw;max-width:640px">
         <div id="nfe-detalhe"></div>
         <div class="m-foot">
           <button class="bts" id="nfe-det-danfe-btn" onclick="abrirDanfeDet()" style="display:none">Abrir DANFE</button>
@@ -1517,107 +1523,17 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     </div>
 
     <!-- VIEW NOTIFICAÇÕES -->
-    <div class="view" id="view-notificacoes">
-      <!-- AUTOMÁTICAS -->
-      <div class="tcard" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px;display:flex;align-items:center;gap:8px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Notificações automáticas
-          <span style="font-size:10px;font-weight:700;background:var(--ok-bg);color:var(--ok-t);padding:2px 9px;border-radius:20px;margin-left:2px">ENVIADAS PELO SISTEMA</span>
-        </div>
-        <p style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Disparadas todos os dias automaticamente — você não precisa fazer nada.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
-          <div class="auto-noti"><span class="an-h">08:00</span><span class="an-t">☀️ Resumo de ontem (vendas + lucro)</span></div>
-          <div class="auto-noti"><span class="an-h">09:00</span><span class="an-t">⚠️ Alerta de estoque zerado/crítico</span></div>
-          <div class="auto-noti"><span class="an-h">12:00</span><span class="an-t">🍽️ Parcial do almoço</span></div>
-          <div class="auto-noti"><span class="an-h">15:00</span><span class="an-t">☕ Resumo da tarde</span></div>
-          <div class="auto-noti"><span class="an-h">20:00</span><span class="an-t">🌙 Fechamento do dia (lucro/prejuízo)</span></div>
-        </div>
-        <p style="font-size:11px;color:var(--fa);margin-top:12px">Eventos como pedido novo e nota com erro também notificam em tempo real. Requer Firebase e Bling conectados.</p>
-      </div>
-      <div class="notif-grid">
-        <!-- COMPOSITOR -->
-        <div class="tcard notif-composer">
-          <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:18px;display:flex;align-items:center;gap:8px">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Nova Notificação
-          </div>
-          <div class="df">
-            <label>Título *</label>
-            <input type="text" id="nt-title" placeholder="Ex: Produto com estoque crítico!" maxlength="60" oninput="updateNotifPreview()">
-          </div>
-          <div class="df">
-            <label>Mensagem *</label>
-            <textarea id="nt-body" rows="3" placeholder="Ex: O produto X atingiu estoque zerado. Clique para ver." maxlength="200" oninput="updateNotifPreview()"></textarea>
-          </div>
-          <div class="df">
-            <label>Link ao clicar (opcional)</label>
-            <input type="text" id="nt-url" placeholder="/dashboard.html">
-          </div>
-          <div class="df">
-            <label>Botão de ação (opcional)</label>
-            <input type="text" id="nt-action" placeholder="Ex: Ver produtos" maxlength="30" oninput="updateNotifPreview()">
-          </div>
-          <div class="df">
-            <label>Quando enviar</label>
-            <div class="nt-toggle">
-              <button class="nt-tog on" id="nt-now-btn" onclick="setNotifMode('now')">Enviar agora</button>
-              <button class="nt-tog" id="nt-sched-btn" onclick="setNotifMode('sched')">Agendar</button>
-            </div>
-          </div>
-          <div class="df" id="nt-sched-wrap" style="display:none">
-            <label>Data e hora</label>
-            <input type="datetime-local" id="nt-datetime">
-          </div>
-          <div class="notif-foot">
-            <button class="btp" id="nt-send-btn" onclick="sendOrScheduleNotif()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              <span id="nt-send-label">Enviar para todos</span>
-            </button>
-            <span class="nt-sub-info" id="nt-sub-info">— dispositivos inscritos</span>
-          </div>
-        </div>
-
-        <!-- PREVIEW + HISTÓRICO -->
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <!-- Preview -->
-          <div class="tcard">
-            <div style="font-size:11.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px">Preview — como aparece no celular/PC</div>
-            <div class="np-card">
-              <div class="np-header">
-                <img class="np-icon" id="np-icon" src="/favicon.ico" alt="">
-                <span class="np-appname">Estoque Max</span>
-                <span class="np-time">agora</span>
-              </div>
-              <div class="np-title" id="np-title">Título da notificação</div>
-              <div class="np-body" id="np-body">A mensagem aparece aqui, com até 200 caracteres de conteúdo.</div>
-              <div class="np-actions" id="np-actions" style="display:none">
-                <button class="np-act-btn" id="np-act-btn">Ação</button>
-                <button class="np-act-btn" style="color:var(--mu)">Fechar</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Histórico -->
-          <div class="tcard">
-            <div class="toolbar" style="margin-bottom:14px">
-              <span style="font-size:14px;font-weight:700;color:var(--tx)">Histórico</span>
-              <div class="tr"><button class="bts" onclick="loadNotificacoes()">↻ Atualizar</button></div>
-            </div>
-            <div id="notif-history-body"><div class="st-wrap"><p class="st-d">Abra esta aba para carregar o histórico.</p></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- VIEW FINANCEIRO -->
     <div class="view" id="view-financeiro">
       <!-- Period filter bar -->
       <div class="fin-period-bar">
         <div class="fin-periods">
           <button class="fp-btn" data-p="today" onclick="setFinPeriod('today',this)">Hoje</button>
+          <button class="fp-btn" data-p="yesterday" onclick="setFinPeriod('yesterday',this)">Ontem</button>
           <button class="fp-btn" data-p="7d" onclick="setFinPeriod('7d',this)">7 dias</button>
           <button class="fp-btn on" data-p="30d" onclick="setFinPeriod('30d',this)">30 dias</button>
+          <button class="fp-btn" data-p="90d" onclick="setFinPeriod('90d',this)">90 dias</button>
+          <button class="fp-btn" data-p="year" onclick="setFinPeriod('year',this)">Este ano</button>
           <button class="fp-btn" data-p="custom" onclick="setFinPeriod('custom',this)">Personalizado</button>
         </div>
         <div class="fin-custom-range" id="fin-custom-range" style="display:none">
@@ -2436,10 +2352,6 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       <span>NF-e</span>
     </button>
-    <button class="mais-item" onclick="closeMaisMenu();setView('notificacoes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span>Push</span>
-    </button>
     <button class="mais-item" onclick="closeMaisMenu();setView('integracoes')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><path d="M13 17a3 3 0 0 0 3 3h2a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3z"/></svg>
       <span>Integrações</span>
@@ -2570,8 +2482,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',calendario:'Calendário','mercado-livre':'Mercado Livre',notificacoes:'Notificações Push',integracoes:'Integrações',config:'Configurações'};
-const MAIS_VIEWS=['clientes','relatorio','notas','historico','calendario','mercado-livre','notificacoes','integracoes','config'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',calendario:'Calendário','mercado-livre':'Mercado Livre',integracoes:'Integrações',config:'Configurações'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','calendario','mercado-livre','integracoes','config'];
 // Gate de senha para a aba Notas Fiscais
 let _nfeUnlocked=false;
 function setView(v){
@@ -2600,7 +2512,6 @@ function setView(v){
   if(v==='historico')loadHistorico();
   if(v==='financeiro')loadFinanceiro();
   if(v==='calendario')loadCalendario();
-  if(v==='notificacoes')loadNotificacoes();
   if(v==='integracoes')loadIntegracoes();
   if(v==='mercado-livre')loadMercadoLivre();
   closeMaisMenu();
@@ -2616,7 +2527,9 @@ function setDashPeriod(p,btn){
   dashPeriod=p;
   document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('on'));
   if(btn)btn.classList.add('on');
-  loadDashboard(true);
+  const cr=$('dash-custom-range');
+  if(cr)cr.style.display=p==='custom'?'flex':'none';
+  if(p!=='custom')loadDashboard(true);
 }
 function dashHello(){
   const h=new Date().getHours();
@@ -2630,7 +2543,13 @@ async function loadDashboard(force=false){
   const setTxt=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
   ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'…'));
   try{
-    const r=await fetch(`/api/dashboard?period=${dashPeriod}`);
+    let url=`/api/dashboard?period=${dashPeriod}`;
+    if(dashPeriod==='custom'){
+      const s=$('dash-dt-start')?.value,e=$('dash-dt-end')?.value;
+      if(!s||!e){toast('Selecione as datas','wa');return;}
+      url+=`&startDate=${s}&endDate=${e}`;
+    }
+    const r=await fetch(url);
     const d=await r.json();
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
       ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
@@ -3282,7 +3201,12 @@ function renderSkeleton(n=7){
 }
 function renderNoBling(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><p class="st-t">Bling não conectado</p><p class="st-d">Conecte sua conta para carregar produtos.</p><button class="st-btn" onclick="window.location.href='/'">Conectar Bling</button></div></td></tr>`;}
 function renderExpired(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p class="st-t">Sessão Bling expirada</p><button class="st-btn" onclick="window.location.href='/'">Reconectar</button></div></td></tr>`;}
-function sync(){_dashLoaded=false;_pedidosLoaded=false;_clientesLoaded=false;_notasLoaded=false;_finCacheKey='';_finCache={};loadProducts(true);}
+function sync(){
+  _dashLoaded=false;_pedidosLoaded=false;_clientesLoaded=false;_notasLoaded=false;_finCacheKey='';_finCache={};
+  loadProducts(true);
+  if(S.view==='inicio')loadDashboard(true);
+  if(S.view==='financeiro')loadFinanceiro(true);
+}
 
 // ── KPI ──────────────────────────────────────────
 function updateKpis(){
@@ -3709,7 +3633,7 @@ function setAutoRefresh(mins){
   bar.style.display='flex';$('ar-btn').title=`Auto-refresh: ${mins} min (clique para mudar)`;
   S.arCountdown=mins*60;
   $('ar-cd').textContent=S.arCountdown;
-  S.arTimer=setInterval(()=>{S.arCountdown--;if(S.arCountdown<=0){S.arCountdown=mins*60;loadProducts(false);}$('ar-cd').textContent=S.arCountdown;},1000);
+  S.arTimer=setInterval(()=>{S.arCountdown--;if(S.arCountdown<=0){S.arCountdown=mins*60;loadProducts(false);if(S.view==='inicio')loadDashboard(true);if(S.view==='financeiro')loadFinanceiro(true);}$('ar-cd').textContent=S.arCountdown;},1000);
 }
 
 // ── TAREFAS PANEL ────────────────────────────────
@@ -3896,7 +3820,7 @@ async function openPedidoDetalhe(id){
         </div>
         <span class="sb2 ${sb}" style="flex-shrink:0;gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Data</div><div style="font-size:13px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(totalPed)}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px">${esc(p.transportadora)}</div>`:''}</div>
@@ -3904,7 +3828,7 @@ async function openPedidoDetalhe(id){
       </div>
       ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:6px 10px;background:var(--bg);border-radius:8px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
-      <div style="max-height:220px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      <div style="max-height:220px;overflow:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
       ${p.observacoes?`<div style="margin-top:12px;font-size:12px;color:var(--mu);background:var(--bg);border-radius:8px;padding:10px"><strong>Obs:</strong> ${esc(p.observacoes)}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
@@ -4004,7 +3928,7 @@ async function openNotaDetalhe(id){
         <div><div style="font-size:16px;font-weight:700">NF-e nº ${esc(String(n.numero||n.id))}-${esc(n.serie||'1')}</div><div style="font-size:12px;color:var(--mu)">${esc(n.contato)}${n.contatoDoc?' · '+esc(n.contatoDoc):''}</div>${n.natureza?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${esc(n.natureza)}</div>`:''}</div>
         ${notaSitBadge(n.situacao)}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Emissão</div><div style="font-size:13px;font-weight:700">${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(n.total)}</div></div>
         <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(n.totalFrete||0)}</div></div>
@@ -4012,7 +3936,7 @@ async function openNotaDetalhe(id){
       </div>
       ${n.chave?`<div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10px;color:var(--mu);flex-shrink:0">Chave de acesso:</span><span class="nfe-key" style="flex:1">${esc(n.chave)}</span><button class="bts" style="height:24px;padding:0 8px;font-size:11px" onclick="copySku('${esc(n.chave)}');event.stopPropagation()">Copiar</button></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${n.itens?.length||0})</div>
-      <div style="max-height:220px;overflow-y:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      <div style="max-height:220px;overflow:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
     `;
     if(sc==='ok')$('nfe-det-danfe-btn').style.display='';
   }catch(e){$('nfe-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
@@ -4120,7 +4044,6 @@ const _CP_CMDS=[
   {label:'Notas Fiscais',sub:'Emitir e consultar NF-e',icon:'file-text',fn:()=>setView('notas')},
   {label:'Histórico',sub:'Log de alterações',icon:'clock',fn:()=>setView('historico')},
   {label:'Relatório',sub:'Curva ABC e mais vendidos',icon:'bar-chart',fn:()=>setView('relatorio')},
-  {label:'Notificações',sub:'Alertas automáticos',icon:'bell',fn:()=>setView('notificacoes')},
   {label:'Integrações',sub:'Marketplaces e canais',icon:'git-branch',fn:()=>setView('integracoes')},
   {label:'Configurações',sub:'Preferências do sistema',icon:'settings',fn:()=>setView('config')},
   {label:'Novo produto',sub:'Cadastrar produto',icon:'plus-circle',fn:()=>{setView('produtos');setTimeout(openCreate,60)}},
@@ -5015,97 +4938,6 @@ function sendLocalNotif(title,body){
   }
 }
 
-// ── NOTIFICAÇÕES PUSH ────────────────────────────
-let _notifMode='now';
-function setNotifMode(mode){
-  _notifMode=mode;
-  $('nt-now-btn').classList.toggle('on',mode==='now');
-  $('nt-sched-btn').classList.toggle('on',mode==='sched');
-  $('nt-sched-wrap').style.display=mode==='sched'?'':'none';
-  $('nt-send-label').textContent=mode==='sched'?'Agendar notificação':'Enviar para todos';
-}
-function updateNotifPreview(){
-  const title=$('nt-title').value||'Título da notificação';
-  const body=$('nt-body').value||'A mensagem aparece aqui, com até 200 caracteres de conteúdo.';
-  const action=$('nt-action').value;
-  $('np-title').textContent=title;
-  $('np-body').textContent=body;
-  if(action){$('np-act-btn').textContent=action;$('np-actions').style.display='';}
-  else $('np-actions').style.display='none';
-}
-async function sendOrScheduleNotif(){
-  const title=($('nt-title').value||'').trim();
-  const body=($('nt-body').value||'').trim();
-  if(!title||!body){toast('Preencha título e mensagem','wa');return;}
-  const url=($('nt-url').value||'').trim()||'/dashboard.html';
-  const action=($('nt-action').value||'').trim();
-  const btn=$('nt-send-btn');
-  btn.disabled=true;
-  if(_notifMode==='sched'){
-    const dt=$('nt-datetime').value;
-    if(!dt){toast('Informe data e hora para agendamento','wa');btn.disabled=false;return;}
-    $('nt-send-label').textContent='Agendando…';
-    try{
-      const r=await fetch('/api/notif/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body,url,action,sendAt:dt})});
-      const d=await r.json();
-      if(!r.ok)throw new Error(d.error||'Erro');
-      toast('Notificação agendada com sucesso!','ok');
-      $('nt-title').value='';$('nt-body').value='';$('nt-action').value='';$('nt-url').value='';$('nt-datetime').value='';
-      updateNotifPreview();loadNotificacoes();
-    }catch(e){toast('Erro: '+e.message,'err');}
-    finally{btn.disabled=false;$('nt-send-label').textContent='Agendar notificação';}
-  } else {
-    $('nt-send-label').textContent='Enviando…';
-    try{
-      const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body,url,action})});
-      const d=await r.json();
-      if(!r.ok)throw new Error(d.error||'Erro');
-      toast(`Enviado para ${d.sent} dispositivo(s)!`,'ok');
-      $('nt-title').value='';$('nt-body').value='';$('nt-action').value='';$('nt-url').value='';
-      updateNotifPreview();loadNotificacoes();
-    }catch(e){toast('Erro: '+e.message,'err');}
-    finally{btn.disabled=false;$('nt-send-label').textContent='Enviar para todos';}
-  }
-}
-async function loadNotificacoes(){
-  const body=$('notif-history-body');
-  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
-  try{
-    const r=await fetch('/api/notif/history'),d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Erro');
-    const si=$('nt-sub-info');
-    if(si)si.textContent=`${d.subscribers||0} dispositivo(s) inscrito(s)`;
-    const list=d.history||[];
-    if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma notificação enviada ou agendada.</p></div>';return;}
-    body.innerHTML=list.map(n=>{
-      const isSched=n.status==='scheduled';
-      const isErr=n.status==='error';
-      const dotCls=isSched?'nh-dot-sched':isErr?'nh-dot-err':'nh-dot-ok';
-      const statusLbl=isSched?'Agendado para '+new Date(n.sendAt).toLocaleString('pt-BR'):isErr?'Erro':'Enviado — '+new Date(n.sentAt||n.createdAt).toLocaleString('pt-BR');
-      return`<div class="nh-row">
-        <div class="nh-dot ${dotCls}" style="margin-top:5px"></div>
-        <div style="flex:1;min-width:0">
-          <div class="nh-title">${esc(n.title)}</div>
-          <div class="nh-body">${esc(n.body)}</div>
-          <div class="nh-meta">
-            <span>${statusLbl}</span>
-            ${n.sent!=null?`<span>· ${n.sent} enviados</span>`:''}
-            ${isSched?`<button class="bts" style="padding:2px 10px;font-size:11px" onclick="cancelNotif('${esc(n.id)}')">Cancelar</button>`:''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
-}
-async function cancelNotif(id){
-  if(!confirm('Cancelar esta notificação agendada?'))return;
-  try{
-    const r=await fetch(`/api/notif/schedule/${id}`,{method:'DELETE'});
-    if(!r.ok)throw new Error('Erro ao cancelar');
-    toast('Notificação cancelada','ok');loadNotificacoes();
-  }catch(e){toast('Erro: '+e.message,'err');}
-}
-
 // ── IMAGE LIGHTBOX ───────────────────────────────
 function openImgLbox(url){
   if(!url)return;
@@ -5438,7 +5270,6 @@ const _ptrFnMap={
   calendario:()=>loadCalendario(true),
   clientes:()=>loadClientes(true),
   integracoes:()=>loadIntegracoes(),
-  notificacoes:()=>loadNotificacoes(),
 };
 let _ptrY0=0,_ptrActive=false;
 function _ptrReset(){
