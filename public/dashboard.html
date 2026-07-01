@@ -37,6 +37,12 @@
       <a class="ni" id="ni-financeiro" onclick="setView('financeiro')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Financeiro
       </a>
+      <a class="ni" id="ni-mercadolivre" onclick="setView('mercadolivre')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2l1.5 5h9L18 2"></path><path d="M3.5 7h17l-1.2 12a2 2 0 0 1-2 1.8H6.7a2 2 0 0 1-2-1.8L3.5 7z"></path><path d="M9 11v4"></path><path d="M15 11v4"></path></svg> Mercado Livre
+      </a>
+      <a class="ni" id="ni-calendario" onclick="setView('calendario')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Calendário
+      </a>
       <a class="ni" id="ni-integracoes" onclick="setView('integracoes')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Integrações
       </a>
@@ -365,6 +371,114 @@
       </div>
     </div>
 
+    <!-- VIEW MERCADO LIVRE (dados 100% separados do Bling) -->
+    <div class="view" id="view-mercadolivre">
+      <div class="dash-sec-t" style="display:flex; justify-content:space-between; align-items:center; border:none;">
+        <span>Mercado Livre <span style="font-size:11px; font-weight:400; color:var(--text-m);">· dados separados do Bling</span></span>
+        <button class="bts" onclick="loadMercadoLivre()">🔄 Atualizar</button>
+      </div>
+
+      <div id="ml-disconnected" style="display:none;">
+        <div class="st-wrap" style="padding:40px 24px;">
+          <p class="st-t">Mercado Livre não conectado</p>
+          <p class="st-d">Conecte sua conta para ver perguntas, anúncios e métricas em tempo real.</p>
+          <button class="st-btn" onclick="connectML()">Conectar Mercado Livre</button>
+        </div>
+      </div>
+
+      <div id="ml-content" style="display:none;">
+        <div class="dash-hero" style="grid-template-columns: 1fr 1fr;">
+          <div class="hero-card">
+            <div class="hero-top">👤 Vendedor</div>
+            <div class="hero-val" id="ml-apelido" style="font-size:20px;">—</div>
+            <div class="hero-sub" id="ml-nivel">—</div>
+          </div>
+          <div class="hero-card">
+            <div class="hero-top">⭐ Avaliação Positiva</div>
+            <div class="hero-val" id="ml-avaliacao">—</div>
+            <div class="hero-sub">últimas transações</div>
+          </div>
+        </div>
+
+        <div class="dash-kpis">
+          <div class="dk-card dk-blue">
+            <div class="dk-val" id="ml-vendas30d">—</div>
+            <div class="dk-lbl">Vendas (recentes)</div>
+          </div>
+          <div class="dk-card dk-amber">
+            <div class="dk-val" id="ml-perguntas-cnt">—</div>
+            <div class="dk-lbl">Perguntas sem resposta</div>
+          </div>
+          <div class="dk-card dk-rose">
+            <div class="dk-val" id="ml-cancelamentos">—</div>
+            <div class="dk-lbl">Tx. Cancelamentos</div>
+          </div>
+          <div class="dk-card dk-green">
+            <div class="dk-val" id="ml-reclamacoes">—</div>
+            <div class="dk-lbl">Tx. Reclamações</div>
+          </div>
+        </div>
+
+        <div class="dash-two">
+          <div class="conta-card">
+            <div class="conta-hd"><span class="conta-hd-t">❓ Perguntas sem resposta</span></div>
+            <div class="conta-body" id="ml-perguntas-list"></div>
+          </div>
+          <div class="conta-card">
+            <div class="conta-hd"><span class="conta-hd-t">🧾 Últimos pedidos ML</span></div>
+            <div class="conta-body" id="ml-pedidos-list"></div>
+          </div>
+        </div>
+
+        <div class="dash-sec-t" style="border:none; margin-top:16px;">Anúncios ativos</div>
+        <div id="ml-anuncios-list" class="card-grid vg"></div>
+      </div>
+    </div>
+
+    <!-- VIEW CALENDÁRIO -->
+    <div class="view" id="view-calendario">
+      <div class="dash-sec-t" style="display:flex; justify-content:space-between; align-items:center; border:none;">
+        <span id="cal-mes-label">Calendário</span>
+        <div style="display:flex; gap:8px;">
+          <button class="bts" onclick="calMonthNav(-1)">‹</button>
+          <button class="bts" onclick="calMonthNav(0)">Hoje</button>
+          <button class="bts" onclick="calMonthNav(1)">›</button>
+          <button class="btp" onclick="openCalEventModal()">+ Evento</button>
+        </div>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+      <div class="dash-sec-t" style="border:none; margin-top:16px;">Próximos eventos</div>
+      <div class="conta-card">
+        <div class="conta-body" id="cal-upcoming-list"></div>
+      </div>
+    </div>
+
+    <!-- Modal: novo evento de calendário -->
+    <div class="edraw-ov" id="cal-modal-ov" onclick="closeCalEventModal()"></div>
+    <div class="edraw" id="cal-modal">
+      <div class="edraw-hd">
+        <div class="edraw-title">Novo Evento</div>
+        <button class="bti" onclick="closeCalEventModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="edraw-bd">
+        <div class="h-campo"><label>Tipo</label>
+          <select id="cal-ev-tipo">
+            <option value="evento">Evento</option>
+            <option value="vencimento">Vencimento (a pagar)</option>
+            <option value="recebimento">Recebimento (a receber)</option>
+            <option value="comemorativo">Data comemorativa</option>
+            <option value="feriado">Feriado</option>
+          </select>
+        </div>
+        <div class="h-campo"><label>Título</label><input type="text" id="cal-ev-titulo"></div>
+        <div class="h-campo"><label>Data</label><input type="date" id="cal-ev-data"></div>
+        <div class="h-campo"><label>Descrição (opcional)</label><textarea id="cal-ev-desc" rows="2"></textarea></div>
+      </div>
+      <div style="padding:16px 24px; border-top:1px solid var(--border); background:var(--bg);">
+        <button class="btp" style="width:100%;" onclick="saveCalEvent()">Salvar Evento</button>
+      </div>
+    </div>
+
     <!-- Hidden Config View & Notificacoes for ID preservation -->
     <div class="view" id="view-config" style="display:none;"></div>
     <div class="view" id="view-notificacoes" style="display:none;">
@@ -466,6 +580,14 @@
     <button class="mais-item" onclick="setView('integracoes')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       <span>Integrações</span>
+    </button>
+    <button class="mais-item" onclick="setView('mercadolivre')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2l1.5 5h9L18 2"/><path d="M3.5 7h17l-1.2 12a2 2 0 0 1-2 1.8H6.7a2 2 0 0 1-2-1.8L3.5 7z"/><path d="M9 11v4"/><path d="M15 11v4"/></svg>
+      <span>Mercado Livre</span>
+    </button>
+    <button class="mais-item" onclick="setView('calendario')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Calendário</span>
     </button>
   </div>
   <div class="mais-sep"></div>
@@ -591,8 +713,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',integracoes:'Integrações',config:'Configurações'};
-const MAIS_VIEWS=['clientes','relatorio','notas','historico','integracoes','config'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',integracoes:'Integrações',config:'Configurações',mercadolivre:'Mercado Livre',calendario:'Calendário'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','integracoes','config','mercadolivre','calendario'];
 // Gate de senha para a aba Notas Fiscais
 let _nfeUnlocked=false;
 function setView(v){
@@ -621,6 +743,8 @@ function setView(v){
   if(v==='historico')loadHistorico();
   if(v==='financeiro')loadFinanceiro();
   if(v==='integracoes'){ /* no-op */ }
+  if(v==='mercadolivre')loadMercadoLivre();
+  if(v==='calendario')loadCalendario();
   closeMaisMenu();
 }
 
@@ -764,7 +888,12 @@ async function loadProducts(showToast=false){
 }
 function renderNoBling(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><p class="st-t">Bling não conectado</p><p class="st-d">Conecte sua conta para carregar produtos.</p><button class="st-btn" onclick="window.location.href='/conectar.html'">Conectar Bling</button></div></td></tr>`;}
 function renderExpired(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p class="st-t">Sessão Bling expirada</p><button class="st-btn" onclick="window.location.href='/conectar.html'">Reconectar</button></div></td></tr>`;}
-function sync(){loadProducts(true);}
+function sync(){
+  loadProducts(true);
+  if(S.view==='inicio')loadDashboard(true);
+  if(S.view==='financeiro')loadFinanceiro();
+  if(S.view==='mercadolivre')loadMercadoLivre();
+}
 
 // ── KPI ──────────────────────────────────────────
 function updateKpis(){
@@ -1010,7 +1139,7 @@ function setAutoRefresh(mins){
   bar.style.display='flex';$('ar-btn').title=`Auto-refresh: ${mins} min (clique para mudar)`;
   S.arCountdown=mins*60;
   $('ar-cd').textContent=S.arCountdown;
-  S.arTimer=setInterval(()=>{S.arCountdown--;if(S.arCountdown<=0){S.arCountdown=mins*60;loadProducts(false);}$('ar-cd').textContent=S.arCountdown;},1000);
+  S.arTimer=setInterval(()=>{S.arCountdown--;if(S.arCountdown<=0){S.arCountdown=mins*60;loadProducts(false);if(S.view==='inicio')loadDashboard(true);if(S.view==='financeiro')loadFinanceiro();}$('ar-cd').textContent=S.arCountdown;},1000);
 }
 
 // ── TAREFAS PANEL ────────────────────────────────
@@ -1501,6 +1630,146 @@ function pwCancel(){
   closeModal('pw-modal');
   const c=_pwCancelCb;_pwCallback=null;_pwCancelCb=null;
   if(c)c();
+}
+
+// ── MERCADO LIVRE (dados 100% separados do Bling) ─
+let _mlLoaded=false;
+async function connectML(){
+  try{
+    const r=await fetch('/api/ml/auth/url'),d=await r.json();
+    if(d.authUrl){window.location.href=d.authUrl;return;}
+    toast(d.error||'Mercado Livre não configurado','err');
+  }catch(e){toast('Erro ao conectar: '+e.message,'err');}
+}
+async function loadMercadoLivre(force=false){
+  if(_mlLoaded&&!force)return;
+  _mlLoaded=true;
+  try{
+    const r=await fetch('/api/ml/status'),d=await r.json();
+    if(!d.connected){$('ml-disconnected').style.display='';$('ml-content').style.display='none';return;}
+    $('ml-disconnected').style.display='none';$('ml-content').style.display='';
+    $('ml-apelido').textContent=d.apelido||d.nome||'—';
+    $('ml-nivel').textContent=d.pontuacao?`Nível: ${d.pontuacao}`:'—';
+    const [metRes,pergRes,anunRes]=await Promise.allSettled([
+      fetch('/api/ml/metricas').then(r=>r.json()),
+      fetch('/api/ml/perguntas').then(r=>r.json()),
+      fetch('/api/ml/anuncios').then(r=>r.json()),
+    ]);
+    if(metRes.status==='fulfilled'){
+      const m=metRes.value;
+      $('ml-avaliacao').textContent=m.avaliacaoPositiva!=null?`${m.avaliacaoPositiva}%`:'—';
+      $('ml-vendas30d').textContent=m.vendas30d!=null?fmtN(m.vendas30d):'—';
+      $('ml-cancelamentos').textContent=m.txCancelamentos!=null?`${m.txCancelamentos.toFixed(1)}%`:'—';
+      $('ml-reclamacoes').textContent=m.txReclamacoes!=null?`${m.txReclamacoes.toFixed(1)}%`:'—';
+      const pl=$('ml-pedidos-list');
+      const ped=m.ultimosPedidos||[];
+      pl.innerHTML=ped.length?ped.map(o=>`<div class="conta-row"><div class="conta-r-info"><div class="conta-r-nome">Pedido #${esc(o.id)}</div><div class="conta-r-venc">${esc(o.statusPT||o.status)}</div></div><div class="conta-r-val">${fmt(o.total)}</div></div>`).join(''):'<div class="st-wrap" style="padding:24px"><p class="st-d">Sem pedidos recentes.</p></div>';
+    }
+    if(pergRes.status==='fulfilled'){
+      const qs=pergRes.value.perguntas||[];
+      $('ml-perguntas-cnt').textContent=fmtN(qs.length);
+      const pl=$('ml-perguntas-list');
+      pl.innerHTML=qs.length?qs.slice(0,8).map(q=>`<div class="conta-row"><div class="conta-r-info"><div class="conta-r-nome">${esc(q.comprador)}</div><div class="conta-r-venc">${esc(q.texto)}</div></div></div>`).join(''):'<div class="st-wrap" style="padding:24px"><p class="st-d">Nenhuma pergunta pendente. 🎉</p></div>';
+    }
+    if(anunRes.status==='fulfilled'){
+      const ans=anunRes.value.anuncios||[];
+      const al=$('ml-anuncios-list');
+      al.innerHTML=ans.length?ans.map(a=>`<div class="pcard"><div class="pcard-img"><img src="${esc(a.thumb||'')}" alt="" loading="lazy" onerror="this.src='';"></div><div class="pcard-body"><a class="pcard-name plink" href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.titulo)}</a><div class="pcard-meta"><span class="pcard-price">${fmt(a.preco)}</span><span class="pcard-stock">${fmtN(a.qtd)} un.</span></div></div></div>`).join(''):'<div class="st-wrap" style="padding:24px"><p class="st-d">Nenhum anúncio ativo encontrado.</p></div>';
+    }
+  }catch(e){toast('Erro ao carregar Mercado Livre: '+e.message,'err');}
+}
+async function responderPerguntaML(id,btn){
+  const resposta=prompt('Digite sua resposta:');
+  if(!resposta||!resposta.trim())return;
+  try{
+    const r=await fetch(`/api/ml/perguntas/${id}/responder`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resposta})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    toast('Resposta enviada','ok');
+    loadMercadoLivre(true);
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+// ── CALENDÁRIO ────────────────────────────────────
+let _calEvents=[];
+let _calCursor=new Date();
+const CAL_TIPO_LABEL={evento:'Evento',vencimento:'Vencimento',recebimento:'Recebimento',comemorativo:'Comemorativo',feriado:'Feriado'};
+async function loadCalendario(){
+  const mes=`${_calCursor.getFullYear()}-${String(_calCursor.getMonth()+1).padStart(2,'0')}`;
+  try{
+    const r=await fetch(`/api/calendario?mes=${mes}`),d=await r.json();
+    _calEvents=d.eventos||[];
+  }catch(e){_calEvents=[];toast('Erro ao carregar calendário: '+e.message,'err');}
+  renderCalendar();
+}
+function calMonthNav(delta){
+  if(delta===0)_calCursor=new Date();
+  else _calCursor=new Date(_calCursor.getFullYear(),_calCursor.getMonth()+delta,1);
+  loadCalendario();
+}
+function renderCalendar(){
+  const y=_calCursor.getFullYear(),m=_calCursor.getMonth();
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  $('cal-mes-label').textContent=`${meses[m]} ${y}`;
+  const firstDow=new Date(y,m,1).getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const todayStr=new Date().toISOString().split('T')[0];
+  const evByDay={};
+  _calEvents.forEach(e=>{(evByDay[e.data]=evByDay[e.data]||[]).push(e);});
+  let html='';
+  ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].forEach(d=>html+=`<div class="cal-dow">${d}</div>`);
+  for(let i=0;i<firstDow;i++)html+='<div class="cal-day empty"></div>';
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const evs=evByDay[dateStr]||[];
+    const isToday=dateStr===todayStr;
+    html+=`<div class="cal-day${isToday?' today':''}" onclick="openCalEventModal('${dateStr}')">
+      <span class="cal-day-num">${day}</span>
+      ${evs.slice(0,3).map(e=>`<span class="cal-ev t-${e.tipo}" title="${esc(e.titulo)}">${esc(e.titulo)}</span>`).join('')}
+      ${evs.length>3?`<span style="font-size:10px;color:var(--text-d)">+${evs.length-3}</span>`:''}
+    </div>`;
+  }
+  $('cal-grid').innerHTML=html;
+  const upcoming=_calEvents.filter(e=>e.data>=todayStr).sort((a,b)=>a.data<b.data?-1:1).slice(0,10);
+  const ul=$('cal-upcoming-list');
+  ul.innerHTML=upcoming.length?upcoming.map(e=>{
+    const venc=e.data.split('-').reverse().join('/');
+    return `<div class="conta-row"><div class="conta-r-info"><div class="conta-r-nome">${esc(e.titulo)}</div><div class="conta-r-venc">${CAL_TIPO_LABEL[e.tipo]||e.tipo} · ${venc}</div></div><button class="bti" onclick="deleteCalEvent(${e.id})" title="Remover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`;
+  }).join(''):'<div class="st-wrap" style="padding:24px"><p class="st-d">Nenhum evento futuro cadastrado.</p></div>';
+}
+function openCalEventModal(dateStr){
+  $('cal-ev-tipo').value='evento';
+  $('cal-ev-titulo').value='';
+  $('cal-ev-data').value=dateStr||new Date().toISOString().split('T')[0];
+  $('cal-ev-desc').value='';
+  $('cal-modal-ov').classList.add('open');
+  $('cal-modal').classList.add('open');
+}
+function closeCalEventModal(){
+  $('cal-modal-ov').classList.remove('open');
+  $('cal-modal').classList.remove('open');
+}
+async function saveCalEvent(){
+  const tipo=$('cal-ev-tipo').value,titulo=$('cal-ev-titulo').value.trim(),data=$('cal-ev-data').value,descricao=$('cal-ev-desc').value.trim();
+  if(!titulo||!data){toast('Preencha título e data','wa');return;}
+  try{
+    const r=await fetch('/api/calendario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,titulo,data,descricao})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    toast('Evento criado','ok');
+    closeCalEventModal();
+    loadCalendario();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+async function deleteCalEvent(id){
+  if(!confirm('Remover este evento?'))return;
+  try{
+    const r=await fetch(`/api/calendario/${id}`,{method:'DELETE'});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    toast('Evento removido','ok');
+    loadCalendario();
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 
 // ── CLIENTES (CRM) ───────────────────────────────
