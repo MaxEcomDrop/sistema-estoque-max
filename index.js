@@ -465,6 +465,52 @@ app.get('/api/webhook/bling', async (req, res) => {
   }
 });
 
+// Firebase Authentication endpoint
+app.post('/api/auth/firebase', async (req, res) => {
+  const { idToken, email } = req.body || {};
+
+  if (!idToken || !email) {
+    return sendErrorResponse(res, 400, 'ID token e email são obrigatórios');
+  }
+
+  if (!ADMIN_EMAIL || !JWT_SECRET) {
+    return sendErrorResponse(res, 500, 'Configuração incompleta: ADMIN_EMAIL ou JWT_SECRET não definidos');
+  }
+
+  try {
+    // Try to verify Firebase token with Admin SDK
+    const admin = getAdmin();
+    let firebaseUser = null;
+
+    if (admin) {
+      try {
+        firebaseUser = await admin.auth().verifyIdToken(idToken);
+      } catch (err) {
+        console.error('[Firebase Auth]', err.message);
+        return sendErrorResponse(res, 401, 'Token do Firebase inválido ou expirado');
+      }
+    }
+
+    // Check if email matches authorized user
+    if (!safeEqual(email, ADMIN_EMAIL)) {
+      return sendErrorResponse(res, 403, 'Email não autorizado. Entre em contato com o administrador.');
+    }
+
+    // Create JWT token for app
+    clearLoginFailures(req);
+    const token = jwt.sign({ email: ADMIN_EMAIL, provider: 'firebase' }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('system_token', token, {
+      httpOnly: true,
+      secure: NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 3600 * 1000,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao autenticar', err.message);
+  }
+});
+
 // ── OAuth Mercado Livre ───────────────────────────────────────────────
 
 // In-memory cache for ML access_token (TTL ~6h) to avoid Firestore round-trips
