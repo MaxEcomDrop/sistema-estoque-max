@@ -4,6 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+const { rateLimit } = require('express-rate-limit');
 
 // --- Cache e Retry ---
 const apiCache = new Map();
@@ -85,6 +86,7 @@ function getAdmin() {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -299,7 +301,15 @@ app.use(express.static(__dirname + '/public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Limite de 5 requisições por IP por janela
+  message: { error: 'Muitas tentativas de login. Tente novamente mais tarde.' },
+  standardHeaders: true, // Retorna info nos headers `RateLimit-*`
+  legacyHeaders: false, // Desabilita headers `X-RateLimit-*`
+});
+
+app.post('/api/auth/login', loginRateLimiter, (req, res) => {
   const { email, password } = req.body || {};
   
   if (!email || !password) {
