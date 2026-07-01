@@ -391,6 +391,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       allProducts = allProducts.concat(items);
       hasMore = items.length === limit;
       page++;
+      if (hasMore) await new Promise(r => setTimeout(r, 400));
     }
 
     const products = allProducts.map(p => ({
@@ -467,6 +468,7 @@ async function fetchPedidos(token, inicio, fim, maxPg = Infinity) {
     const items = Array.isArray(data?.data) ? data.data : [];
     all = all.concat(items);
     if (items.length < 100) break;
+    await new Promise(r => setTimeout(r, 400));
   }
   return all;
 }
