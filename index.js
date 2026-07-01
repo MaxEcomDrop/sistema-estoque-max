@@ -505,7 +505,7 @@ function mlHeaders(token) {
 app.get('/api/ml/auth/url', requireAuthJson, (req, res) => {
   if (!ML_CLIENT_ID) return res.status(400).json({ error: 'ML_CLIENT_ID não configurado' });
   const params = new URLSearchParams({ response_type: 'code', client_id: ML_CLIENT_ID, redirect_uri: ML_REDIRECT_URI, state: 'estoque_max_ml' });
-  res.json({ authUrl: `https://auth.mercadolibre.com.br/authorization?${params}` });
+  res.json({ authUrl: `https://auth.mercadolivre.com.br/authorization?${params}` });
 });
 
 app.get('/api/ml/callback', async (req, res) => {
