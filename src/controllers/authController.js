@@ -29,9 +29,11 @@ exports.handleCallback = async (req, res) => {
     });
 
     // Sincronizar produtos automaticamente após login
-    syncProductosAposLogin(userId, tokenData.access_token).catch(err => {
+    try {
+      await syncProductosAposLogin(userId, tokenData.access_token);
+    } catch (err) {
       console.error('Erro ao sincronizar produtos após login:', err);
-    });
+    }
 
     res.redirect('/dashboard');
   } catch (error) {
