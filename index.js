@@ -641,6 +641,43 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   try {
     const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
       headers: { Authorization: `Bearer ${token}` },
+      params: { limite: 100, pagina: 1 },
+    });
+
+    const pedidos = (Array.isArray(data?.data) ? data.data : []).map(p => {
+      const valorBruto = p.totalProdutos || p.totalVenda || p.total || 0;
+      const frete = p.frete || p.transporte?.fretePorConta || 0;
+      const desconto = p.desconto?.valor || p.desconto || 0;
+      const impostosEstimados = valorBruto * 0.06;
+      let lucroLiquido = valorBruto - frete - desconto - impostosEstimados;
+      
+      return {
+        id:        p.id,
+        numero:    p.numero,
+        data:      p.data,
+        valor:     valorBruto,
+        frete,
+        desconto,
+        impostos: impostosEstimados,
+        lucro:     lucroLiquido,
+        situacao:  String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
+        contato:   p.contato?.nome || '—',
+      };
+    });
+
+    res.json({ total: pedidos.length, pedidos });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao buscar pedidos', err.message);
+  }
+});
+
+  try {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+      headers: { Authorization: `Bearer ${token}` },
       params: { limite: 50, pagina: 1 },
     });
 
