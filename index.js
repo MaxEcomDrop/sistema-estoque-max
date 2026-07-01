@@ -159,6 +159,22 @@ function blingHeaders(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+// Axios config with timeout to prevent hanging requests
+const AXIOS_TIMEOUT = 15000; // 15 segundos
+axios.defaults.timeout = AXIOS_TIMEOUT;
+
+// Handle common API errors
+function getApiErrorMessage(err) {
+  if (err.code === 'ECONNABORTED') return 'Requisição expirou - tente novamente';
+  if (err.code === 'ENOTFOUND') return 'Sem conexão com a internet';
+  if (err.response?.status === 401) return 'Token expirado';
+  if (err.response?.status === 403) return 'Acesso negado';
+  if (err.response?.status === 404) return 'Recurso não encontrado';
+  if (err.response?.status === 429) return 'Muitas requisições - tente novamente em alguns segundos';
+  if (err.response?.status === 500) return 'Erro no servidor - tente novamente';
+  return err.response?.data?.error?.message || err.message || 'Erro desconhecido';
+}
+
 // ── Bling token: renovação automática via refresh_token ──────────
 const BLING_COOKIE_OPTS = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
 
