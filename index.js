@@ -242,11 +242,20 @@ function resolvePeriodo(period, startDate, endDate) {
 
 // ── Páginas ──────────────────────────────────────────────────────────
 
-app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
+app.get('/login', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.sendFile(__dirname + '/public/login.html');
+});
 app.get('/', requireAuth, (req, res) => res.redirect('/dashboard.html'));
 app.get('/conectar.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/conectar.html'));
 
-app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
+app.get('/dashboard.html', requireAuth, (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  res.sendFile(__dirname + '/public/dashboard.html');
+});
 app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
