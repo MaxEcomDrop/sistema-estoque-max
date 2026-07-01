@@ -278,7 +278,7 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
   res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
 });
 
-app.get('/api/auth/callback', async (req, res) => {
+app.get(['/api/auth/callback', '/api/webhook/bling'], async (req, res) => {
   const { code, error } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
