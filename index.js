@@ -112,7 +112,12 @@ function pushLog(logData) {
     admin.firestore().collection('historico').add({
       ...logData,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
-    }).catch(console.error);
+    }).catch(err => {
+      console.error('[pushLog] Erro ao salvar no Firestore:', err.message);
+      // Fallback seguro em memória em caso de falha
+      logData.timestamp = new Date().toISOString();
+      changeLog.push(logData);
+    });
   } else {
     // Fallback seguro em memória
     logData.timestamp = new Date().toISOString();
