@@ -1059,9 +1059,8 @@ app.get('/api/cron/push', async (req, res) => {
     if (snap.empty) return res.json({ ok: true, sent: 0 });
     const tokSnap = await admin.firestore().collection('fcm_tokens').get();
     const tokens = tokSnap.docs.map(d => d.data().token).filter(Boolean);
-    let sent = 0;
     const batch = admin.firestore().batch();
-    for (const doc of snap.docs) {
+    const results = await Promise.all(snap.docs.map(async (doc) => {
       const { title, body, url = '/dashboard.html', action } = doc.data();
       try {
         let successCount = 0;
@@ -1072,11 +1071,13 @@ app.get('/api/cron/push', async (req, res) => {
           successCount = result.successCount;
         }
         batch.update(doc.ref, { status: 'sent', sent: successCount, sentAt: admin.firestore.FieldValue.serverTimestamp() });
-        sent++;
+        return true;
       } catch (e) {
         batch.update(doc.ref, { status: 'error', error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message });
+        return false;
       }
-    }
+    }));
+    const sent = results.filter(Boolean).length;
     await batch.commit();
     res.json({ ok: true, sent });
   } catch (e) {
