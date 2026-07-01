@@ -444,7 +444,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
     });
     const criado = data?.data || data;
     pushLog({
-      id: changeLog.length + 1, produto_id: criado?.id || '—',
+      id: Date.now(), produto_id: criado?.id || '—',
       produto_nome: req.body.nome || 'Novo produto', campo: 'criação',
       valor_anterior: '—', valor_novo: req.body.nome || '—',
       timestamp: new Date().toISOString(),
@@ -576,7 +576,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         );
       }
       pushLog({
-        id: changeLog.length + 1, produto_id: id,
+        id: Date.now(), produto_id: id,
         produto_nome: _fullUpdate.nome || `#${id}`, campo: 'edição completa',
         valor_anterior: '—', valor_novo: 'campos atualizados',
         timestamp: new Date().toISOString(),
@@ -602,7 +602,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { headers: blingHeaders(token) }
       );
       pushLog({
-        id: changeLog.length + 1, produto_id: id,
+        id: Date.now(), produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'preço',
         valor_anterior: valor_anterior || '—',
         valor_novo: `R$ ${Number(preco).toFixed(2)}`,
@@ -616,7 +616,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { headers: blingHeaders(token) }
       );
       pushLog({
-        id: changeLog.length + 1, produto_id: id,
+        id: Date.now(), produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'estoque',
         valor_anterior: valor_anterior || '—',
         valor_novo: `${Number(estoque)} un.`,
@@ -659,7 +659,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
         );
       }
       pushLog({
-        id: changeLog.length + 1,
+        id: Date.now(),
         produto_id: p.id,
         produto_nome: p.nome || `#${p.id}`,
         campo: 'importação CSV',
@@ -1293,8 +1293,31 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 
 // ── Histórico ────────────────────────────────────────────────────
 
-app.get('/api/historico', requireAuthJson, (req, res) => {
-  res.json({ history: changeLog.slice().reverse().slice(0, 300) });
+app.get('/api/historico', requireAuthJson, async (req, res) => {
+  try {
+    const admin = getAdmin();
+    if (admin) {
+      const snapshot = await admin.firestore().collection('historico')
+        .orderBy('timestamp', 'desc')
+        .limit(300)
+        .get();
+
+      const history = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.timestamp && typeof data.timestamp.toDate === 'function') {
+          data.timestamp = data.timestamp.toDate().toISOString();
+        }
+        history.push({ id: doc.id, ...data });
+      });
+      res.json({ history });
+    } else {
+      res.json({ history: changeLog.slice().reverse().slice(0, 300) });
+    }
+  } catch (err) {
+    console.error('Erro ao buscar histórico:', err);
+    res.status(500).json({ error: 'Erro ao buscar histórico', detail: err.message });
+  }
 });
 
 // ── Webhook (Bling notificações) ──────────────────────────────────────
