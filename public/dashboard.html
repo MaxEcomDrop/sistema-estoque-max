@@ -1222,6 +1222,11 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
       </div>
 
+      <!-- MÉTRICAS FINANCEIRAS AVANÇADAS -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5M12.5 15.5L6 21M10 19H6a2 2 0 0 1-2-2v-4M21 15v4a2 2 0 0 1-2 2h-7"/></svg> Indicadores Financeiros</div>
+      <div id="enhanced-dash-wrap"></div>
+      <div id="previsao-financeira-wrap"></div>
+
       <!-- ATALHOS -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Atalhos rápidos</div>
       <div class="dash-shortcuts">
@@ -1388,6 +1393,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <button class="pt-btn" onclick="setTabPedidos('concluido',this)">Concluídos <span class="pt-cnt pt-cnt-ok" id="pt-cnt-ok"></span></button>
           <button class="pt-btn" onclick="setTabPedidos('cancelado',this)">Cancelados <span class="pt-cnt pt-cnt-can" id="pt-cnt-can"></span></button>
           <button class="bts" style="margin-left:auto;margin-bottom:4px" onclick="loadPedidos(true)">↻ Atualizar</button>
+          <button class="bts" id="ped-sync-btn" title="Sincronizar status em tempo real" onclick="syncPedidosStatus()">🔄 Sincronizar</button>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--bord-l)">
           <div class="sw">
@@ -1453,6 +1459,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
               Emitir NF-e
             </button>
             <button class="bts" onclick="loadNotas(true)">↻ Atualizar</button>
+            <button class="bts" id="notas-sync-btn" title="Sincronizar status em tempo real" onclick="syncNotasStatus()">🔄 Sincronizar</button>
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--bord-l)">
@@ -2617,6 +2624,8 @@ async function loadDashboard(force=false){
     renderContasVencidas(cr,cp);
     renderCalendarPreview();
     renderDashSparkline(v.byDay||{});
+    loadEnhancedDashboard();
+    loadFinanceiroPrevisao();
   }catch(e){
     _dashLoaded=false;
     ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
@@ -2644,6 +2653,64 @@ function recomputeDashLucro(){
     }
   }
   renderMetaBar();
+}
+async function loadEnhancedDashboard(){
+  try{
+    const r=await fetch('/api/dashboard/enhanced'),d=await r.json();
+    if(!r.ok)return;
+    const contas=d.contas||{};
+    const fluxo=contas.fluxoLiquido||0;
+    const receber=contas.aReceber||{};
+    const pagar=contas.aPagar||{};
+    const wrap=$('enhanced-dash-wrap');
+    if(!wrap)return;
+    const fluxoClass=fluxo>=0?'s-ok':'s-out';
+    const fluxoIcon=fluxo>=0?'📈':'📉';
+    wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+      <div style="background:var(--bg);border-radius:11px;padding:12px 14px;border-left:3px solid var(--acc)">
+        <div style="font-size:11px;color:var(--mu);margin-bottom:2px">Fluxo de Caixa (30 dias)</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <div style="font-size:18px;font-weight:700;color:${fluxo>=0?'var(--ok-t)':'var(--er-t)'}">${fmt(fluxo)}</div>
+          <span class="sb2 ${fluxoClass}">${fluxoIcon}</span>
+        </div>
+        <div style="font-size:10px;color:var(--mu);margin-top:4px">A receber: ${fmt(receber.total||0)} · A pagar: ${fmt(pagar.total||0)}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:11px;padding:12px 14px;border-left:3px solid var(--acc)">
+        <div style="font-size:11px;color:var(--mu);margin-bottom:2px">Contas Vencidas</div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--tx)">${receber.vencidas||0}</div>
+            <div style="font-size:10px;color:var(--mu)">A receber</div>
+          </div>
+          <div style="flex:1;border-left:1px solid var(--bord)">
+            <div style="font-size:12px;font-weight:600;color:var(--tx);padding-left:8px">${pagar.vencidas||0}</div>
+            <div style="font-size:10px;color:var(--mu);padding-left:8px">A pagar</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }catch(e){console.error('[Enhanced Dashboard]',e.message);}
+}
+async function loadFinanceiroPrevisao(){
+  try{
+    const r=await fetch('/api/financeiro/previsao'),d=await r.json();
+    if(!r.ok)return;
+    const wrap=$('previsao-financeira-wrap');
+    if(!wrap)return;
+    const fluxo=d.proximos30dias?.fluxoLiquido||0;
+    const alertas=d.alertas||{};
+    const recomendacoes=d.recomendacoes||[];
+    wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--bg);border-radius:11px;padding:12px 14px">
+        <div style="font-size:11px;color:var(--mu);margin-bottom:6px">🔮 Próximos 30 dias</div>
+        <div style="display:flex;justify-content:space-between">
+          <div><div style="font-size:11px;color:var(--fa)">A receber</div><div style="font-size:14px;font-weight:700;color:var(--ok-t)">${fmt(d.proximos30dias?.aReceber||0)}</div></div>
+          <div style="border-left:1px solid var(--bord);padding-left:12px"><div style="font-size:11px;color:var(--fa)">A pagar</div><div style="font-size:14px;font-weight:700;color:var(--er-t)">−${fmt(d.proximos30dias?.aPagar||0)}</div></div>
+        </div>
+      </div>
+      ${recomendacoes.length?`<div style="background:linear-gradient(135deg,var(--wa-bg),var(--bg));border-radius:11px;padding:12px 14px;border-left:3px solid var(--wa)"><div style="font-size:11px;color:var(--mu);margin-bottom:6px">⚠️ Alertas</div><div style="font-size:12px;line-height:1.6;color:var(--tx)">${recomendacoes.slice(0,2).map(r=>'· '+esc(r)).join('<br>')}</div></div>`:''}
+    </div>`;
+  }catch(e){console.error('[Previsão]',e.message);}
 }
 function renderDashSparkline(byDay){
   const svg=$('dash-sparkline');if(!svg)return;
@@ -3650,6 +3717,36 @@ function pedSitIcon(situacao){
   if(n.includes('aprovad')||n.includes('pago')||n.includes('verificad'))return'✔';
   if(n.includes('contest'))return'⚠️';
   return'🔄';
+}
+async function syncPedidosStatus(){
+  const btn=$('ped-sync-btn');if(!btn)return;
+  const origText=btn.textContent;btn.disabled=true;btn.textContent='Sincronizando…';
+  try{
+    const r=await fetch('/api/pedidos/sync/status'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao sincronizar');
+    _pedidosCache=d.pedidos||[];
+    renderPedidosTable(_pedStatus);
+    toast(`${_pedidosCache.length} pedido${_pedidosCache.length!==1?'s':''} sincronizados com sucesso!`,'ok');
+  }catch(e){
+    toast('Erro ao sincronizar: '+e.message,'err');
+  }finally{
+    btn.disabled=false;btn.textContent=origText;
+  }
+}
+async function syncNotasStatus(){
+  const btn=$('notas-sync-btn');if(!btn)return;
+  const origText=btn.textContent;btn.disabled=true;btn.textContent='Sincronizando…';
+  try{
+    const r=await fetch('/api/notas-fiscais/sync/status'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao sincronizar');
+    _notasCache=d.notas||[];
+    renderNotas();
+    toast(`${_notasCache.length} nota${_notasCache.length!==1?'s':''} sincronizada${_notasCache.length!==1?'s':''} com sucesso!`,'ok');
+  }catch(e){
+    toast('Erro ao sincronizar: '+e.message,'err');
+  }finally{
+    btn.disabled=false;btn.textContent=origText;
+  }
 }
 function renderPedidosTable(status){
   const body=$('pedidos-body');

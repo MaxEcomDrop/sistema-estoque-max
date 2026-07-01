@@ -1827,6 +1827,245 @@ app.post('/api/webhook/bling', async (req, res) => {
   } catch (e) { console.error('[webhook bling]', e.message); }
 });
 
+// ── Enhanced Order Sync (Real-time Status) ───────────────────────────
+
+app.get('/api/pedidos/sync/status', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  try {
+    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limite: 150, pagina: 1 },
+    });
+    const raw = Array.isArray(data?.data) ? data.data : [];
+
+    const pedidos = raw.map(p => ({
+      id:         p.id,
+      numero:     p.numero,
+      data:       p.data,
+      valor:      Number(p.totalVenda || p.totalProdutos || 0),
+      situacao:   situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      contato:    p.contato?.nome || '—',
+      status:     p.situacao?.valor || p.situacao,
+      frete:      Number(p.transporte?.frete || p.frete || 0),
+      desconto:   Number(p.desconto || 0),
+      observ:     p.observacoes || '',
+      lastSync:   new Date().toISOString(),
+    }));
+
+    res.json({
+      total: pedidos.length,
+      pedidos,
+      sincronizado: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao sincronizar pedidos', err.message);
+  }
+});
+
+// ── Enhanced Invoice Sync ────────────────────────────────────────────
+
+app.get('/api/notas-fiscais/sync/status', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+
+  try {
+    let all = [];
+    for (let pg = 1; pg <= 3; pg++) {
+      const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfes', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: pg },
+      });
+      const items = Array.isArray(data?.data) ? data.data : [];
+      all = all.concat(items);
+      if (items.length < 100) break;
+    }
+
+    const notas = all.map(n => ({
+      id:         n.id,
+      numero:     n.numero,
+      serie:      n.serie || '1',
+      data:       n.dataEmissao || n.data,
+      valor:      Number(n.totalNota || n.total || 0),
+      situacao:   n.situacao?.nome || n.situacao || '—',
+      contato:    n.destinatario?.nome || n.cliente?.nome || '—',
+      chave:      n.chave || n.numeroNFe || '—',
+      status:     n.situacao?.valor || n.situacao,
+      lastSync:   new Date().toISOString(),
+    }));
+
+    res.json({
+      total: notas.length,
+      notas,
+      sincronizado: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao sincronizar notas', err.message);
+  }
+});
+
+// ── Financial Forecasting ────────────────────────────────────────────
+
+app.get('/api/financeiro/previsao', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  try {
+    const hoje = new Date();
+    const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1);
+    const fimProxMes = new Date(hoje.getFullYear(), hoje.getMonth() + 2, 0);
+
+    const [recRes, pagRes] = await Promise.allSettled([
+      fetchContas(token, 'receber'),
+      fetchContas(token, 'pagar'),
+    ]);
+
+    const receber = recRes.status === 'fulfilled' ? recRes.value : { total: 0, vencidas: 0, vencidasValor: 0, count: 0 };
+    const pagar = pagRes.status === 'fulfilled' ? pagRes.value : { total: 0, vencidas: 0, vencidasValor: 0, count: 0 };
+
+    const fluxoLiquido = receber.total - pagar.total;
+
+    res.json({
+      proximos30dias: {
+        aReceber: receber.total,
+        aPagar: pagar.total,
+        fluxoLiquido,
+      },
+      alertas: {
+        recebedoresVencidas: receber.vencidas,
+        recebedoresVencinValor: receber.vencidasValor,
+        pagadoresVencidas: pagar.vencidas,
+        pagadoresVencidoValor: pagar.vencidasValor,
+      },
+      recomendacoes: [
+        receber.vencidas > 0 ? `⚠️ ${receber.vencidas} conta(s) a receber vencida(s)` : null,
+        pagar.vencidas > 0 ? `⚠️ ${pagar.vencidas} conta(s) a pagar vencida(s)` : null,
+        fluxoLiquido < 0 ? '⚠️ Fluxo de caixa negativo nos próximos 30 dias' : null,
+      ].filter(Boolean),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao prever financeiro', err.message);
+  }
+});
+
+// ── Integrations Management ──────────────────────────────────────────
+
+app.get('/api/integracoes/status', requireAuthJson, async (req, res) => {
+  const blingToken = req.cookies?.bling_token || req.session?.bling_token;
+  const mlToken = req.cookies?.ml_token || req.session?.ml_token;
+
+  res.json({
+    bling: {
+      conectado: !!blingToken,
+      tipo: 'ERP',
+      descricao: 'Integração com Bling ERP v3',
+      status: blingToken ? 'ativo' : 'inativo',
+      features: ['Pedidos', 'NFe', 'Estoque', 'Clientes'],
+    },
+    mercadoLivre: {
+      conectado: !!mlToken,
+      tipo: 'Marketplace',
+      descricao: 'Integração com Mercado Livre',
+      status: mlToken ? 'ativo' : 'inativo',
+      features: ['Anúncios', 'Pedidos', 'Perguntas', 'Métricas'],
+    },
+    firebase: {
+      conectado: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+      tipo: 'Notificações',
+      descricao: 'Firebase Admin SDK',
+      status: process.env.FIREBASE_SERVICE_ACCOUNT ? 'ativo' : 'inativo',
+      features: ['Push Notifications', 'Histórico'],
+    },
+  });
+});
+
+// ── Enhanced Dashboard ───────────────────────────────────────────────
+
+app.get('/api/dashboard/enhanced', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
+
+  try {
+    const prev = periodoAnterior(inicio, fim);
+
+    const [pedRes, prevRes, receberRes, pagarRes, prodRes] = await Promise.allSettled([
+      fetchPedidos(token, inicio, fim, 2),
+      fetchPedidos(token, prev.inicio, prev.fim, 1),
+      fetchContas(token, 'receber'),
+      fetchContas(token, 'pagar'),
+      fetchResumoProdutos(token, 1),
+    ]);
+
+    const allPedidos = pedRes.status === 'fulfilled' ? (pedRes.value || []) : [];
+    const valorOf = p => p.totalVenda || p.totalProdutos || 0;
+    const concluidos = allPedidos.filter(p => categorizePedido(p.situacao) === 'concluido');
+    const pendentes = allPedidos.filter(p => categorizePedido(p.situacao) === 'pendente');
+    const cancelados = allPedidos.filter(p => categorizePedido(p.situacao) === 'cancelado');
+
+    const sum = arr => arr.reduce((a, p) => a + valorOf(p), 0);
+    const faturamento = sum(concluidos);
+    const margem = concluidos.reduce((a, p) => a + ((Number(p.totalProdutos) || 0) - (Number(p.totalCusto) || 0)), 0);
+
+    const receber = receberRes.status === 'fulfilled' ? receberRes.value : { total: 0, count: 0, vencidas: 0 };
+    const pagar = pagarRes.status === 'fulfilled' ? pagarRes.value : { total: 0, count: 0, vencidas: 0 };
+    const produtos = prodRes.status === 'fulfilled' ? prodRes.value : { margem: 0, zerados: 0, criticos: 0 };
+
+    const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
+    const fatAnterior = prevPedidos.filter(p => categorizePedido(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
+    const variacao = fatAnterior > 0 ? ((faturamento - fatAnterior) / fatAnterior) * 100 : null;
+
+    res.json({
+      periodo: { inicio, fim, period },
+      vendas: {
+        total: sum(allPedidos),
+        faturamento,
+        pendente: sum(pendentes),
+        cancelado: sum(cancelados),
+        ticket_medio: concluidos.length > 0 ? faturamento / concluidos.length : 0,
+        quantidade: allPedidos.length,
+      },
+      margens: {
+        bruta: margem,
+        percentual: faturamento > 0 ? (margem / faturamento) * 100 : 0,
+        media: produtos.margem ? (produtos.margem * 100) : 0,
+      },
+      contas: {
+        aReceber: { total: receber.total, quantidade: receber.count, vencidas: receber.vencidas },
+        aPagar: { total: pagar.total, quantidade: pagar.count, vencidas: pagar.vencidas },
+        fluxoLiquido: receber.total - pagar.total,
+      },
+      estoque: {
+        zerados: produtos.zerados,
+        criticos: produtos.criticos,
+      },
+      comparativo: {
+        fatAnterior,
+        variacao,
+      },
+      custom: {
+        contasTotal: customContas.length,
+        eventosAgendados: calendarEvents.length,
+      },
+    });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao buscar dashboard', err.message);
+  }
+});
+
 // ── 404 ──────────────────────────────────────────────────────────────
 
 app.use((req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
