@@ -31,11 +31,6 @@ const logger = winston.createLogger({
   ],
 });
 
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-  }));
-}
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -103,7 +98,7 @@ const apiLimiter = rateLimit({
 });
 
 // Aplicar limite de requisições
-app.use('/api/', apiLimiter);
+// Rate limit is selectively applied on certain routes, not global
 
 // ── Carregar Variáveis de Ambiente Seguramente ───────────────────────
 // Validar variáveis de ambiente ANTES de carregar qualquer rota
@@ -666,7 +661,9 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       id:        p.id,
       numero:    p.numero,
       data:      p.data,
-      valor:     p.totalProdutos || p.totalVenda || 0,
+      valor:     p.total || p.totalVenda || p.totalProdutos || 0,
+      frete:     p.transporte?.frete || p.transporte?.valorFrete || p.valorFrete || 0,
+      taxas:     p.outrasDespesas || p.taxas || p.desconto?.valor || 0,
       situacao:  String(p.situacao?.nome || p.situacao?.valor || p.situacao || '—'),
       contato:   p.contato?.nome || '—',
     }));
