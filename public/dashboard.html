@@ -1,1656 +1,491 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#4f46e5">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Estoque Max">
-<link rel="manifest" href="/manifest.json">
-<title>Estoque Max</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --sw:240px;--scw:60px;--th:56px;
-  --bg:#eef1fb;--surf:#ffffff;--bord:#e2e8f0;--bord-l:#eef1f8;
-  --acc:#6366f1;--acc-h:#4f46e5;--acc-bg:#eef2ff;--acc-t:#4f46e5;
-  --sb:#0f172a;--sb-bord:rgba(255,255,255,.06);
-  --tx:#0f172a;--mu:#64748b;--fa:#94a3b8;
-  --ok:#10b981;--ok-bg:#ecfdf5;--ok-t:#059669;
-  --wa:#f59e0b;--wa-bg:#fffbeb;--wa-t:#d97706;
-  --er:#ef4444;--er-bg:#fef2f2;--er-t:#dc2626;
-  --sh:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
-  --sh-md:0 4px 24px rgba(0,0,0,.08),0 1px 4px rgba(0,0,0,.04);
-}
-[data-theme=dark]{
-  --bg:#0b1120;--surf:#141e31;--bord:#1e2d3f;--bord-l:#182233;
-  --acc-bg:#1e1b4b;--acc-t:#818cf8;
-  --tx:#f0f4ff;--mu:#8898a8;--fa:#3d5066;
-  --ok-bg:#052e16;--ok-t:#34d399;--wa-bg:#1a0f00;--wa-t:#fbbf24;--er-bg:#200000;--er-t:#f87171;
-  --sh:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.2);
-}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex;font-size:13.5px;transition:background .25s,color .25s}
-
-
-/* LOADING BAR */
-#lbar{position:fixed;top:0;left:0;right:0;height:2px;background:var(--acc);z-index:9999;transform:scaleX(0);transform-origin:left;transition:transform .3s ease;pointer-events:none}
-#lbar.go{transform:scaleX(.75);transition:transform 4s ease-out}
-#lbar.done{transform:scaleX(1);transition:transform .15s ease}
-
-/* SIDEBAR */
-.sb{width:var(--sw);background:var(--sb);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden;box-shadow:1px 0 0 rgba(255,255,255,.04)}
-.sb.col{width:var(--scw)}
-.sb-head{height:var(--th);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0}
-.bmark{width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-.5px;box-shadow:0 2px 8px rgba(99,102,241,.4)}
-.bname{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;transition:opacity .15s;letter-spacing:-.3px}
-.sb.col .bname{opacity:0}
-.sb-nav{flex:1;padding:8px 10px;overflow-y:auto;overflow-x:hidden}
-.nav-sec{font-size:9px;font-weight:700;color:#3d5066;text-transform:uppercase;letter-spacing:1px;padding:14px 8px 6px;white-space:nowrap;transition:opacity .15s}
-.sb.col .nav-sec{opacity:0}
-.ni{display:flex;align-items:center;gap:10px;padding:9px 10px;font-size:13px;font-weight:500;color:#64748b;cursor:pointer;transition:all .15s;white-space:nowrap;position:relative;border:none;background:none;width:100%;font-family:inherit;text-align:left;border-radius:8px;margin-bottom:1px}
-.ni:hover{background:rgba(255,255,255,.06);color:#cbd5e1}
-.ni.on{background:rgba(99,102,241,.18);color:#a5b4fc}
-.ni.on::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;background:linear-gradient(#818cf8,#6366f1);border-radius:0 2px 2px 0}
-.ni svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
-.ni.on svg{opacity:1}
-.ni-label{transition:opacity .15s}
-.sb.col .ni-label{opacity:0}
-.ni-badge{margin-left:auto;background:var(--er);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;transition:opacity .15s}
-.sb.col .ni-badge{opacity:0}
-.ni-badge:empty{display:none}
-.sb-foot{padding:8px 10px;border-top:1px solid rgba(255,255,255,.05);flex-shrink:0}
-.col-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;font-size:12px;font-weight:500;color:#3d5066;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .1s,color .1s;border-radius:8px}
-.col-btn:hover{background:rgba(255,255,255,.05);color:#64748b}
-.col-btn svg{width:16px;height:16px;flex-shrink:0;transition:transform .22s}
-.sb.col .col-btn svg{transform:rotate(180deg)}
-.col-label{transition:opacity .15s}
-.sb.col .col-label{opacity:0}
-
-/* MAIN */
-.main{margin-left:var(--sw);flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .22s cubic-bezier(.4,0,.2,1)}
-.sb.col~.main{margin-left:var(--scw)}
-
-/* TOPBAR */
-.topbar{height:var(--th);background:linear-gradient(90deg,var(--surf),var(--acc-bg) 180%);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;box-shadow:0 1px 0 var(--bord)}
-.tb-title{font-size:15px;font-weight:700;color:var(--tx);letter-spacing:-.3px}
-.sync-ts{font-size:11px;color:var(--fa);white-space:nowrap}
-.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.bti{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--bord);border-radius:11px;cursor:pointer;color:var(--mu);transition:all .15s;flex-shrink:0}
-.bti:hover{background:var(--acc-bg);border-color:var(--acc);color:var(--acc-t)}
-.bti svg{width:15px;height:15px}
-.btp{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;background:var(--acc);color:#fff;border:none;border-radius:11px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:0 1px 4px rgba(99,102,241,.3)}
-.btp:hover{background:var(--acc-h);box-shadow:0 4px 12px rgba(99,102,241,.4);transform:translateY(-1px)}
-.btp:active{transform:none;box-shadow:none}
-.btp:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
-.btp svg{width:14px;height:14px}
-.bts{display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;background:var(--surf);color:var(--tx);border:1px solid var(--bord);border-radius:11px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap}
-.bts:hover{background:var(--bg);border-color:var(--mu)}.bts svg{width:14px;height:14px}
-
-/* CONTENT */
-.content{padding:24px;display:flex;flex-direction:column;gap:20px}
-.view{display:none}.view.on{display:flex;flex-direction:column;gap:20px}
-
-/* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.kpi{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:20px 22px;position:relative;box-shadow:var(--sh);transition:box-shadow .2s,transform .2s}
-.kpi:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
-.kpi-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.kpi-val{font-size:30px;font-weight:800;color:var(--tx);letter-spacing:-1.5px;line-height:1;font-variant-numeric:tabular-nums}
-.kpi-sub{font-size:11.5px;color:var(--fa);margin-top:6px}
-.kpi-tip{display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#1e293b;color:#e2e8f0;border-radius:10px;padding:12px 16px;font-size:12px;line-height:1.7;z-index:200;white-space:pre-wrap;min-width:220px;box-shadow:var(--sh-md)}
-.kpi:hover .kpi-tip{display:block}
-
-/* TABLE CARD */
-.tcard{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
-
-/* TOOLBAR */
-.toolbar{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--bord-l);flex-wrap:wrap}
-.sw{position:relative}
-.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--fa);pointer-events:none}
-.sinp{height:36px;padding:0 12px 0 34px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;width:240px;transition:all .15s}
-.sinp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.12);background:var(--surf);width:280px}
-.sinp::placeholder{color:var(--fa)}
-.dvv{width:1px;height:20px;background:var(--bord);flex-shrink:0;margin:0 2px}
-.toolbar select{height:36px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;cursor:pointer;transition:border-color .15s}
-.toolbar select:focus{border-color:var(--acc)}
-.tr{margin-left:auto;display:flex;align-items:center;gap:6px}
-.fa-cnt{font-size:10px;font-weight:700;background:var(--acc);color:#fff;border-radius:10px;padding:1px 5px;margin-left:2px}
-
-/* FILTER PANEL */
-.fpanel{border-bottom:1px solid var(--bord-l);padding:12px 16px;display:none;background:var(--bg)}
-.fpanel.open{display:block}
-.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end}
-.fg label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:4px}
-.fg select,.fg input{width:100%;height:30px;padding:0 8px;background:var(--surf);border:1px solid var(--bord);border-radius:5px;font-size:12px;font-family:inherit;color:var(--tx);outline:none}
-.fg select:focus,.fg input:focus{border-color:var(--acc)}
-.frow{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
-.pchips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
-.pchip{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--surf);border:1px solid var(--bord);color:var(--mu);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .1s}
-.pchip:hover{border-color:var(--acc);color:var(--acc-t)}
-.pdx{color:var(--fa);font-size:13px;line-height:1}
-.pdx:hover{color:var(--er)}
-
-/* TABLE */
-.twrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-thead th{position:sticky;top:var(--th);padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);background:var(--surf);border-bottom:2px solid var(--bord-l);white-space:nowrap;cursor:pointer;user-select:none;z-index:10;transition:color .12s}
-thead th:hover{color:var(--acc-t)}
-thead th.r{text-align:right}
-thead th.srt{color:var(--acc)}
-.si{font-size:10px;margin-left:3px;opacity:.7}
-tbody tr{transition:background .1s}
-tbody tr:not(:last-child) td{border-bottom:1px solid var(--bord-l)}
-tbody tr td:first-child{transition:box-shadow .12s}
-tbody tr:hover td{background:rgba(99,102,241,.04)}
-tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
-tbody tr.sel td{background:rgba(99,102,241,.07)!important}
-tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
-tbody tr.dup-row td:nth-child(3){border-left:2px solid var(--wa)}
-tbody td{padding:14px 14px;font-size:13.5px;color:var(--tx);vertical-align:middle}
-tbody td.r{text-align:right}
-.grp-row td{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--mu);background:var(--bg);padding:8px 14px;border-bottom:1px solid var(--bord-l)}
-input[type=checkbox]{width:18px;height:18px;border:1.5px solid var(--bord);border-radius:4px;appearance:none;cursor:pointer;background:var(--surf);transition:all .1s;position:relative;vertical-align:middle;flex-shrink:0}
-input[type=checkbox]:checked{background:var(--acc);border-color:var(--acc)}
-input[type=checkbox]:checked::after{content:'';position:absolute;left:3px;top:1px;width:5px;height:8px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(40deg)}
-/* THUMBNAILS — card produto */
-.thumb{width:52px;height:52px;border-radius:10px;background:var(--bord-l);border:1px solid var(--bord);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;transition:box-shadow .15s}
-.thumb img{width:100%;height:100%;object-fit:cover}
-.thumb svg{width:20px;height:20px;color:var(--fa)}
-tr:hover .thumb{box-shadow:0 2px 8px rgba(0,0,0,.1)}
-/* PRODUCT NAME + SKU STACKED */
-.pinfo{display:flex;flex-direction:column;gap:3px;min-width:0}
-.pname{font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;color:var(--tx);font-size:13.5px}
-.pname mark{background:#fef08a;color:#713f12;border-radius:2px;padding:0 1px}
-[data-theme=dark] .pname mark{background:#3d2c00;color:#fde68a}
-.pname-sub{font-size:11px;color:var(--fa);font-family:SFMono-Regular,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
-.sku{font-family:SFMono-Regular,Consolas,monospace;font-size:11px;background:var(--bord-l);color:var(--mu);padding:2px 7px;border-radius:5px}
-.dup-flag{font-size:10px;font-weight:700;background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:4px;margin-left:4px}
-[data-theme=dark] .dup-flag{background:#422006;color:#fcd34d}
-.pcell{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
-.parr{font-size:10px;margin-left:3px}
-.parr.up{color:var(--ok)}.parr.dn{color:var(--er)}
-.ev{display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:4px 8px;border-radius:7px;transition:background .12s}
-.ev:hover{background:var(--acc-bg)}
-.ev:hover .eh{opacity:1}
-.eh{opacity:0;transition:opacity .1s;color:var(--acc-t)}
-.eh svg{width:12px;height:12px}
-.iinp{height:32px;padding:0 10px;border:1.5px solid var(--acc);border-radius:7px;font-size:13px;font-family:inherit;font-variant-numeric:tabular-nums;color:var(--tx);outline:none;width:90px;background:var(--surf);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.flash{animation:fok .6s ease}
-@keyframes fok{0%,100%{background:transparent}40%{background:var(--ok-bg)}}
-/* STATUS BADGES */
-.sb2{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;letter-spacing:.1px}
-.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.s-ok{background:var(--ok-bg);color:var(--ok-t)}.s-ok .sdot{background:var(--ok)}
-.s-lo{background:var(--wa-bg);color:var(--wa-t)}.s-lo .sdot{background:var(--wa)}
-.s-out{background:var(--er-bg);color:var(--er-t)}.s-out .sdot{background:var(--er)}
-.ctag{font-size:11px;color:var(--mu);background:var(--bg);border:1px solid var(--bord);padding:3px 8px;border-radius:20px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;display:inline-block}
-.lmbtn{width:100%;padding:13px;background:none;border:none;border-top:1px solid var(--bord-l);font-size:12.5px;font-weight:500;color:var(--mu);cursor:pointer;font-family:inherit;transition:background .12s,color .12s}
-.lmbtn:hover{background:var(--acc-bg);color:var(--acc-t)}
-.st-wrap{padding:56px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
-.st-ico{width:48px;height:48px;background:var(--bg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
-.st-ico svg{width:22px;height:22px;color:var(--fa)}
-.st-t{font-size:15px;font-weight:600;color:var(--tx)}
-.st-d{font-size:13px;color:var(--mu);max-width:300px}
-.st-btn{margin-top:8px;height:36px;padding:0 18px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
-.st-btn:hover{background:var(--acc-h)}
-
-/* BATCH BAR */
-.bbar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;border-radius:10px;padding:12px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.25);z-index:500;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .2s;opacity:0;pointer-events:none;white-space:nowrap}
-.bbar.vis{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:all}
-.bbar-cnt{font-size:13px;font-weight:600;color:#fff}
-.bbar-dv{width:1px;height:18px;background:rgba(255,255,255,.15)}
-.bb{font-size:12px;font-weight:500;color:#cbd5e1;background:none;border:none;cursor:pointer;font-family:inherit;padding:4px 8px;border-radius:5px;transition:background .1s,color .1s}
-.bb:hover{background:rgba(255,255,255,.08);color:#fff}
-.bb.err:hover{color:#fca5a5}
-.bbar-x{color:#475569;background:none;border:none;cursor:pointer;font-size:18px;padding:2px 4px;font-family:inherit;transition:color .1s}
-.bbar-x:hover{color:#94a3b8}
-
-/* BACKDROP + SHEET */
-.bdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s}
-.bdrop.open{opacity:1;pointer-events:all}
-.sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-radius:14px 14px 0 0;padding:20px 24px 32px;z-index:900;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:75vh;overflow-y:auto;border-top:1px solid var(--bord)}
-.sheet.open{transform:translateY(0)}
-.sh-hand{width:36px;height:4px;background:var(--bord);border-radius:2px;margin:-8px auto 16px}
-.sh-title{font-size:16px;font-weight:600;color:var(--tx);margin-bottom:16px}
-.sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.shf label{display:block;font-size:12px;font-weight:500;color:var(--mu);margin-bottom:5px}
-.shf input{width:100%;height:38px;padding:0 12px;background:var(--bg);border:1px solid var(--bord);border-radius:7px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;transition:border-color .12s}
-.shf input:focus{border-color:var(--acc)}
-.sh-foot{display:flex;gap:10px;margin-top:18px}
-.sh-note{font-size:12px;color:var(--mu);margin-top:8px}
-
-/* QUICK PANEL */
-.qpanel{position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--surf);border-left:1px solid var(--bord);z-index:700;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
-.qpanel.open{transform:translateX(0)}
-.qh{height:var(--th);border-bottom:1px solid var(--bord);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
-.qh-t{font-size:14px;font-weight:600;color:var(--tx)}
-.qclose{background:none;border:none;cursor:pointer;color:var(--fa);font-size:20px;font-family:inherit;transition:color .1s;line-height:1}
-.qclose:hover{color:var(--tx)}
-.qbody{flex:1;overflow-y:auto;padding:12px}
-.qi{padding:10px 0;border-bottom:1px solid var(--bord-l)}
-.qi:last-child{border-bottom:none}
-.qi-n{font-size:12px;font-weight:500;color:var(--tx);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qi-s{font-size:11px;color:var(--fa);margin-bottom:6px}
-.qi-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.qi-lbl{font-size:11px;color:var(--mu);width:48px;flex-shrink:0}
-.qi-inp{flex:1;height:26px;padding:0 7px;background:var(--bg);border:1px solid var(--bord);border-radius:5px;font-size:12px;font-family:inherit;color:var(--tx);outline:none}
-.qi-inp:focus{border-color:var(--acc)}
-.qfoot{padding:10px 12px;border-top:1px solid var(--bord);display:flex;gap:8px;flex-shrink:0}
-
-/* MODALS */
-.modal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
-.modal.open{opacity:1;pointer-events:all}
-.mbox{background:var(--surf);border-radius:12px;padding:24px;border:1px solid var(--bord);max-height:85vh;overflow-y:auto}
-.m-title{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px}
-.m-desc{font-size:13px;color:var(--mu);margin-bottom:16px;line-height:1.5}
-.m-foot{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
-.sc-box{width:380px}
-.sc-list{display:flex;flex-direction:column;gap:9px}
-.sc-row{display:flex;align-items:center;justify-content:space-between;font-size:13px}
-.sc-lbl{color:var(--mu)}
-.kbd{font-family:SFMono-Regular,Consolas,monospace;font-size:11px;background:var(--bg);border:1px solid var(--bord);border-radius:4px;padding:2px 7px;color:var(--tx)}
-.im-box{width:500px}
-.dropz{border:2px dashed var(--bord);border-radius:8px;padding:28px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
-.dropz:hover,.dropz.over{border-color:var(--acc);background:var(--acc-bg)}
-.dropz svg{width:28px;height:28px;color:var(--fa);margin:0 auto 8px;display:block}
-.dropz p{font-size:13px;color:var(--mu)}
-.dropz strong{color:var(--acc-t);cursor:pointer}
-.iprev{margin-top:12px;max-height:180px;overflow-y:auto;border:1px solid var(--bord);border-radius:6px}
-.iprev table{width:100%}
-.iprev th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);padding:6px 10px;background:var(--bg);text-align:left;position:static}
-.iprev td{font-size:12px;padding:6px 10px;border-top:1px solid var(--bord-l)}
-
-/* UNDO + TOAST */
-.undo{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:#1e293b;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:14px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:600;opacity:0;transition:transform .22s,opacity .2s;pointer-events:none;white-space:nowrap}
-.undo.vis{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:all}
-.undo-btn{color:#818cf8;font-weight:600;cursor:pointer;font-size:12px;background:none;border:none;font-family:inherit}
-.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:10px 15px;border-radius:8px;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:opacity .18s,transform .18s;z-index:9999;pointer-events:none;max-width:280px}
-.toast.vis{opacity:1;transform:translateY(0)}
-.toast.ok{background:#14532d}.toast.err{background:#7f1d1d}
-
-/* AR BAR */
-.ar-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu);padding:6px 16px;background:var(--bg);border-bottom:1px solid var(--bord-l)}
-.ar-cd{font-variant-numeric:tabular-nums;font-weight:600;color:var(--tx);min-width:25px;display:inline-block}
-
-/* SECONDARY VIEWS */
-.vtable table{width:100%}
-.vtable thead th{position:static;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);background:var(--bg);border-bottom:1px solid var(--bord);padding:9px 16px;text-align:left;cursor:default}
-.vtable tbody td{padding:11px 16px;font-size:13px;border-bottom:1px solid var(--bord-l);vertical-align:middle}
-.vtable tbody tr:last-child td{border-bottom:none}
-.vtable tbody tr:hover td{background:var(--bg)}
-.h-campo{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;background:var(--bg);color:var(--mu);padding:2px 7px;border-radius:4px}
-.h-from{color:var(--er-t)}.h-to{color:var(--ok-t)}
-.o-val{font-variant-numeric:tabular-nums;font-weight:500}
-.o-ok{color:var(--ok);font-weight:500}.o-pen{color:var(--wa);font-weight:500}.o-can{color:var(--er-t);font-weight:500}
-.rep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:20px}
-.rep-card{background:var(--surf);border:1px solid var(--bord);border-radius:10px;padding:14px 16px}
-.rep-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:6px}
-.rep-val{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.rep-tcard{background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;margin-top:0}
-
-/* LAYOUT TOGGLE */
-.layout-toggle{display:flex;border:1px solid var(--bord);border-radius:6px;overflow:hidden;flex-shrink:0}
-.lt-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--mu);transition:all .1s}
-.lt-btn.on{background:var(--acc-bg);color:var(--acc-t)}
-.lt-btn svg{width:14px;height:14px}
-/* GRID / CATALOG CARDS */
-#card-container{padding:16px;display:none}
-#card-container.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:12px}
-#card-container.vc{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.pcard{background:var(--surf);border:1px solid var(--bord);border-radius:10px;overflow:hidden;transition:box-shadow .15s,border-color .15s;display:flex;flex-direction:column;cursor:default}
-.pcard:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:var(--bord)}
-.pcard.sel{border-color:var(--acc);background:var(--acc-bg)}
-.pcard-img{width:100%;aspect-ratio:1;background:var(--bord-l);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border-bottom:1px solid var(--bord-l)}
-.pcard-img img{width:100%;height:100%;object-fit:cover}
-.pcard-img svg{width:28px;height:28px;color:var(--fa)}
-.pcard-body{padding:10px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
-.pcard-name{font-size:12px;font-weight:600;color:var(--tx);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pcard-sku{font-size:10px;color:var(--fa);font-family:monospace}
-.pcard-cat{font-size:10px;color:var(--mu);background:var(--bg);border:1px solid var(--bord-l);border-radius:3px;padding:1px 5px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
-.pcard-meta{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--bord-l)}
-.pcard-price{font-size:13px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
-.pcard-stock{font-size:11px;color:var(--mu)}
-/* Catalog: 2 columns with horizontal layout */
-.vc .pcard{flex-direction:row;align-items:stretch}
-.vc .pcard-img{width:90px;aspect-ratio:1;border-bottom:none;border-right:1px solid var(--bord-l);flex-shrink:0}
-.vc .pcard-body{padding:12px 14px}
-.vc .pcard-name{-webkit-line-clamp:1;font-size:13px}
-/* NF-e status */
-.nfe-ok{color:var(--ok);font-weight:500}.nfe-can{color:var(--er-t);font-weight:500}.nfe-pen{color:var(--wa);font-weight:500}
-.nfe-key{font-family:monospace;font-size:10px;color:var(--fa);word-break:break-all}
-
-/* TABLE - acento lateral, sem grade Excel */
-tbody tr{border-bottom:1px solid var(--bord-l);transition:background .1s}
-tbody tr:last-child{border-bottom:none}
-tbody tr td:first-child{transition:box-shadow .12s}
-tbody tr:hover td{background:var(--acc-bg)!important}
-tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
-tbody tr.sel td{background:var(--acc-bg)!important}
-tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
-tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
-/* KPI accent line */
-.kpi{overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
-.kpi:nth-child(1)::before{background:var(--acc)}
-.kpi:nth-child(2)::before{background:var(--ok)}
-.kpi:nth-child(3)::before{background:var(--er)}
-.kpi:nth-child(4)::before{background:var(--wa)}
-/* Product name link */
-.plink{cursor:pointer;transition:color .12s;display:inline-block}
-.plink:hover{color:var(--acc-t)!important;text-decoration:underline;text-underline-offset:2px}
-/* EDITOR DRAWER */
-.edraw-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
-.edraw-ov.open{opacity:1;pointer-events:all}
-.edraw{position:fixed;right:-100%;top:0;bottom:0;width:440px;max-width:100vw;background:var(--surf);border-left:1px solid var(--bord);z-index:900;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
-.edraw.open{right:0}
-.edraw-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bord);flex-shrink:0}
-.edraw-title{font-size:14px;font-weight:600;color:var(--tx);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.edraw-x{background:none;border:none;font-size:22px;color:var(--mu);cursor:pointer;padding:2px 8px;border-radius:6px;line-height:1;transition:background .1s,color .1s;flex-shrink:0}
-.edraw-x:hover{background:var(--bg);color:var(--tx)}
-.edraw-bd{flex:1;overflow-y:auto;padding:16px 18px}
-.edraw-ft{padding:12px 18px;border-top:1px solid var(--bord);display:flex;gap:10px;flex-shrink:0}
-.df{margin-bottom:14px}
-.df label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:5px}
-.df input,.df select,.df textarea{width:100%;height:36px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:7px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;transition:border-color .12s,box-shadow .12s}
-.df input:focus,.df select:focus,.df textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(79,70,229,.1);background:var(--surf)}
-.df textarea{height:auto;min-height:72px;padding:8px 10px;resize:vertical;line-height:1.5}
-.df-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.df-margin{font-size:11px;color:var(--mu);margin-top:-8px;margin-bottom:12px;padding:6px 10px;background:var(--bg);border-radius:5px;font-weight:500}
-.df-margin strong{font-weight:700}
-.edraw-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);padding:8px 0 10px;margin-top:4px;border-top:1px solid var(--bord-l)}
-.edraw-img{width:100%;max-height:130px;object-fit:contain;border-radius:8px;margin-bottom:14px;border:1px solid var(--bord);background:var(--bord-l);display:block}
-/* NOTIFICATION STACK */
-#noti-stack{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;max-width:360px}
-.noti{width:100%;padding:11px 13px;border-radius:10px;background:var(--surf);border:1px solid var(--bord);box-shadow:0 4px 20px rgba(0,0,0,.13);display:flex;align-items:flex-start;gap:9px;animation:nti .22s cubic-bezier(.34,1.56,.64,1) both;font-size:13px;color:var(--tx);line-height:1.4;pointer-events:all}
-.noti.out{animation:nto .16s ease forwards}
-.noti-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.noti.ok .noti-dot{background:var(--ok)}.noti.err .noti-dot{background:var(--er)}.noti.warn .noti-dot{background:var(--wa)}.noti.info .noti-dot{background:var(--acc)}
-.noti-x{margin-left:auto;background:none;border:none;color:var(--fa);cursor:pointer;font-size:16px;padding:0 0 0 10px;line-height:1;flex-shrink:0;transition:color .1s}
-.noti-x:hover{color:var(--tx)}
-@keyframes nti{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
-@keyframes nto{to{opacity:0;transform:translateX(16px)}}
-/* FINANCIAL VIEW — UpSeller style */
-.fin-period-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-.fin-periods{display:flex;gap:4px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:4px}
-.fp-btn{padding:6px 16px;border:none;background:none;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);cursor:pointer;transition:all .12s;font-family:inherit;white-space:nowrap}
-.fp-btn.on{background:var(--surf);color:var(--acc-t);box-shadow:0 1px 4px rgba(0,0,0,.08);font-weight:600}
-.fp-btn:hover:not(.on){color:var(--tx)}
-.fin-custom-range{display:flex;align-items:center;gap:8px}
-.fin-custom-range input[type=date]{height:34px;padding:0 10px;border:1.5px solid var(--bord);border-radius:8px;font-size:13px;font-family:inherit;color:var(--tx);background:var(--surf);outline:none}
-.fin-custom-range input[type=date]:focus{border-color:var(--acc)}
-.fk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
-.fk-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s,transform .12s}
-.fk-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
-.fk-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
-.fk-label{font-size:12px;font-weight:600;color:var(--mu);line-height:1.3}
-.fk-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.fk-ico svg{width:17px;height:17px}
-.fk-val{font-size:22px;font-weight:800;letter-spacing:-.8px;line-height:1;margin-bottom:5px;font-variant-numeric:tabular-nums}
-.fk-sub{font-size:12px;color:var(--mu)}
-.fk-blue .fk-ico{background:#eff6ff;color:#2563eb}.fk-blue .fk-val{color:#1e3a8a}
-.fk-green .fk-ico{background:#ecfdf5;color:#059669}.fk-green .fk-val{color:#065f46}
-.fk-red .fk-ico{background:#fef2f2;color:#dc2626}.fk-red .fk-val{color:#991b1b}
-.fk-orange .fk-ico{background:#fff7ed;color:#ea580c}.fk-orange .fk-val{color:#9a3412}
-.fk-indigo .fk-ico{background:#eef2ff;color:#4338ca}.fk-indigo .fk-val{color:#312e81}
-.fk-purple .fk-ico{background:#f5f3ff;color:#7c3aed}.fk-purple .fk-val{color:#4c1d95}
-.fk-teal .fk-ico{background:#f0fdfa;color:#0d9488}.fk-teal .fk-val{color:#134e4a}
-.fk-sky .fk-ico{background:#f0f9ff;color:#0284c7}.fk-sky .fk-val{color:#0c4a6e}
-[data-theme=dark] .fk-blue .fk-ico{background:rgba(37,99,235,.15);color:#93c5fd}[data-theme=dark] .fk-blue .fk-val{color:#93c5fd}
-[data-theme=dark] .fk-green .fk-ico{background:rgba(5,150,105,.15);color:#34d399}[data-theme=dark] .fk-green .fk-val{color:#34d399}
-[data-theme=dark] .fk-red .fk-ico{background:rgba(220,38,38,.15);color:#f87171}[data-theme=dark] .fk-red .fk-val{color:#f87171}
-[data-theme=dark] .fk-orange .fk-ico{background:rgba(234,88,12,.15);color:#fb923c}[data-theme=dark] .fk-orange .fk-val{color:#fb923c}
-[data-theme=dark] .fk-indigo .fk-ico{background:rgba(67,56,202,.15);color:#a5b4fc}[data-theme=dark] .fk-indigo .fk-val{color:#a5b4fc}
-[data-theme=dark] .fk-purple .fk-ico{background:rgba(124,58,237,.15);color:#c4b5fd}[data-theme=dark] .fk-purple .fk-val{color:#c4b5fd}
-[data-theme=dark] .fk-teal .fk-ico{background:rgba(13,148,136,.15);color:#2dd4bf}[data-theme=dark] .fk-teal .fk-val{color:#2dd4bf}
-[data-theme=dark] .fk-sky .fk-ico{background:rgba(2,132,199,.15);color:#38bdf8}[data-theme=dark] .fk-sky .fk-val{color:#38bdf8}
-.fk-grid-2{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-.fk-sm{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px}
-.fk-sm-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.fk-sm-ico svg{width:18px;height:18px}
-.fk-sm-label{font-size:11.5px;color:var(--mu);font-weight:500;margin-bottom:3px}
-.fk-sm-val{font-size:20px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--tx)}
-/* DRE SIMPLIFICADO */
-.dre-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:20px 24px;margin-bottom:20px;box-shadow:var(--sh)}
-.dre-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px}
-.dre-title{font-size:14px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px}
-.dre-title svg{width:16px;height:16px;color:var(--mu)}
-.dre-tag{font-size:10.5px;font-weight:600;color:var(--mu);background:var(--bg);border:1px solid var(--bord);padding:3px 9px;border-radius:20px}
-.dre-list{margin-top:12px}
-.dre-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bord-l);font-size:13.5px;gap:12px}
-.dre-row:last-child{border-bottom:none}
-.dre-lbl{color:var(--mu);display:flex;align-items:center;gap:8px}
-.dre-lbl .dre-op{width:18px;height:18px;border-radius:5px;background:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:var(--fa)}
-.dre-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.dre-val.neg{color:var(--er-t)}.dre-val.pos{color:var(--ok-t)}
-.dre-row.sub{background:linear-gradient(90deg,var(--bg),transparent);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:7px}
-.dre-row.total{border-top:2px solid var(--bord);border-bottom:none;margin-top:6px;padding-top:14px}
-.dre-row.total .dre-lbl{font-size:14px;font-weight:700;color:var(--tx)}
-.dre-row.total .dre-val{font-size:19px;font-weight:800;letter-spacing:-.5px}
-.dre-margin-pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:8px}
-/* TREND BADGE */
-.fin-trend{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle}
-.fin-trend svg{width:11px;height:11px}
-.fin-trend.up{background:var(--ok-bg);color:var(--ok-t)}
-.fin-trend.down{background:var(--er-bg);color:var(--er-t)}
-.fin-trend.flat{background:var(--bg);color:var(--mu)}
-.hero-trend.up::before{content:'▲ '}.hero-trend.down::before{content:'▼ '}
-.fin-chart-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:20px 24px;margin-bottom:20px}
-.fin-chart-title{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:4px}
-.fin-chart-sub{font-size:12px;color:var(--mu);margin-bottom:16px}
-.fin-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:8px}
-.fin-val{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:-.5px;line-height:1;font-variant-numeric:tabular-nums}
-.fin-sub{font-size:11px;color:var(--fa);margin-top:5px}
-/* TAREFAS PANEL */
-.tarefas-panel{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:16px 20px;margin-bottom:18px;box-shadow:var(--sh)}
-.tf-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-.tf-header-title{font-size:13px;font-weight:700;color:var(--tx)}
-.tf-badge{font-size:10px;font-weight:700;background:var(--er);color:#fff;padding:2px 7px;border-radius:20px}
-.tf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.tf-card{border-radius:10px;padding:14px 16px;cursor:pointer;transition:transform .12s,box-shadow .15s;border:1px solid transparent}
-.tf-card:hover{transform:translateY(-1px);box-shadow:var(--sh-md)}
-.tf-num{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:4px}
-.tf-lbl{font-size:11.5px;font-weight:500;opacity:.8}
-.tf-red{background:#fef2f2;border-color:#fecaca;color:#991b1b}.tf-red .tf-num{color:#dc2626}
-.tf-orange{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.tf-orange .tf-num{color:#ea580c}
-.tf-blue{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}.tf-blue .tf-num{color:#2563eb}
-.tf-green{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}.tf-green .tf-num{color:#059669}
-[data-theme=dark] .tf-red{background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.3);color:#fca5a5}
-[data-theme=dark] .tf-red .tf-num{color:#f87171}
-[data-theme=dark] .tf-orange{background:rgba(234,88,12,.12);border-color:rgba(234,88,12,.3);color:#fdba74}
-[data-theme=dark] .tf-orange .tf-num{color:#fb923c}
-[data-theme=dark] .tf-blue{background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.3);color:#93c5fd}
-[data-theme=dark] .tf-blue .tf-num{color:#60a5fa}
-[data-theme=dark] .tf-green{background:rgba(5,150,105,.12);border-color:rgba(5,150,105,.3);color:#6ee7b7}
-[data-theme=dark] .tf-green .tf-num{color:#34d399}
-/* PEDIDOS VIEW */
-.ped-tab-bar{display:flex;align-items:center;gap:6px;padding:14px 16px 0;border-bottom:1px solid var(--bord-l);flex-wrap:wrap}
-.pt-btn{padding:8px 18px;border:none;background:none;border-bottom:2px solid transparent;font-size:13px;font-weight:500;color:var(--mu);cursor:pointer;font-family:inherit;transition:all .12s;margin-bottom:-1px;white-space:nowrap}
-.pt-btn.on{color:var(--acc-t);border-bottom-color:var(--acc);font-weight:600}
-.pt-btn:hover:not(.on){color:var(--tx)}
-.pt-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle}
-.pt-cnt-pen{background:#fff7ed;color:#ea580c}
-.pt-cnt-ok{background:#ecfdf5;color:#059669}
-.pt-cnt-can{background:#fef2f2;color:#dc2626}
-/* NOTIFICAÇÕES VIEW */
-.notif-grid{display:grid;grid-template-columns:420px 1fr;gap:16px;align-items:start}
-@media(max-width:900px){.notif-grid{grid-template-columns:1fr}}
-.notif-composer .df{margin-bottom:14px}
-.notif-composer label{display:block;font-size:12px;font-weight:600;color:var(--mu);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-.notif-composer input,.notif-composer textarea{width:100%;padding:9px 12px;border:1px solid var(--bord);border-radius:9px;font-size:13.5px;font-family:inherit;color:var(--tx);background:var(--bg);transition:border .15s,box-shadow .15s;resize:vertical}
-.notif-composer input:focus,.notif-composer textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.nt-toggle{display:flex;background:var(--bord-l);border-radius:9px;padding:3px;gap:3px;width:fit-content}
-.nt-tog{padding:6px 18px;border:none;border-radius:7px;font-size:13px;font-weight:500;color:var(--mu);background:none;cursor:pointer;font-family:inherit;transition:all .15s}
-.nt-tog.on{background:var(--surf);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.1);font-weight:600}
-.notif-foot{display:flex;align-items:center;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--bord-l)}
-.nt-sub-info{font-size:12px;color:var(--mu)}
-/* Preview card — imita notificação Chrome */
-.np-card{background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.08);max-width:380px}
-[data-theme=dark] .np-card{box-shadow:0 4px 20px rgba(0,0,0,.25)}
-.np-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.np-icon{width:22px;height:22px;border-radius:5px;object-fit:cover;flex-shrink:0}
-.np-appname{font-size:11.5px;font-weight:700;color:var(--tx);text-transform:uppercase;letter-spacing:.4px}
-.np-time{font-size:11px;color:var(--mu);margin-left:auto}
-.np-title{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px;line-height:1.3}
-.np-body{font-size:13px;color:var(--fa);line-height:1.5}
-.np-actions{display:flex;gap:8px;margin-top:10px;border-top:1px solid var(--bord-l);padding-top:10px}
-.np-act-btn{padding:6px 14px;border-radius:6px;background:var(--bord-l);border:1px solid var(--bord);font-size:12px;font-weight:500;color:var(--tx);cursor:default;font-family:inherit}
-/* Histórico de notificações */
-.nh-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--bord-l)}
-.nh-row:last-child{border-bottom:none}
-.nh-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
-.nh-dot-ok{background:#10b981}
-.nh-dot-sched{background:#f59e0b}
-.nh-dot-err{background:#ef4444}
-.nh-title{font-size:13px;font-weight:600;color:var(--tx)}
-.nh-body{font-size:12px;color:var(--mu);margin-top:2px}
-.nh-meta{font-size:11px;color:var(--fa);margin-top:4px;display:flex;align-items:center;gap:8px}
-/* ════ DASHBOARD / INÍCIO ════ */
-.dash-greet{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.dash-greet h2{font-size:22px;font-weight:800;letter-spacing:-.6px;color:var(--tx)}
-.dash-greet p{font-size:13px;color:var(--mu);margin-top:3px}
-.dash-period{display:flex;gap:3px;background:var(--bg);border:1px solid var(--bord);border-radius:10px;padding:3px}
-.dp-btn{padding:6px 14px;border:none;background:none;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--mu);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
-.dp-btn.on{background:var(--surf);color:var(--acc-t);box-shadow:0 1px 4px rgba(0,0,0,.1)}
-.dp-btn:hover:not(.on){color:var(--tx)}
-/* HERO CARDS */
-.dash-hero{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.hero-card{border-radius:18px;padding:22px 24px;position:relative;overflow:hidden;color:#fff;box-shadow:0 8px 28px rgba(0,0,0,.12);animation:dashIn .5s cubic-bezier(.22,1,.36,1) both}
-.hero-card::after{content:'';position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.1);top:-70px;right:-50px}
-.hero-fat{background:linear-gradient(135deg,#6366f1,#8b5cf6)}
-.hero-luc{background:linear-gradient(135deg,#059669,#10b981)}
-.hero-top{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;opacity:.92;margin-bottom:14px;position:relative;z-index:1}
-.hero-top svg{width:16px;height:16px}
-.hero-val{font-size:32px;font-weight:800;letter-spacing:-1.2px;line-height:1;position:relative;z-index:1;font-variant-numeric:tabular-nums}
-.hero-sub{font-size:12.5px;opacity:.85;margin-top:8px;position:relative;z-index:1;display:flex;align-items:center;gap:5px}
-.hero-trend{display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:20px;font-weight:600;font-size:11.5px}
-/* DASH KPIS */
-.dash-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.dk-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;animation:dashIn .5s cubic-bezier(.22,1,.36,1) both}
-.dk-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md);border-color:var(--acc)}
-.dk-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.dk-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.dk-ico svg{width:16px;height:16px}
-.dk-arrow{color:var(--fa);transition:transform .15s}
-.dk-card:hover .dk-arrow{transform:translateX(3px);color:var(--acc)}
-.dk-arrow svg{width:15px;height:15px}
-.dk-lbl{font-size:11.5px;font-weight:600;color:var(--mu);margin-bottom:3px}
-.dk-val{font-size:21px;font-weight:800;letter-spacing:-.6px;color:var(--tx);font-variant-numeric:tabular-nums;line-height:1.1}
-.dk-sub{font-size:11px;color:var(--fa);margin-top:3px}
-.dk-blue .dk-ico{background:#eff6ff;color:#2563eb}.dk-green .dk-ico{background:#ecfdf5;color:#059669}
-.dk-amber .dk-ico{background:#fffbeb;color:#d97706}.dk-rose .dk-ico{background:#fef2f2;color:#e11d48}
-[data-theme=dark] .dk-blue .dk-ico{background:rgba(37,99,235,.16);color:#93c5fd}
-[data-theme=dark] .dk-green .dk-ico{background:rgba(5,150,105,.16);color:#34d399}
-[data-theme=dark] .dk-amber .dk-ico{background:rgba(217,119,6,.16);color:#fbbf24}
-[data-theme=dark] .dk-rose .dk-ico{background:rgba(225,29,72,.16);color:#fb7185}
-/* DASH SECTION */
-.dash-sec-t{font-size:13px;font-weight:700;color:var(--tx);margin:4px 0 -6px;display:flex;align-items:center;gap:7px}
-.dash-sec-t svg{width:15px;height:15px;color:var(--mu)}
-/* ALERT CHIPS */
-.dash-alerts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.da-card{border-radius:13px;padding:14px 16px;cursor:pointer;border:1px solid transparent;transition:transform .12s,box-shadow .15s;display:flex;flex-direction:column;gap:2px}
-.da-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
-.da-num{font-size:24px;font-weight:800;letter-spacing:-.8px;line-height:1;font-variant-numeric:tabular-nums}
-.da-lbl{font-size:11px;font-weight:600;opacity:.85}
-.da-red{background:#fef2f2;border-color:#fecaca;color:#991b1b}.da-red .da-num{color:#dc2626}
-.da-orange{background:#fff7ed;border-color:#fed7aa;color:#9a3412}.da-orange .da-num{color:#ea580c}
-.da-blue{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}.da-blue .da-num{color:#2563eb}
-.da-purple{background:#f5f3ff;border-color:#ddd6fe;color:#5b21b6}.da-purple .da-num{color:#7c3aed}
-[data-theme=dark] .da-red{background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.3);color:#fca5a5}[data-theme=dark] .da-red .da-num{color:#f87171}
-[data-theme=dark] .da-orange{background:rgba(234,88,12,.12);border-color:rgba(234,88,12,.3);color:#fdba74}[data-theme=dark] .da-orange .da-num{color:#fb923c}
-[data-theme=dark] .da-blue{background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.3);color:#93c5fd}[data-theme=dark] .da-blue .da-num{color:#60a5fa}
-[data-theme=dark] .da-purple{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:#c4b5fd}[data-theme=dark] .da-purple .da-num{color:#a78bfa}
-/* QUICK SHORTCUTS */
-.dash-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.qs-btn{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surf);border:1px solid var(--bord);border-radius:13px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left}
-.qs-btn:hover{border-color:var(--acc);background:var(--acc-bg);transform:translateY(-1px)}
-.qs-btn:active{transform:scale(.97)}
-.qs-ico{width:34px;height:34px;border-radius:9px;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.qs-ico svg{width:17px;height:17px}
-/* CONTAS LIST */
-.dash-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.conta-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh)}
-.conta-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bord-l)}
-.conta-hd-t{font-size:13px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px}
-.conta-hd-t svg{width:15px;height:15px}
-.conta-tot{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px}
-.conta-body{max-height:230px;overflow-y:auto}
-.conta-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bord-l);font-size:12.5px;gap:10px}
-.conta-row:last-child{border-bottom:none}
-.conta-r-info{min-width:0;flex:1}
-.conta-r-nome{font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.conta-r-venc{font-size:11px;color:var(--fa);margin-top:1px}
-.conta-r-venc.vencida{color:var(--er-t);font-weight:600}
-.conta-r-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tx)}
-@keyframes dashIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-.dash-kpis .dk-card:nth-child(1){animation-delay:.04s}.dash-kpis .dk-card:nth-child(2){animation-delay:.08s}
-.dash-kpis .dk-card:nth-child(3){animation-delay:.12s}.dash-kpis .dk-card:nth-child(4){animation-delay:.16s}
-.hero-luc{animation-delay:.08s}
-
-/* CONFIGURAÇÕES */
-.cfg-card{background:var(--surf);border:1px solid var(--bord);border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:var(--sh)}
-.cfg-title{font-size:15px;font-weight:700;color:var(--tx);margin-bottom:4px}
-.cfg-desc{font-size:12.5px;color:var(--mu);margin-bottom:14px}
-.cfg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--bord-l);font-size:13.5px}
-.cfg-row:last-child{border-bottom:none}
-.cfg-row-lbl{color:var(--mu)}
-.cfg-row-val{font-weight:600;color:var(--tx)}
-.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.theme-opt{background:var(--bg);border:2px solid var(--bord);border-radius:14px;padding:12px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:9px;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.theme-opt:hover{border-color:var(--acc)}
-.theme-opt.on{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.16)}
-.theme-prev{width:100%;height:44px;border-radius:9px;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--bord)}
-.theme-prev span{flex:1;display:block}
-.tp-light{background:#fff}.tp-light span:first-child{background:#6366f1;flex:0 0 13px}.tp-light span:last-child{background:#f1f5f9}
-.tp-dark{background:#0b1120}.tp-dark span:first-child{background:#6366f1;flex:0 0 13px}.tp-dark span:last-child{background:#141e31}
-.tp-system{background:linear-gradient(135deg,#fff 49%,#0b1120 51%)}
-.theme-lbl{font-size:12.5px;font-weight:600;color:var(--tx)}
-
-/* AUTO NOTIFICATIONS */
-.auto-noti{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--bord-l);border-radius:10px}
-.an-h{font-size:13px;font-weight:800;color:var(--acc-t);font-variant-numeric:tabular-nums;flex-shrink:0;min-width:42px}
-.an-t{font-size:12px;color:var(--tx);line-height:1.3}
-
-/* MOBILE BOTTOM NAV */
-.bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;height:calc(60px + env(safe-area-inset-bottom,0px));background:var(--surf);border-top:1px solid var(--bord);z-index:300;align-items:stretch;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -1px 0 var(--bord),0 -4px 20px rgba(0,0,0,.05)}
-.bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;background:none;border:none;cursor:pointer;color:var(--mu);font-size:10px;font-weight:600;font-family:inherit;padding:6px 2px 4px;transition:color .15s;min-width:0;position:relative;-webkit-tap-highlight-color:transparent}
-.bnav-item.on{color:var(--acc)}
-.bnav-item.on::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2.5px;background:var(--acc);border-radius:0 0 3px 3px}
-.bnav-item svg{width:22px;height:22px;flex-shrink:0}
-.bnav-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 2px;display:block}
-/* MAIS MENU */
-.mais-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-.mais-ov.open{opacity:1;pointer-events:all}
-.mais-menu{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-radius:20px 20px 0 0;z-index:900;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);border-top:1px solid var(--bord);padding-bottom:max(20px,env(safe-area-inset-bottom,20px))}
-.mais-menu.open{transform:translateY(0)}
-.mais-handle{width:40px;height:4px;background:var(--bord);border-radius:2px;margin:12px auto 6px}
-.mais-title{font-size:11px;font-weight:700;color:var(--fa);padding:4px 20px 10px;text-transform:uppercase;letter-spacing:.8px}
-.mais-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px 16px}
-.mais-item{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;border-radius:16px;background:var(--bg);border:1px solid var(--bord-l);font-size:12px;font-weight:600;color:var(--tx);cursor:pointer;font-family:inherit;transition:all .12s;-webkit-tap-highlight-color:transparent;text-align:center;line-height:1.3}
-.mais-item:active{transform:scale(.95);background:var(--acc-bg)}
-.mais-item svg{width:26px;height:26px;color:var(--mu)}
-.mais-sep{height:1px;background:var(--bord-l);margin:0 16px 12px}
-.mais-actions{padding:0 16px;display:flex;flex-direction:column;gap:8px}
-.mais-row-item{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;background:var(--bg);border:1px solid var(--bord-l);font-size:14px;font-weight:500;color:var(--tx);cursor:pointer;font-family:inherit;transition:background .12s;-webkit-tap-highlight-color:transparent;text-align:left;width:100%}
-.mais-row-item:active{background:var(--acc-bg)}
-.mais-row-item.danger{color:var(--er-t)}
-.mais-row-item svg{width:20px;height:20px;color:var(--mu);flex-shrink:0}
-.mais-row-item.danger svg{color:var(--er-t)}
-/* RESPONSIVE */
-@media(max-width:900px){
-  .kpi-row{grid-template-columns:1fr 1fr}
-  .sb,.col-btn{display:none!important}
-  .main{margin-left:0!important}
-  .bnav{display:flex}
-  .content{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-  #noti-stack{bottom:calc(76px + env(safe-area-inset-bottom,0px));right:12px;max-width:calc(100vw - 24px)}
-  .bbar{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
-  .undo{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
-  .topbar{padding:0 14px;gap:6px}
-  .sync-ts{display:none}
-  .tb-hide-mobile{display:none!important}
-  .toolbar{flex-wrap:wrap;gap:6px;padding:10px 12px}
-  .sw{flex:1;min-width:0}
-  .sinp{width:100%!important;min-width:0}
-  .sinp:focus{width:100%!important}
-  .toolbar .dvv{display:none}
-  .layout-toggle{display:none}
-  .tr{gap:4px}
-  .tr .bts{display:none}
-}
-@media(max-width:600px){
-  .kpi-row{grid-template-columns:1fr 1fr}
-  .kpi-val{font-size:24px;letter-spacing:-1px}
-  .edraw{width:100vw;max-width:100vw}
-  .content{padding:12px 8px calc(76px + env(safe-area-inset-bottom,0px))}
-  .fk-grid,.fk-grid-2{grid-template-columns:1fr 1fr}
-  .fin-period-bar{flex-direction:column;align-items:flex-start}
-  .fin-chart-wrap{padding:14px}
-  .tf-grid{grid-template-columns:1fr 1fr}
-  .tb-title{font-size:13px}
-  .btp{padding:0 10px;font-size:12px}
-  .topbar{padding:0 10px;gap:4px}
-  .dash-hero{grid-template-columns:1fr}
-  .dash-kpis{grid-template-columns:1fr 1fr}
-  .dash-alerts{grid-template-columns:1fr 1fr}
-  .dash-shortcuts{grid-template-columns:1fr 1fr}
-  .dash-two{grid-template-columns:1fr}
-  .hero-val{font-size:28px}
-  .dash-greet h2{font-size:19px}
-}
-@media(max-width:380px){
-  .bnav-item span{font-size:9px}
-  .bnav-item svg{width:20px;height:20px}
-}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bord);border-radius:10px}
-.spin{animation:sp .8s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.fade-in{animation:fdin .3s ease both}
-@keyframes fdin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.create-box{width:520px;max-width:95vw}
-/* Cards hover */
-.pcard:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:var(--acc);transform:translateY(-1px)}
-.pcard{transition:box-shadow .15s,border-color .15s,transform .15s}
-.pcard-edit{position:absolute;top:7px;right:7px;width:26px;height:26px;background:var(--surf);border:1px solid var(--bord);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-.pcard-img{position:relative}
-.pcard:hover .pcard-edit{opacity:1}
-.pcard-edit svg{width:12px;height:12px;color:var(--acc)}
-
-/* ════ POLISH / EFEITOS ════ */
-html{scroll-behavior:smooth}
-body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-/* Transição suave ao trocar de view */
-.view.on{animation:viewIn .3s cubic-bezier(.22,1,.36,1)}
-@keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-/* Feedback de toque universal nos botões */
-.btp,.bts,.bti,.qs-btn,.fp-btn,.dp-btn,.pt-btn,.lt-btn,.mais-item,.bnav-item,.da-card,.dk-card,.kpi,.fk-card,.tf-card{-webkit-tap-highlight-color:transparent}
-.btp:active,.bts:active,.bti:active{transform:scale(.96)}
-/* Acessibilidade — foco visível por teclado */
-:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
-button:focus:not(:focus-visible){outline:none}
-/* Backdrop blur nos overlays */
-.modal,.bdrop,.edraw-ov{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
-.mbox,.sheet{animation:popIn .25s cubic-bezier(.22,1,.36,1)}
-@keyframes popIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
-/* Skeleton shimmer p/ loading */
-.skel{position:relative;overflow:hidden;background:var(--bord-l);border-radius:8px}
-.skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:shimmer 1.3s infinite}
-[data-theme=dark] .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
-@keyframes shimmer{100%{transform:translateX(100%)}}
-.skel-row{height:14px;margin:10px 16px;border-radius:6px}
-.skel-row.w60{width:60%}.skel-row.w40{width:40%}.skel-row.w80{width:80%}
-/* Botões primários com brilho sutil ao hover */
-.btp{position:relative;overflow:hidden}
-.btp::before{content:'';position:absolute;top:0;left:-75%;width:50%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-20deg);transition:left .5s}
-.btp:hover::before{left:125%}
-/* Respeita preferência de movimento reduzido */
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
-}
-/* Scroll momentum no iOS */
-.conta-body,.qbody,.edraw-bd,.twrap,.sb-nav,.mbox{-webkit-overflow-scrolling:touch}
-
-@media(max-width:768px){
-  .mbox { width: 100% !important; max-width: 100% !important; height: 100% !important; max-height: 100vh !important; border-radius: 0 !important; padding: 20px 16px !important; margin: 0 !important; overflow-y: auto; }
-  .modal { padding: 0 !important; }
-  .vtable { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100%; display: block; }
-  .view { padding: 8px !important; overflow-x: hidden !important; width: 100vw !important; box-sizing: border-box !important; }
-  table { width: 100% !important; min-width: 600px; }
-  .tcard { width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
-}
-
-
-/* UI EXTREME MOBILE FIXES */
-@media (max-width: 768px) {
-  #card-container.vg, #card-container.vc {
-    grid-template-columns: 1fr !important;
-  }
-  .vc .pcard {
-    flex-direction: row;
-  }
-  .edraw {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    right: -100vw;
-  }
-  .edraw.open {
-    right: 0 !important;
-  }
-}
-/* Shimmer Animation for Skeletons */
-@keyframes shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
-}
-.skeleton {
-  background: linear-gradient(90deg, var(--bg) 25%, var(--bord-l) 50%, var(--bg) 75%);
-  background-size: 200px 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-}
-.skeleton-text { height: 16px; width: 60%; margin-bottom: 8px; }
-.skeleton-title { height: 24px; width: 40%; margin-bottom: 12px; }
-
-/* Dashboard VIP and Notifications adjustments */
-.vip-badge { background: gold; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
-.profit-badge { background: #dcfce7; color: #166534; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; border: 1px solid #bbf7d0; }
-.profit-badge.neg { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-
-/* Empty states */
-.empty-state { text-align: center; padding: 40px 20px; color: var(--mu); }
-.empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5; }
-
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Estoque Max</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>">
+  <link rel="stylesheet" href="new_style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 </head>
 <body>
-
-<!-- SIDEBAR -->
-<aside class="sb" id="sidebar">
-  <div class="sb-head">
-    <div class="bmark">EM</div>
-    <span class="bname">Estoque Max</span>
-  </div>
-  <nav class="sb-nav">
-    <span class="nav-sec">Menu</span>
-    <button class="ni on" id="ni-inicio" onclick="setView('inicio')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span class="ni-label">Meu Negócio</span>
-    </button>
-    <button class="ni" id="ni-produtos" onclick="setView('produtos')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg>
-      <span class="ni-label">Produtos</span>
-      <span class="ni-badge" id="badge-low"></span>
-    </button>
-    <button class="ni" id="ni-pedidos" onclick="setView('pedidos')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      <span class="ni-label">Pedidos</span>
-    </button>
-    <button class="ni" id="ni-historico" onclick="setView('historico')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span class="ni-label">Histórico</span>
-    </button>
-    <button class="ni" id="ni-relatorio" onclick="setView('relatorio')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span class="ni-label">Relatório</span>
-    </button>
-    <button class="ni" id="ni-notas" onclick="setView('notas')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      <span class="ni-label">Notas Fiscais</span>
-    </button>
-    <button class="ni" id="ni-integracoes" onclick="setView('integracoes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-      <span class="ni-label">Integrações</span>
-    </button>
-    <button class="ni" id="ni-financeiro" onclick="setView('financeiro')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <span class="ni-label">Financeiro</span>
-    </button>
-    <button class="ni" onclick="window.location.href='/conectar.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
-      <span class="ni-label">Reconectar Bling</span>
-    </button>
-  </nav>
-  <div class="sb-foot">
-    <button class="ni" onclick="logout()" style="color:#475569">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      <span class="ni-label">Sair</span>
-    </button>
-    <button class="col-btn" onclick="toggleSidebar()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      <span class="col-label">Recolher sidebar</span>
-    </button>
-  </div>
-</aside>
-
-<!-- MAIN -->
 <div class="main">
+  <!-- PWA INSTALL BAR -->
+  <div id="pwa-install-bar" style="display:none; padding:12px; background:var(--primary); color:#fff; text-align:center; font-size:14px; z-index:999; justify-content:space-between; align-items:center;">
+    <span>Instale o Estoque Max (App Offline)</span>
+    <button onclick="installApp()" class="bts" style="padding:4px 12px; height:auto; margin-left:12px;">Instalar</button>
+  </div>
+
   <div id="lbar"></div>
-  <!-- PWA install banner -->
-  <div id="pwa-install-bar" style="display:none;align-items:center;gap:12px;background:linear-gradient(90deg,#6366f1,#8b5cf6);color:#fff;padding:10px 20px;font-size:13px;font-weight:500;box-shadow:0 2px 8px rgba(99,102,241,.3)">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg>
-    <span>Instale o Estoque Max como app no seu celular — acesso rápido e offline!</span>
-    <button onclick="installApp()" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.4);color:#fff;padding:5px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.35)'" onmouseout="this.style.background='rgba(255,255,255,.25)'">Instalar</button>
-    <button onclick="document.getElementById('pwa-install-bar').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;padding:4px;font-size:18px;line-height:1">✕</button>
-  </div>
 
-  <header class="topbar">
-    <span class="tb-title" id="tb-title">Produtos</span>
-    <span class="sync-ts" id="sync-ts"></span>
-    <div class="tb-right">
-      <button class="bti" onclick="toggleDark()" title="Alternar modo escuro (D)">
-        <svg id="dm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      </button>
-      <button class="bti tb-hide-mobile" onclick="askNotifPerm()" title="Ativar notificações push" id="notif-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      </button>
-      <button class="bti tb-hide-mobile" onclick="openModal('sc-modal')" title="Atalhos de teclado (?)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"/></svg>
-      </button>
-      <button class="bti tb-hide-mobile" id="ar-btn" onclick="cycleAutoRefresh()" title="Auto-refresh (desativado)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"/></svg>
-      </button>
-      <button class="btp" id="sync-btn" onclick="sync()">
-        <svg id="sync-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
-        Sincronizar
-      </button>
+  <!-- SIDEBAR (Desktop) -->
+  <aside class="sb" id="sidebar">
+    <div class="sb-head">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      Estoque Max
     </div>
-  </header>
+    <nav class="sb-nav">
+      <a class="ni on" id="ni-inicio" onclick="setView('inicio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Dashboard
+      </a>
+      <a class="ni" id="ni-produtos" onclick="setView('produtos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 4 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 20 16z"></path><polyline points="4.27 6.96 12 12.01 19.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Produtos
+        <span class="ni-badge" id="badge-low" style="display:none">0</span>
+      </a>
+      <a class="ni" id="ni-pedidos" onclick="setView('pedidos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Pedidos
+      </a>
+      <a class="ni" id="ni-financeiro" onclick="setView('financeiro')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Financeiro
+      </a>
+      <!-- New Integracoes Tab instead of Notificacoes -->
+      <a class="ni" id="ni-integracoes" onclick="setView('integracoes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Integrações
+      </a>
+      <a class="ni" id="ni-notas" onclick="setView('notas')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> NF-e
+      </a>
+      <a class="ni" id="ni-relatorio" onclick="setView('relatorio')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Relatórios
+      </a>
+      <a class="ni" id="ni-historico" onclick="setView('historico')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Histórico
+      </a>
+    </nav>
+  </aside>
 
-  <div class="ar-bar" id="ar-bar" style="display:none">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    Auto-sync ativo · próxima atualização em <span class="ar-cd" id="ar-cd">—</span>s
-    <button class="bts" onclick="setAutoRefresh(0)" style="height:24px;padding:0 8px;font-size:11px;margin-left:4px">Desativar</button>
-  </div>
+  <!-- CONTENT AREA -->
+  <main class="content">
+    <header class="topbar">
+      <div class="tb-title" id="tb-title">Dashboard</div>
+      <span id="sync-ts" style="display:none;"></span>
+      <div class="tb-right">
+        <!-- Notif Perm Button -->
+        <button class="bti" onclick="askNotifPerm()" id="notif-btn" title="Ativar Notificações" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        </button>
+        <button class="bti" id="ar-btn" onclick="cycleAutoRefresh()" title="Auto Sync">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"></path></svg>
+        </button>
+        <button class="bti" onclick="toggleDark()">
+          <svg id="dm-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+        <button class="btp" id="sync-btn" onclick="sync()">
+          <svg id="sync-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.84"></path></svg>
+          Sincronizar
+        </button>
+      </div>
+    </header>
 
-  <div class="content">
+    <div class="ar-bar" id="ar-bar" style="display:none; padding:8px 32px; background:var(--primary); color:#fff; font-size:12px; font-weight:600;">
+      Auto-sync em <span id="ar-cd"></span>s
+    </div>
 
-    <!-- VIEW INÍCIO (DASHBOARD) -->
+    <!-- VIEW INÍCIO -->
     <div class="view on" id="view-inicio">
       <div class="dash-greet">
         <div>
           <h2 id="dash-hello">Olá! 👋</h2>
-          <p id="dash-sub">Aqui está o resumo do seu negócio.</p>
+          <p id="dash-sub">Visão geral do negócio (Versão 2050).</p>
         </div>
-        <div class="dash-period">
+        <div style="display:flex; gap:8px;">
           <button class="dp-btn" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
-          <button class="dp-btn" data-dp="7d" onclick="setDashPeriod('7d',this)">7 dias</button>
-          <button class="dp-btn on" data-dp="30d" onclick="setDashPeriod('30d',this)">30 dias</button>
+          <button class="dp-btn" data-dp="7d" onclick="setDashPeriod('7d',this)">7d</button>
+          <button class="dp-btn on" data-dp="30d" onclick="setDashPeriod('30d',this)">30d</button>
         </div>
       </div>
 
-      <!-- HERO: Faturamento + Lucro -->
       <div class="dash-hero">
-        <div class="hero-card hero-fat">
-          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div>
-          <div class="hero-val" id="dash-faturamento">—</div>
-          <div class="hero-sub" id="dash-fat-sub">no período selecionado</div>
+        <div class="hero-card">
+          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Faturamento</div>
+          <div class="hero-val" id="dash-faturamento">R$ 0,00</div>
+          <div class="hero-sub" id="dash-fat-sub">no período</div>
         </div>
-        <div class="hero-card hero-luc">
-          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado</div>
-          <div class="hero-val" id="dash-lucro">—</div>
-          <div class="hero-sub" id="dash-luc-sub">margem média do catálogo</div>
+        <div class="hero-card">
+          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Lucro Estimado</div>
+          <div class="hero-val" id="dash-lucro">R$ 0,00</div>
+          <div class="hero-sub" id="dash-luc-sub">margem média</div>
         </div>
       </div>
 
-      <!-- KPIs -->
       <div class="dash-kpis">
         <div class="dk-card dk-blue" onclick="setView('pedidos')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">Vendas concluídas</div>
-          <div class="dk-val" id="dash-vendas">—</div>
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></div></div>
+          <div class="dk-val" id="dash-vendas">0</div>
+          <div class="dk-lbl">Vendas concl.</div>
           <div class="dk-sub" id="dash-vendas-sub">pedidos no período</div>
         </div>
         <div class="dk-card dk-green" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">Ticket médio</div>
-          <div class="dk-val" id="dash-ticket">—</div>
-          <div class="dk-sub">por venda concluída</div>
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div>
+          <div class="dk-val" id="dash-ticket">R$ 0,00</div>
+          <div class="dk-lbl">Ticket Médio</div>
+          <div class="dk-sub">por venda</div>
         </div>
         <div class="dk-card dk-amber" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">A receber</div>
-          <div class="dk-val" id="dash-receber">—</div>
-          <div class="dk-sub" id="dash-receber-sub">contas em aberto</div>
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div></div>
+          <div class="dk-val" id="dash-receber">R$ 0,00</div>
+          <div class="dk-lbl">A Receber</div>
+          <div class="dk-sub" id="dash-receber-sub">contas</div>
         </div>
-        <div class="dk-card dk-rose">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div></div>
-          <div class="dk-lbl">A pagar</div>
-          <div class="dk-val" id="dash-pagar">—</div>
-          <div class="dk-sub" id="dash-pagar-sub">contas em aberto</div>
+        <div class="dk-card dk-rose" onclick="setView('financeiro')">
+          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></div></div>
+          <div class="dk-val" id="dash-pagar">R$ 0,00</div>
+          <div class="dk-lbl">A Pagar</div>
+          <div class="dk-sub" id="dash-pagar-sub">contas</div>
         </div>
       </div>
 
-      <!-- ALERTAS -->
-      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Precisa de atenção</div>
       <div class="dash-alerts">
-        <div class="da-card da-red" onclick="setView('produtos');setTimeout(()=>filterByStock(0,0),50)">
-          <div class="da-num" id="dash-zerados">—</div><div class="da-lbl">Produtos zerados</div>
+        <div class="da-card da-red" onclick="setView('produtos')">
+          <div class="da-num" id="dash-zerados">0</div><div class="da-lbl">Produtos Zerados</div>
         </div>
-        <div class="da-card da-orange" onclick="setView('produtos');setTimeout(()=>filterByStock(1,5),50)">
-          <div class="da-num" id="dash-criticos">—</div><div class="da-lbl">Estoque crítico (≤5)</div>
+        <div class="da-card da-orange" onclick="setView('produtos')">
+          <div class="da-num" id="dash-criticos">0</div><div class="da-lbl">Estoque Crítico (≤5)</div>
         </div>
         <div class="da-card da-blue" onclick="setView('pedidos')">
-          <div class="da-num" id="dash-pendentes">—</div><div class="da-lbl">Pedidos pendentes</div>
+          <div class="da-num" id="dash-pendentes">0</div><div class="da-lbl">Pedidos Pendentes</div>
         </div>
         <div class="da-card da-purple" onclick="setView('financeiro')">
-          <div class="da-num" id="dash-vencidas">—</div><div class="da-lbl">Contas vencidas</div>
+          <div class="da-num" id="dash-vencidas">0</div><div class="da-lbl">Contas Vencidas</div>
         </div>
       </div>
 
-      <!-- CONTAS -->
       <div class="dash-two">
         <div class="conta-card">
           <div class="conta-hd">
-            <span class="conta-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> A receber</span>
-            <span class="conta-tot" id="dash-receber-tot" style="color:var(--ok-t)">—</span>
+            <span class="conta-hd-t"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--bl)" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg> Últimos Pedidos</span>
           </div>
-          <div class="conta-body" id="dash-receber-list"><div class="st-wrap" style="padding:24px"><p class="st-d">Carregando…</p></div></div>
+          <div class="conta-body" id="dash-receber-list"></div>
         </div>
         <div class="conta-card">
           <div class="conta-hd">
-            <span class="conta-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="var(--er)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> A pagar</span>
-            <span class="conta-tot" id="dash-pagar-tot" style="color:var(--er-t)">—</span>
+            <span class="conta-hd-t"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--er)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg> Contas a Pagar</span>
+            <span class="conta-tot" id="dash-pagar-tot" style="color:var(--er)">R$ 0,00</span>
           </div>
-          <div class="conta-body" id="dash-pagar-list"><div class="st-wrap" style="padding:24px"><p class="st-d">Carregando…</p></div></div>
+          <div class="conta-body" id="dash-pagar-list"></div>
         </div>
       </div>
-
-      <!-- ATALHOS -->
-      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Atalhos rápidos</div>
-      <div class="dash-shortcuts">
-        <button class="qs-btn" onclick="setView('produtos');setTimeout(openCreate,60)"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>Novo produto</button>
-        <button class="qs-btn" onclick="sync()"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"/></svg></span>Sincronizar</button>
-        <button class="qs-btn" onclick="setView('pedidos')"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Ver pedidos</button>
-        <button class="qs-btn" onclick="setView('notas');setTimeout(openEmitirNFe,60)"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>Emitir NF-e</button>
-      </div>
+      <div id="dash-receber-tot" style="display:none;"></div>
     </div>
 
     <!-- VIEW PRODUTOS -->
     <div class="view" id="view-produtos">
-      <!-- Painel de Tarefas (aparece só quando há alertas) -->
-      <div class="tarefas-panel" id="tarefas-panel" style="display:none">
-        <div class="tf-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span class="tf-header-title">Atenção necessária</span>
-          <span class="tf-badge" id="tf-total-badge">0</span>
+      <!-- Painel Tarefas -->
+      <div class="tarefas-panel" id="tarefas-panel" style="display:none; background:var(--wr-bg); border:1px solid rgba(245,158,11,0.3); padding:16px; border-radius:var(--rad-s); margin-bottom:24px;">
+        <div style="display:flex; align-items:center; gap:8px; color:var(--wr); font-weight:600; margin-bottom:12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> 
+          Atenção Necessária (<span id="tf-total-badge">0</span>)
         </div>
-        <div class="tf-grid">
-          <div class="tf-card tf-red" onclick="filterByStock(0,0)" title="Ver produtos sem estoque">
-            <div class="tf-num" id="tf-zerados">0</div>
-            <div class="tf-lbl">Zerados</div>
-          </div>
-          <div class="tf-card tf-orange" onclick="filterByStock(1,5)" title="Ver estoque crítico ≤5">
-            <div class="tf-num" id="tf-criticos">0</div>
-            <div class="tf-lbl">Críticos (≤5)</div>
-          </div>
-          <div class="tf-card tf-blue" onclick="setView('pedidos')" title="Ver pedidos pendentes">
-            <div class="tf-num" id="tf-pend-count">0</div>
-            <div class="tf-lbl">Pedidos pend.</div>
-          </div>
-          <div class="tf-card tf-green" onclick="setView('notas')" title="Ver notas fiscais">
-            <div class="tf-num" id="tf-nfe-count">—</div>
-            <div class="tf-lbl">NF-e emitidas</div>
-          </div>
-        </div>
-      </div>
-      <div class="kpi-row">
-        <div class="kpi">
-          <div class="kpi-lbl">Total de produtos</div>
-          <div class="kpi-val" id="k-total">—</div>
-          <div class="kpi-sub" id="k-total-s">Carregando…</div>
-          <div class="kpi-tip" id="k-total-tip"></div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-lbl">Em estoque</div>
-          <div class="kpi-val" id="k-ok">—</div>
-          <div class="kpi-sub">quantidade &gt; 0</div>
-          <div class="kpi-tip" id="k-ok-tip"></div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-lbl">Sem estoque</div>
-          <div class="kpi-val" id="k-out">—</div>
-          <div class="kpi-sub" id="k-out-s">precisam de reposição</div>
-          <div class="kpi-tip" id="k-out-tip"></div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-lbl">Valor em estoque</div>
-          <div class="kpi-val" id="k-val" style="font-size:18px;letter-spacing:-.5px">—</div>
-          <div class="kpi-sub">preço × quantidade</div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+          <button class="bts" id="tf-zerados" onclick="filterByStock(0,0)">0 Zerados</button>
+          <button class="bts" id="tf-criticos" onclick="filterByStock(1,5)">0 Críticos</button>
+          <button class="bts" id="tf-pend-count" onclick="setView('pedidos')">0 Pedidos</button>
+          <button class="bts" id="tf-nfe-count" onclick="setView('notas')">0 NFs</button>
         </div>
       </div>
 
-      <div class="tcard">
-        <div class="toolbar">
-          <div class="sw">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="sinp" id="search" type="search" placeholder="Buscar nome, SKU ou cole código de barras…" oninput="applyFilters()" autocomplete="off">
-          </div>
-          <div class="dvv"></div>
-          <button class="bts" onclick="toggleFilters()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            Filtros <span class="fa-cnt" id="fa-cnt" style="display:none"></span>
-          </button>
-          <button class="bts" onclick="toggleGroup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span id="grp-lbl">Agrupar</span></button>
-          <div class="dvv"></div>
-          <div class="layout-toggle">
-            <button class="lt-btn on" id="lt-list" onclick="setLayout('list')" title="Tabela (L)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
-            <button class="lt-btn" id="lt-grid" onclick="setLayout('grid')" title="Grade (G)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
-            <button class="lt-btn" id="lt-cat" onclick="setLayout('catalog')" title="Catálogo (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg></button>
-          </div>
-          <div class="tr">
-            <button class="btp" onclick="openCreate()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Novo Produto</button>
-            <button class="bts" onclick="openModal('im-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar</button>
-            <button class="bts" onclick="exportCSV()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button>
-            <button class="bts" onclick="openQuick()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Entrada rápida</button>
-          </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="search" placeholder="Buscar produtos por nome ou SKU..." onkeyup="applyFilters()">
         </div>
+        <button class="bts" onclick="openCreate()">+ Novo Produto</button>
+      </div>
 
-        <div class="fpanel" id="fpanel">
-          <div class="fgrid">
-            <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo">Estoque baixo (≤3)</option><option value="out">Sem estoque</option></select></div>
-            <div class="fg"><label>Categoria</label><select id="f-cat" onchange="applyFilters()"><option value="">Todas</option></select></div>
-            <div class="fg"><label>Estoque mín.</label><input type="number" id="f-st-min" placeholder="0" min="0" oninput="applyFilters()"></div>
-            <div class="fg"><label>Estoque máx.</label><input type="number" id="f-st-max" placeholder="999" min="0" oninput="applyFilters()"></div>
-            <div class="fg"><label>Preço mín. R$</label><input type="number" id="f-pr-min" placeholder="0" min="0" oninput="applyFilters()"></div>
-            <div class="fg"><label>Preço máx. R$</label><input type="number" id="f-pr-max" placeholder="9999" min="0" oninput="applyFilters()"></div>
-          </div>
-          <div class="frow">
-            <div class="pchips" id="pchips"></div>
-            <button class="bts" onclick="savePreset()" style="height:28px;padding:0 10px;font-size:11px">Salvar filtro</button>
-            <button class="bts" onclick="clearFilters()" style="height:28px;padding:0 10px;font-size:11px;color:var(--mu)">Limpar</button>
-          </div>
+      <div style="margin-bottom: 24px; display:flex; gap:16px; align-items:center;">
+        <span style="font-size:14px; color:var(--text-m)">Layout:</span>
+        <button class="bti" id="lt-grid" onclick="setLayout('grid')" title="Cards"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></button>
+        <button class="bti" id="lt-list" onclick="setLayout('list')" title="Lista"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
+        <button class="bts" id="cb-all" style="display:none"></button> <!-- Preserved for logic -->
+        
+        <!-- HIDDEN BUT NEEDED IDs for logic -->
+        <div style="display:none;">
+          <div id="fa-cnt"></div><div id="grp-lbl"></div><div id="lt-cat"></div>
+          <div id="fpanel"></div><div id="f-status"></div><div id="f-cat"></div>
+          <div id="f-st-min"></div><div id="f-st-max"></div><div id="f-pr-min"></div>
+          <div id="f-pr-max"></div><div id="pchips"></div>
+          <div id="k-total"></div><div id="k-total-s"></div><div id="k-total-tip"></div>
+          <div id="k-ok"></div><div id="k-ok-tip"></div><div id="k-out"></div>
+          <div id="k-out-s"></div><div id="k-out-tip"></div><div id="k-val"></div>
+          <div id="si-nome"></div><div id="si-categoria"></div><div id="si-preco"></div>
+          <div id="si-estoque"></div><div id="si-status"></div>
         </div>
+      </div>
 
-        <div id="card-container"></div>
-        <div class="twrap" id="list-container">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:32px" onclick="toggleAllCb()"><input type="checkbox" id="cb-all"></th>
-                <th onclick="sortBy('nome')">Produto <span class="si" id="si-nome">↑</span></th>
-                <th onclick="sortBy('categoria')" style="width:120px">Categoria <span class="si" id="si-categoria"></span></th>
-                <th class="r" onclick="sortBy('preco')" style="width:130px">Preço <span class="si" id="si-preco"></span></th>
-                <th class="r" onclick="sortBy('estoque')" style="width:120px">Estoque <span class="si" id="si-estoque"></span></th>
-                <th style="width:130px">Status <span class="si" id="si-status"></span></th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
-          <button class="lmbtn" id="lm-btn" onclick="loadMore()" style="display:none">Carregar mais…</button>
-        </div>
+      <div id="card-container" style="display:none;"></div>
+      
+      <div id="list-container" class="vtable-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th width="50">Img</th>
+              <th>Nome & Categoria</th>
+              <th>SKU</th>
+              <th>Preço Base</th>
+              <th>Estoque</th>
+              <th>Situação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      
+      <div style="text-align:center; margin-top:24px;">
+        <button id="lm-btn" class="bts" onclick="loadMore()" style="display:none;">Carregar mais</button>
       </div>
     </div>
 
     <!-- VIEW PEDIDOS -->
     <div class="view" id="view-pedidos">
-      <div class="tcard" style="padding:0;overflow:hidden">
-        <div class="ped-tab-bar">
-          <button class="pt-btn on" onclick="setTabPedidos('all',this)">Todos <span class="pt-cnt" id="pt-cnt-all"></span></button>
-          <button class="pt-btn" onclick="setTabPedidos('pendente',this)">Pendentes <span class="pt-cnt pt-cnt-pen" id="pt-cnt-pen"></span></button>
-          <button class="pt-btn" onclick="setTabPedidos('concluido',this)">Concluídos <span class="pt-cnt pt-cnt-ok" id="pt-cnt-ok"></span></button>
-          <button class="pt-btn" onclick="setTabPedidos('cancelado',this)">Cancelados <span class="pt-cnt pt-cnt-can" id="pt-cnt-can"></span></button>
-          <button class="bts" style="margin-left:auto;margin-bottom:4px" onclick="loadPedidos()">↻ Atualizar</button>
-        </div>
-        <div class="vtable" id="pedidos-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><p class="st-d">Clique em Atualizar para carregar os pedidos do Bling.</p></div></div>
+      <div class="dash-sec-t">Pedidos de Venda</div>
+      <div style="display:flex; gap:12px; margin-bottom:24px; overflow-x:auto; padding-bottom:8px;">
+        <button class="bts" onclick="setTabPedidos('all')">Todos (<span id="pt-cnt-all">0</span>)</button>
+        <button class="bts" onclick="setTabPedidos('pen')" style="color:var(--wr); border-color:var(--wr-bg)">Pendentes (<span id="pt-cnt-pen">0</span>)</button>
+        <button class="bts" onclick="setTabPedidos('ok')" style="color:var(--ok); border-color:var(--ok-bg)">Concluídos (<span id="pt-cnt-ok">0</span>)</button>
+        <button class="bts" onclick="setTabPedidos('can')" style="color:var(--er); border-color:var(--er-bg)">Cancelados (<span id="pt-cnt-can">0</span>)</button>
       </div>
-    </div>
-
-    <!-- VIEW HISTÓRICO -->
-    <div class="view" id="view-historico">
-      <div class="tcard">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Histórico de alterações</span><span style="font-size:12px;color:var(--mu);margin-left:4px">(sessão atual)</span><div class="tr"><button class="btp" onclick="loadHistorico()">Atualizar</button></div></div>
-        <div class="vtable" id="historico-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><p class="st-d">Clique em Atualizar para ver as alterações desta sessão.</p></div></div>
-      </div>
-    </div>
-
-    <!-- VIEW RELATÓRIO -->
-    <div class="view" id="view-relatorio">
-      <div class="rep-grid">
-        <div class="rep-card"><div class="rep-lbl">Produtos zerados</div><div class="rep-val" id="rep-parado">—</div></div>
-        <div class="rep-card"><div class="rep-lbl">Estoque crítico (≤3)</div><div class="rep-val" id="rep-crit">—</div></div>
-        <div class="rep-card"><div class="rep-lbl">Valor imobilizado</div><div class="rep-val" id="rep-imob" style="font-size:16px">—</div></div>
-        <div class="rep-card"><div class="rep-lbl">Preço médio</div><div class="rep-val" id="rep-ticket" style="font-size:16px">—</div></div>
-      </div>
-      <div class="rep-tcard tcard">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Produtos sem estoque</span><span style="font-size:12px;color:var(--mu);margin-left:4px">(ordenado por preço)</span></div>
-        <div class="vtable" id="rep-body"></div>
-      </div>
-    </div>
-
-    <!-- VIEW NOTAS FISCAIS -->
-    <div class="view" id="view-notas">
-      <div class="tcard">
-        <div class="toolbar">
-          <span style="font-size:14px;font-weight:600;color:var(--tx)">Notas Fiscais (NF-e)</span>
-          <span style="font-size:12px;color:var(--mu);margin-left:6px">via Bling</span>
-          <div class="tr">
-            <button class="btp" onclick="openEmitirNFe()" title="Emitir NF-e a partir de um pedido">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-              Emitir NF-e
-            </button>
-            <button class="bts" onclick="loadNotas()">↻ Atualizar</button>
-          </div>
-        </div>
-        <div class="vtable" id="notas-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><p class="st-d">Clique em Atualizar para carregar as notas fiscais do Bling.</p></div></div>
-      </div>
-    </div>
-
-    <!-- MODAL EMITIR NF-e -->
-    <div class="modal" id="nfe-modal" onclick="if(event.target===this)closeModal('nfe-modal')">
-      <div class="mbox" style="max-width:420px">
-        <div class="m-title">Emitir NF-e</div>
-        <div class="m-desc">Informe o número do pedido de venda do Bling para gerar a nota fiscal.</div>
-        <div class="df"><label>Número / ID do Pedido *</label><input type="text" id="nfe-pedido-id" placeholder="Ex: 123456" style="letter-spacing:.5px"></div>
-        <div class="df"><label>Observação (opcional)</label><input type="text" id="nfe-obs" placeholder="Observação interna da nota"></div>
-        <div class="m-foot">
-          <button class="btp" id="nfe-emit-btn" onclick="emitirNFe()">Emitir NF-e</button>
-          <button class="bts" onclick="closeModal('nfe-modal')">Cancelar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEW NOTIFICAÇÕES -->
-    <div class="view" id="view-notificacoes">
-      <!-- AUTOMÁTICAS -->
-      <div class="tcard" style="padding:18px 20px;margin-bottom:16px">
-        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px;display:flex;align-items:center;gap:8px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Notificações automáticas
-          <span style="font-size:10px;font-weight:700;background:var(--ok-bg);color:var(--ok-t);padding:2px 9px;border-radius:20px;margin-left:2px">ENVIADAS PELO SISTEMA</span>
-        </div>
-        <p style="font-size:12.5px;color:var(--mu);margin-bottom:14px">Disparadas todos os dias automaticamente — você não precisa fazer nada.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
-          <div class="auto-noti"><span class="an-h">08:00</span><span class="an-t">☀️ Resumo de ontem (vendas + lucro)</span></div>
-          <div class="auto-noti"><span class="an-h">09:00</span><span class="an-t">⚠️ Alerta de estoque zerado/crítico</span></div>
-          <div class="auto-noti"><span class="an-h">12:00</span><span class="an-t">🍽️ Parcial do almoço</span></div>
-          <div class="auto-noti"><span class="an-h">15:00</span><span class="an-t">☕ Resumo da tarde</span></div>
-          <div class="auto-noti"><span class="an-h">20:00</span><span class="an-t">🌙 Fechamento do dia (lucro/prejuízo)</span></div>
-        </div>
-        <p style="font-size:11px;color:var(--fa);margin-top:12px">Eventos como pedido novo e nota com erro também notificam em tempo real. Requer Firebase e Bling conectados.</p>
-      </div>
-      <div class="notif-grid">
-        <!-- COMPOSITOR -->
-        <div class="tcard notif-composer">
-          <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:18px;display:flex;align-items:center;gap:8px">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Nova Notificação
-          </div>
-          <div class="df">
-            <label>Título *</label>
-            <input type="text" id="nt-title" placeholder="Ex: Produto com estoque crítico!" maxlength="60" oninput="updateNotifPreview()">
-          </div>
-          <div class="df">
-            <label>Mensagem *</label>
-            <textarea id="nt-body" rows="3" placeholder="Ex: O produto X atingiu estoque zerado. Clique para ver." maxlength="200" oninput="updateNotifPreview()"></textarea>
-          </div>
-          <div class="df">
-            <label>Link ao clicar (opcional)</label>
-            <input type="text" id="nt-url" placeholder="/dashboard.html">
-          </div>
-          <div class="df">
-            <label>Botão de ação (opcional)</label>
-            <input type="text" id="nt-action" placeholder="Ex: Ver produtos" maxlength="30" oninput="updateNotifPreview()">
-          </div>
-          <div class="df">
-            <label>Quando enviar</label>
-            <div class="nt-toggle">
-              <button class="nt-tog on" id="nt-now-btn" onclick="setNotifMode('now')">Enviar agora</button>
-              <button class="nt-tog" id="nt-sched-btn" onclick="setNotifMode('sched')">Agendar</button>
-            </div>
-          </div>
-          <div class="df" id="nt-sched-wrap" style="display:none">
-            <label>Data e hora</label>
-            <input type="datetime-local" id="nt-datetime">
-          </div>
-          <div class="notif-foot">
-            <button class="btp" id="nt-send-btn" onclick="sendOrScheduleNotif()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              <span id="nt-send-label">Enviar para todos</span>
-            </button>
-            <span class="nt-sub-info" id="nt-sub-info">— dispositivos inscritos</span>
-          </div>
-        </div>
-
-        <!-- PREVIEW + HISTÓRICO -->
-        <div style="display:flex;flex-direction:column;gap:16px">
-          <!-- Preview -->
-          <div class="tcard">
-            <div style="font-size:11.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px">Preview — como aparece no celular/PC</div>
-            <div class="np-card">
-              <div class="np-header">
-                <img class="np-icon" id="np-icon" src="/favicon.ico" alt="">
-                <span class="np-appname">Estoque Max</span>
-                <span class="np-time">agora</span>
-              </div>
-              <div class="np-title" id="np-title">Título da notificação</div>
-              <div class="np-body" id="np-body">A mensagem aparece aqui, com até 200 caracteres de conteúdo.</div>
-              <div class="np-actions" id="np-actions" style="display:none">
-                <button class="np-act-btn" id="np-act-btn">Ação</button>
-                <button class="np-act-btn" style="color:var(--mu)">Fechar</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Histórico -->
-          <div class="tcard">
-            <div class="toolbar" style="margin-bottom:14px">
-              <span style="font-size:14px;font-weight:700;color:var(--tx)">Histórico</span>
-              <div class="tr"><button class="bts" onclick="loadNotificacoes()">↻ Atualizar</button></div>
-            </div>
-            <div id="notif-history-body"><div class="st-wrap"><p class="st-d">Abra esta aba para carregar o histórico.</p></div></div>
-          </div>
-        </div>
+      <div class="vtable-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Pedido</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Situação</th>
+              <th>Itens</th>
+              <th>Vlr Produtos</th>
+              <th>Frete Bling</th>
+              <th>Outras Despesas</th>
+              <th>Total Pedido</th>
+              <th>Lucro Liq. (Est.)</th>
+            </tr>
+          </thead>
+          <tbody id="pedidos-body"></tbody>
+        </table>
       </div>
     </div>
 
     <!-- VIEW FINANCEIRO -->
     <div class="view" id="view-financeiro">
-      <!-- Period filter bar -->
-      <div class="fin-period-bar">
-        <div class="fin-periods">
-          <button class="fp-btn" data-p="today" onclick="setFinPeriod('today',this)">Hoje</button>
-          <button class="fp-btn" data-p="7d" onclick="setFinPeriod('7d',this)">7 dias</button>
-          <button class="fp-btn on" data-p="30d" onclick="setFinPeriod('30d',this)">30 dias</button>
-          <button class="fp-btn" data-p="custom" onclick="setFinPeriod('custom',this)">Personalizado</button>
-        </div>
-        <div class="fin-custom-range" id="fin-custom-range" style="display:none">
-          <input type="date" id="fin-dt-start">
-          <span style="color:var(--mu)">—</span>
-          <input type="date" id="fin-dt-end">
-          <button class="btp" onclick="loadFinanceiro()">Aplicar</button>
-        </div>
-        <button class="bts" onclick="loadFinanceiro()" style="margin-left:auto">↻ Atualizar</button>
+      <div class="dash-sec-t">Inteligência Financeira</div>
+      
+      <!-- Preserved IDs for logic -->
+      <div style="display:none">
+        <select id="fin-custom-range"></select>
+        <input id="fin-dt-start">
+        <input id="fin-dt-end">
+        <div id="fin-chart-range"></div>
+        <div id="fin-chart"></div>
       </div>
-      <!-- Row 1: main KPIs -->
-      <div class="fk-grid" id="fin-kpis">
-        <div class="fk-card fk-blue">
-          <div class="fk-top"><span class="fk-label">Vendas totais</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div></div>
-          <div class="fk-val" id="fin-bruto">—</div>
-          <div class="fk-sub" id="fin-sub-total">— pedidos no período</div>
+
+      <div class="dash-hero" id="fin-kpis">
+        <div class="hero-card">
+          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Bruto (Concluído)</div>
+          <div class="hero-val" id="fin-bruto">R$ 0,00</div>
+          <div class="hero-sub" id="fin-sub-total">Apenas pedidos concluídos</div>
         </div>
-        <div class="fk-card fk-green">
-          <div class="fk-top"><span class="fk-label">Aprovadas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
-          <div class="fk-val" id="fin-rec">—</div>
-          <div class="fk-sub" id="fin-sub-conc">— pedidos concluídos</div>
-        </div>
-        <div class="fk-card fk-red">
-          <div class="fk-top"><span class="fk-label">Canceladas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div></div>
-          <div class="fk-val" id="fin-cancelado">—</div>
-          <div class="fk-sub" id="fin-sub-canc">— pedidos cancelados</div>
-        </div>
-        <div class="fk-card fk-orange">
-          <div class="fk-top"><span class="fk-label">Pendentes</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div></div>
-          <div class="fk-val" id="fin-pend-val">—</div>
-          <div class="fk-sub" id="fin-sub-pend">— aguardando</div>
-        </div>
-      </div>
-      <!-- Row 2: secondary KPIs -->
-      <div class="fk-grid-2">
-        <div class="fk-sm">
-          <div class="fk-sm-ico" style="background:#f0f9ff;color:#0284c7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
-          <div><div class="fk-sm-label">Frete total</div><div class="fk-sm-val" id="fin-frete">—</div></div>
-        </div>
-        <div class="fk-sm">
-          <div class="fk-sm-ico" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div><div class="fk-sm-label">Ticket médio</div><div class="fk-sm-val" id="fin-ticket">—</div></div>
-        </div>
-        <div class="fk-sm">
-          <div class="fk-sm-ico" style="background:#f0fdfa;color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-          <div><div class="fk-sm-label">Descontos</div><div class="fk-sm-val" id="fin-desconto">—</div></div>
-        </div>
-        <div class="fk-sm">
-          <div class="fk-sm-ico" style="background:#eef2ff;color:#4338ca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-          <div><div class="fk-sm-label">Total de pedidos</div><div class="fk-sm-val" id="fin-total">—</div></div>
-        </div>
-      </div>
-      <!-- Gráfico de vendas -->
-      <div class="fin-chart-wrap">
-        <div class="fin-chart-title">Vendas por dia</div>
-        <div class="fin-chart-sub" id="fin-chart-range">Selecione um período e clique em Atualizar</div>
-        <div id="fin-chart" style="min-height:140px"></div>
-      </div>
-      <!-- DRE SIMPLIFICADO -->
-      <div class="dre-card">
-        <div class="dre-head">
-          <span class="dre-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg> Resultado do período (DRE)</span>
-          <span class="dre-tag">estimativa · custo via margem do catálogo</span>
-        </div>
-        <div class="dre-list" id="dre-list">
-          <div class="st-wrap" style="padding:20px"><p class="st-d">Clique em Atualizar para calcular o resultado.</p></div>
+        <div class="hero-card" style="border-color: rgba(16,185,129,0.3);">
+          <div class="hero-top" style="color:var(--ok)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Lucro Líquido (Est.)</div>
+          <div class="hero-val" id="fin-rec" style="color:var(--ok)">R$ 0,00</div>
+          <div class="hero-sub" id="fin-sub-conc">Receita Bruta - Custo Produtos - Despesas</div>
         </div>
       </div>
 
-      <!-- Margem por produto -->
-      <div class="tcard" style="margin-top:0">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(venda vs custo cadastrado no Bling)</span><div class="tr"><button class="bts" onclick="loadFinanceiro()">↻ Atualizar</button></div></div>
-        <div class="vtable" id="fin-margin-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para carregar os dados financeiros.</p></div></div>
+      <div class="dash-kpis">
+        <div class="dk-card">
+          <div class="dk-lbl">Valor Pendente</div>
+          <div class="dk-val" id="fin-pend-val" style="color:var(--wr); font-size:22px;">R$ 0,00</div>
+          <div class="dk-sub" id="fin-sub-pend">Pedidos pendentes</div>
+        </div>
+        <div class="dk-card">
+          <div class="dk-lbl">Cancelamentos</div>
+          <div class="dk-val" id="fin-cancelado" style="color:var(--er); font-size:22px;">R$ 0,00</div>
+          <div class="dk-sub" id="fin-sub-canc">Deixou de ganhar</div>
+        </div>
+        <div class="dk-card">
+          <div class="dk-lbl">Custo com Frete</div>
+          <div class="dk-val" id="fin-frete" style="color:var(--er); font-size:22px;">R$ 0,00</div>
+          <div class="dk-sub">Dos pedidos concluídos</div>
+        </div>
+        <div class="dk-card">
+          <div class="dk-lbl">Ticket Médio (Concl.)</div>
+          <div class="dk-val" id="fin-ticket" style="font-size:22px;">R$ 0,00</div>
+          <div class="dk-sub">Bruto / Qtd Pedidos</div>
+        </div>
+      </div>
+
+      <!-- Preserved table IDs -->
+      <div style="display:none">
+        <div id="fin-desconto"></div>
+        <div id="fin-total"></div>
+        <tbody id="dre-list"></tbody>
+        <tbody id="fin-margin-body"></tbody>
       </div>
     </div>
 
-    <!-- VIEW CLIENTES (CRM) -->
+    <!-- OUTRAS VIEWS SIMPLIFICADAS PARA MANTER OS IDS -->
     <div class="view" id="view-clientes">
-      <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
-        <div class="kpi"><div class="kpi-lbl">Total de clientes</div><div class="kpi-val" id="cli-total">—</div><div class="kpi-sub" id="cli-total-sub">cadastrados no Bling</div></div>
-        <div class="kpi"><div class="kpi-lbl">Ticket médio/cliente</div><div class="kpi-val" id="cli-ticket" style="font-size:22px">—</div><div class="kpi-sub">gasto médio (90 dias)</div></div>
-        <div class="kpi"><div class="kpi-lbl">Melhor cliente</div><div class="kpi-val" id="cli-top" style="font-size:15px">—</div><div class="kpi-sub" id="cli-top-sub">maior valor gasto</div></div>
+      <div class="dash-sec-t">Clientes</div>
+      <div style="display:none">
+        <div id="cli-total"></div><div id="cli-total-sub"></div><div id="cli-ticket"></div>
+        <div id="cli-top"></div><div id="cli-top-sub"></div><div id="cli-search"></div>
+        <div id="cli-uf"></div><div id="cli-tipo"></div><div id="cli-sort"></div>
       </div>
-      <div class="tcard">
-        <div class="toolbar">
-          <div class="sw">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="sinp" id="cli-search" type="search" placeholder="Buscar nome, documento, cidade…" oninput="renderClientes()" autocomplete="off">
+      <div class="vtable-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Fantasia/Doc</th><th>Contato</th><th>Cidade/UF</th><th>Total Comprado</th></tr></thead>
+          <tbody id="clientes-body"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="view" id="view-historico">
+      <div class="dash-sec-t">Histórico de Alterações</div>
+      <div class="vtable-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Ação</th><th>Item</th><th>De -> Para</th></tr></thead>
+          <tbody id="historico-body"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="view" id="view-relatorio">
+      <div class="dash-sec-t">Relatórios Gerenciais</div>
+      <div style="display:none"><div id="rep-parado"></div><div id="rep-crit"></div><div id="rep-imob"></div><div id="rep-ticket"></div></div>
+      <div class="vtable-wrap">
+        <table>
+          <thead><tr><th>Produto</th><th>Curva ABC</th><th>Giro (Média/Mês)</th><th>Sugestão Compra</th></tr></thead>
+          <tbody id="rep-body"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="view" id="view-notas">
+      <div class="dash-sec-t">Emissão de NF-e</div>
+      <div class="vtable-wrap">
+        <table>
+          <thead><tr><th>Nº / Série</th><th>Pedido</th><th>Cliente</th><th>Valor</th><th>Data</th><th>Situação NF</th></tr></thead>
+          <tbody id="notas-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="view" id="view-integracoes">
+      <div class="dash-sec-t">Integrações</div>
+      <div class="dash-hero">
+        <div class="hero-card" style="display:flex; align-items:center; gap:20px;">
+          <img src="https://logodownload.org/wp-content/uploads/2016/08/Mercado-Livre-logo-0.png" style="width:60px; filter:brightness(0) invert(1);">
+          <div>
+            <h3 style="font-family:var(--font-d); margin-bottom:4px;">Mercado Livre</h3>
+            <p style="color:var(--text-m); font-size:13px; margin-bottom:12px;">Conectado e sincronizando.</p>
+            <span class="sb2 s-ok">Sincronizado</span>
           </div>
-          <div class="dvv"></div>
-          <select id="cli-uf" onchange="renderClientes()"><option value="">Todas UF</option></select>
-          <select id="cli-tipo" onchange="renderClientes()"><option value="">PF e PJ</option><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></select>
-          <select id="cli-sort" onchange="renderClientes()"><option value="gasto">Maior gasto</option><option value="pedidos">Mais pedidos</option><option value="recente">Compra recente</option><option value="nome">Nome A-Z</option></select>
-          <div class="tr"><button class="bts" onclick="loadClientes(true)">↻ Atualizar</button></div>
-        </div>
-        <div class="vtable" id="clientes-body"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div><p class="st-d">Clique em Atualizar para carregar seus clientes do Bling.</p></div></div>
-      </div>
-    </div>
-
-    <!-- VIEW CONFIGURAÇÕES -->
-    <div class="view" id="view-config">
-      <div class="cfg-card">
-        <div class="cfg-title">Aparência</div>
-        <div class="cfg-desc">Escolha o tema do aplicativo.</div>
-        <div class="theme-grid">
-          <button class="theme-opt" data-theme="light" onclick="setTheme('light')">
-            <div class="theme-prev tp-light"><span></span><span></span></div>
-            <span class="theme-lbl">Claro</span>
-          </button>
-          <button class="theme-opt" data-theme="dark" onclick="setTheme('dark')">
-            <div class="theme-prev tp-dark"><span></span><span></span></div>
-            <span class="theme-lbl">Escuro</span>
-          </button>
-          <button class="theme-opt" data-theme="system" onclick="setTheme('system')">
-            <div class="theme-prev tp-system"></div>
-            <span class="theme-lbl">Sistema</span>
-          </button>
         </div>
       </div>
-      <div class="cfg-card">
-        <div class="cfg-title">Notificações</div>
-        <div class="cfg-row"><span class="cfg-row-lbl">Push neste dispositivo</span><button class="btp" onclick="askNotifPerm()">Ativar</button></div>
-        <div class="cfg-desc" style="margin-top:10px;margin-bottom:0">Resumos automáticos de lucro são enviados nos horários configurados (manhã, almoço, tarde e noite).</div>
-      </div>
-      <div class="cfg-card">
-        <div class="cfg-title">Conta &amp; Integração</div>
-        <div class="cfg-row"><span class="cfg-row-lbl">Integração Bling</span><button class="bts" onclick="window.location.href='/conectar.html'">Reconectar</button></div>
-        <div class="cfg-row"><span class="cfg-row-lbl">Sessão</span><button class="bts" onclick="logout()" style="color:var(--er-t)">Sair da conta</button></div>
-      </div>
-      <div class="cfg-card">
-        <div class="cfg-title">Sobre</div>
-        <div class="cfg-row"><span class="cfg-row-lbl">Sistema</span><span class="cfg-row-val">Estoque Max</span></div>
-        <div class="cfg-row"><span class="cfg-row-lbl">Integrado a</span><span class="cfg-row-val">Bling ERP</span></div>
-      </div>
     </div>
 
-  </div>
-</div>
-
-<!-- FICHA DO CLIENTE -->
-<div class="modal" id="cli-modal" onclick="if(event.target===this)closeModal('cli-modal')">
-  <div class="mbox" style="width:440px;max-width:95vw">
-    <div id="cli-ficha"></div>
-    <div class="m-foot"><button class="bts" onclick="closeModal('cli-modal')">Fechar</button></div>
-  </div>
-</div>
-
-<!-- CONFIRMAÇÃO DE SENHA -->
-<div class="modal" id="pw-modal" onclick="if(event.target===this)pwCancel()">
-  <div class="mbox" style="width:360px;max-width:92vw">
-    <div style="width:46px;height:46px;border-radius:13px;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;margin-bottom:14px">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <!-- Hidden Config View & Notificacoes for ID preservation -->
+    <div class="view" id="view-config" style="display:none;"></div>
+    <div class="view" id="view-notificacoes" style="display:none;">
+      <div id="nt-title"></div><div id="nt-body"></div><div id="nt-url"></div><div id="nt-action"></div>
+      <div id="nt-now-btn"></div><div id="nt-sched-btn"></div><div id="nt-sched-wrap"></div><div id="nt-datetime"></div>
+      <div id="nt-send-btn"></div><div id="nt-send-label"></div><div id="nt-sub-info"></div><div id="np-icon"></div>
+      <div id="np-title"></div><div id="np-body"></div><div id="np-actions"></div><div id="np-act-btn"></div>
+      <div id="notif-history-body"></div>
     </div>
-    <div class="m-title" id="pw-title">Confirme sua senha</div>
-    <div class="m-desc" id="pw-desc">Por segurança, digite sua senha de login para continuar.</div>
-    <input type="password" id="pw-input" placeholder="Sua senha" autocomplete="current-password" style="width:100%;height:46px;padding:0 14px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none" onkeydown="if(event.key==='Enter')pwConfirm()">
-    <div id="pw-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
-    <div class="m-foot">
-      <button class="btp" id="pw-ok" onclick="pwConfirm()">Confirmar</button>
-      <button class="bts" onclick="pwCancel()">Cancelar</button>
-    </div>
-  </div>
+
+  </main>
 </div>
 
-<!-- BATCH BAR -->
-<div class="bbar" id="bbar">
-  <span class="bbar-cnt" id="bbar-cnt">0 selecionados</span>
-  <div class="bbar-dv"></div>
-  <button class="bb" onclick="openBulk()">Editar selecionados</button>
-  <button class="bb" onclick="batchExport()">Exportar selecionados</button>
-  <button class="bb err" onclick="clearSelection()">Desmarcar tudo</button>
-  <button class="bbar-x" onclick="clearSelection()">✕</button>
+<!-- ── BOTTOM NAV (MOBILE) ── -->
+<nav class="bnav" id="bnav">
+  <a class="bn-item on" id="bn-inicio" onclick="setView('inicio')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Início
+  </a>
+  <a class="bn-item" id="bn-produtos" onclick="setView('produtos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 4 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 20 16z"></path></svg> Produtos
+  </a>
+  <a class="bn-item" id="bn-pedidos" onclick="setView('pedidos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Pedidos
+  </a>
+  <a class="bn-item" id="bn-financeiro" onclick="setView('financeiro')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Financ.
+  </a>
+  <a class="bn-item" id="bn-mais" onclick="toggleMaisMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> Mais
+  </a>
+</nav>
+
+<!-- ── OVERLAYS & MODALS & UTILS ── -->
+<div id="toast">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  <span id="undo-msg"></span>
+  <button id="undo-toast" class="bts" style="padding:4px 8px; font-size:12px; margin-left:auto; display:none;">Desfazer</button>
 </div>
 
-<!-- BULK EDIT SHEET -->
-<div class="bdrop" id="bdrop" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet">
-  <div class="sh-hand"></div>
-  <div class="sh-title">Editar produtos selecionados</div>
-  <div class="sh-grid">
-    <div class="shf"><label>Novo preço (R$)</label><input type="number" id="bulk-preco" placeholder="Deixe vazio para não alterar" min="0" step="0.01"></div>
-    <div class="shf"><label>Novo estoque (un.)</label><input type="number" id="bulk-estoque" placeholder="Deixe vazio para não alterar" min="0"></div>
-  </div>
-  <p class="sh-note" id="sh-note"></p>
-  <div class="sh-foot">
-    <button class="btp" id="bulk-save-btn" onclick="saveBulk()">Salvar alterações</button>
-    <button class="bts" onclick="closeSheet()">Cancelar</button>
-  </div>
-</div>
-
-<!-- QUICK ENTRY -->
-<div class="qpanel" id="qpanel">
-  <div class="qh"><span class="qh-t">Entrada rápida</span><button class="qclose" onclick="closeQuick()">×</button></div>
-  <div class="qbody" id="qbody"></div>
-  <div class="qfoot"><button class="btp" onclick="saveQuick()">Salvar tudo</button><button class="bts" onclick="closeQuick()">Fechar</button></div>
-</div>
-
-<!-- SHORTCUTS MODAL -->
-<div class="modal" id="sc-modal" onclick="if(event.target===this)closeModal('sc-modal')">
-  <div class="mbox sc-box">
-    <div class="m-title">Atalhos de teclado</div>
-    <div class="sc-list">
-      <div class="sc-row"><span class="sc-lbl">Focar busca</span><kbd class="kbd">/</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Sincronizar</span><kbd class="kbd">R</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Exportar CSV</span><kbd class="kbd">E</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Entrada rápida</span><kbd class="kbd">Q</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Editar em massa</span><kbd class="kbd">B</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Modo escuro</span><kbd class="kbd">D</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Desfazer edição</span><kbd class="kbd">Z</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Selecionar tudo</span><kbd class="kbd">A</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Fechar / cancelar</span><kbd class="kbd">Esc</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Este painel</span><kbd class="kbd">?</kbd></div>
-    </div>
-    <div class="m-foot"><button class="bts" onclick="closeModal('sc-modal')">Fechar</button></div>
-  </div>
-</div>
-
-<!-- IMPORT MODAL -->
-<div class="modal" id="im-modal" onclick="if(event.target===this){closeModal('im-modal');resetImport()}">
-  <div class="mbox im-box">
-    <div class="m-title">Importar via planilha</div>
-    <div class="m-desc">Faça upload de um CSV com colunas: <code>id, nome, preco, estoque</code> (ou <code>codigo</code> em vez de id). Deixe célula vazia para não alterar o campo.</div>
-    <div class="dropz" id="dropz" onclick="document.getElementById('csv-file').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="handleDrop(event)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <p>Arraste um arquivo CSV ou <strong>clique para selecionar</strong></p>
-    </div>
-    <input type="file" id="csv-file" accept=".csv,text/csv" style="display:none" onchange="handleFileSelect(this)">
-    <div class="iprev" id="iprev" style="display:none"><table><thead><tr id="iprev-head"></tr></thead><tbody id="iprev-body"></tbody></table></div>
-    <div class="m-foot">
-      <button class="btp" id="im-btn" onclick="importCSV()" style="display:none">Importar</button>
-      <button class="bts" onclick="closeModal('im-modal');resetImport()">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- EDITOR DRAWER (full product edit) -->
 <div class="edraw-ov" id="edraw-ov" onclick="closeEditor()"></div>
 <div class="edraw" id="edraw">
   <div class="edraw-hd">
-    <span class="edraw-title" id="edraw-title">Editar produto</span>
-    <button class="edraw-x" onclick="closeEditor()">×</button>
+    <div class="edraw-title" id="edraw-title">Editar Produto</div>
+    <button class="bti" onclick="closeEditor()" style="width:32px; height:32px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
   </div>
   <div class="edraw-bd" id="edraw-bd">
-    <div class="st-wrap"><p class="st-d">Carregando…</p></div>
+    <!-- Preserved IDs -->
+    <div class="h-campo"><label>Situação</label><select id="ed-sit"><option value="A">Ativo</option><option value="I">Inativo</option></select></div>
+    <div class="h-campo"><label>Tipo</label><select id="ed-tipo"><option value="P">Produto</option><option value="S">Serviço</option></select></div>
+    <div class="h-campo"><label>Nome</label><input type="text" id="ed-nome"></div>
+    <div class="dash-two">
+      <div class="h-campo"><label>Código (SKU)</label><input type="text" id="ed-codigo"></div>
+      <div class="h-campo"><label>EAN</label><input type="text" id="ed-ean"></div>
+    </div>
+    <div class="h-campo"><label>URL da Imagem</label><input type="text" id="ed-img-url" oninput="updateImgPrev()"></div>
+    <div style="width:100%; height:120px; background:rgba(0,0,0,0.2); border-radius:var(--rad-s); display:flex; align-items:center; justify-content:center; overflow:hidden;"><img id="ed-img-prev" style="max-height:100%; max-width:100%; object-fit:contain; display:none;"></div>
+    <div class="dash-two">
+      <div class="h-campo"><label>Preço (R$)</label><input type="number" id="ed-preco" step="0.01" oninput="updateMargem()"></div>
+      <div class="h-campo"><label>Custo (R$)</label><input type="number" id="ed-custo" step="0.01" oninput="updateMargem()"></div>
+    </div>
+    <div style="font-size:13px; color:var(--primary); font-weight:600; text-align:right;">Margem Estimada: <span id="df-margem">0%</span></div>
+    <div class="dash-two">
+      <div class="h-campo"><label>Estoque Atual</label><input type="number" id="ed-estoque"></div>
+      <div class="h-campo"><label>Unidade</label><input type="text" id="ed-unidade"></div>
+    </div>
+    <div class="dash-two">
+      <div class="h-campo"><label>Peso (Kg)</label><input type="number" id="ed-peso" step="0.01"></div>
+      <div class="h-campo"><label>Categoria</label><input type="text" id="ed-cat"></div>
+    </div>
+    <div class="h-campo"><label>Descrição Curta</label><textarea id="ed-desc" rows="3"></textarea></div>
   </div>
-  <div class="edraw-ft">
-    <button class="btp" id="edraw-save" onclick="saveEditorFull()" style="flex:1">Salvar alterações</button>
-    <button class="bts" onclick="closeEditor()">Cancelar</button>
+  <div style="padding:24px 32px; border-top:1px solid var(--border-l); background:rgba(0,0,0,0.2);">
+    <button class="btp" id="edraw-save" style="width:100%; justify-content:center;" onclick="saveEditorFull()">Salvar e Sincronizar Bling</button>
   </div>
 </div>
 
-<!-- CREATE PRODUCT MODAL -->
-<div class="modal" id="create-modal" onclick="if(event.target===this)closeModal('create-modal')">
-  <div class="mbox create-box">
-    <div class="m-title">Novo produto</div>
-    <div class="m-desc">Preencha os dados básicos para cadastrar o produto no Bling.</div>
-    <div class="df"><label>Nome do produto *</label><input type="text" id="cr-nome" placeholder="Ex: Camiseta Básica Branca"></div>
-    <div class="df-2">
-      <div class="df"><label>SKU / Código</label><input type="text" id="cr-codigo" placeholder="CAM-BRA-M"></div>
-      <div class="df"><label>Tipo</label><select id="cr-tipo"><option value="P">Produto</option><option value="S">Serviço</option></select></div>
-    </div>
-    <div class="df-2">
-      <div class="df"><label>Preço de venda (R$) *</label><input type="number" id="cr-preco" placeholder="0.00" min="0" step="0.01"></div>
-      <div class="df"><label>Custo (R$)</label><input type="number" id="cr-custo" placeholder="0.00" min="0" step="0.01"></div>
-    </div>
-    <div class="df-2">
-      <div class="df"><label>Estoque inicial</label><input type="number" id="cr-estoque" placeholder="0" min="0"></div>
-      <div class="df"><label>Unidade</label><input type="text" id="cr-unidade" placeholder="un" value="un"></div>
-    </div>
-    <div class="df"><label>URL da imagem</label><input type="url" id="cr-imagem" placeholder="https://…" oninput="updateImgPrev('cr-img-prev','cr-imagem')"></div>
-    <div id="cr-img-prev" style="display:none;width:72px;height:72px;border-radius:10px;overflow:hidden;border:1px solid var(--bord);margin-bottom:8px"><img style="width:100%;height:100%;object-fit:cover"></div>
-    <div class="df"><label>Descrição</label><textarea id="cr-descricao" rows="2" placeholder="Descrição do produto (opcional)"></textarea></div>
-    <div class="m-foot">
-      <button class="btp" id="cr-btn" onclick="saveCreate()">Cadastrar produto</button>
-      <button class="bts" onclick="closeModal('create-modal')">Cancelar</button>
-    </div>
-  </div>
+<div class="edraw-ov" id="mais-ov" onclick="closeMaisMenu()"></div>
+<div class="edraw" id="mais-menu" style="bottom:0; top:auto; height:300px; transform:translateY(100%);">
+  <div class="edraw-hd" style="border:none;"><div class="edraw-title">Menu</div><button class="bti" onclick="closeMaisMenu()">X</button></div>
 </div>
 
-<!-- UNDO TOAST -->
-<div class="undo" id="undo-toast"><span id="undo-msg">Edição salva</span><button class="undo-btn" onclick="undoLast()">Desfazer</button></div>
-
-<!-- NOTIFICATION STACK -->
-<div id="noti-stack"></div>
-
-<!-- MOBILE BOTTOM NAV -->
-<nav class="bnav" id="bnav">
-  <button class="bnav-item on" id="bn-inicio" onclick="setView('inicio')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Negócio</span>
-  </button>
-  <button class="bnav-item" id="bn-produtos" onclick="setView('produtos')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg><span>Produtos</span>
-  </button>
-  <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2V5a2 2 0 0 1 2-2h11"/></svg><span>Pedidos</span>
-  </button>
-  <button class="bnav-item" id="bn-financeiro" onclick="setView('financeiro')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Financeiro</span>
-  </button>
-  <button class="bnav-item" id="bn-mais" onclick="toggleMaisMenu()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>Mais</span>
-  </button>
-</nav>
-
-
-<div class="view" id="view-integracoes" style="display:none">
-  <div class="toolbar">
-    <h1 class="t-title">Integrações</h1>
-  </div>
-  <div class="empty-state" style="margin-top: 40px">
-    <div style="width:64px;height:64px;background:#ffe600;border-radius:12px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#2d3277" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;opacity:1"><path d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-    </div>
-    <h2 style="font-size:18px;color:var(--tx);margin-bottom:8px">Mercado Livre</h2>
-    <p style="font-size:14px;line-height:1.6">Integração nativa de alta velocidade com o Mercado Livre está em desenvolvimento.<br><br>Você poderá contornar os limites do Bling e sincronizar pedidos instantaneamente.</p>
-    <button class="btp" style="margin-top:24px;opacity:0.5;cursor:not-allowed">Em Breve</button>
-  </div>
+<!-- HIDDEN MODALS & DIVS (ID preservation) -->
+<div style="display:none">
+  <div id="cli-modal"></div><div id="cli-ficha"></div>
+  <div id="pw-modal"></div><div id="pw-title"></div><div id="pw-desc"></div><div id="pw-input"></div><div id="pw-err"></div><div id="pw-ok"></div>
+  <div id="bbar"></div><div id="bbar-cnt"></div><div id="bdrop"></div><div id="sheet"></div>
+  <div id="bulk-preco"></div><div id="bulk-estoque"></div><div id="sh-note"></div><div id="bulk-save-btn"></div>
+  <div id="qpanel"></div><div id="qbody"></div><div id="sc-modal"></div><div id="im-modal"></div>
+  <div id="dropz"></div><div id="csv-file"></div><div id="iprev"></div><div id="iprev-head"></div>
+  <div id="iprev-body"></div><div id="im-btn"></div><div id="create-modal"></div>
+  <div id="cr-nome"></div><div id="cr-codigo"></div><div id="cr-tipo"></div><div id="cr-preco"></div>
+  <div id="cr-custo"></div><div id="cr-estoque"></div><div id="cr-unidade"></div><div id="cr-imagem"></div>
+  <div id="cr-img-prev"></div><div id="cr-descricao"></div><div id="cr-btn"></div>
+  <div id="noti-stack"></div><div id="nfe-modal"></div><div id="nfe-pedido-id"></div>
+  <div id="nfe-obs"></div><div id="nfe-emit-btn"></div>
 </div>
 
-<!-- MAIS MENU (bottom sheet) -->
-<div class="mais-ov" id="mais-ov" onclick="closeMaisMenu()"></div>
-<div class="mais-menu" id="mais-menu">
-  <div class="mais-handle"></div>
-  <div class="mais-title">Mais opções</div>
-  <div class="mais-grid">
-    <button class="mais-item" onclick="setView('clientes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-      <span>Clientes</span>
-    </button>
-    <button class="mais-item" onclick="setView('relatorio')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span>Relatório</span>
-    </button>
-    <button class="mais-item" onclick="setView('historico')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Histórico</span>
-    </button>
-    <button class="mais-item" onclick="setView('notas')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      <span>NF-e</span>
-    </button>
-    <button class="mais-item" onclick="setView('integracoes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-      <span>Integrações</span>
-    </button>
-  </div>
-  <div class="mais-sep"></div>
-  <div class="mais-actions">
-    <button class="mais-row-item" onclick="setView('config')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Configurações
-    </button>
-    <button class="mais-row-item" onclick="window.location.href='/conectar.html'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
-      Reconectar Bling
-    </button>
-    <button class="mais-row-item danger" onclick="logout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Sair da conta
-    </button>
-  </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
-firebase.initializeApp({
-  apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
-  authDomain:"erp-max-sistema.firebaseapp.com",
-  projectId:"erp-max-sistema",
-  storageBucket:"erp-max-sistema.firebasestorage.app",
-  messagingSenderId:"1023327647246",
-  appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
-});
-</script>
-<script>
+
 // ── STATE ──────────────────────────────────────────
 const S = {
   products:[], filtered:[], selected:new Set(),
@@ -2884,6 +1719,7 @@ async function cancelNotif(id){
     });
   }
 })();
+</script>
 </script>
 </body>
 </html>
