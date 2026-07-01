@@ -108,16 +108,25 @@ const NODE_ENV            = process.env.NODE_ENV || 'development';
 const changeLog = [];
 function pushLog(logData) {
   const admin = getAdmin();
+
+  const fallback = () => {
+    logData.timestamp = new Date().toISOString();
+    changeLog.push(logData);
+    console.log('[Historico Local]', logData);
+  };
+
   if (admin) {
     admin.firestore().collection('historico').add({
       ...logData,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
-    }).catch(console.error);
+    }).catch((err) => {
+      console.error('[Firestore pushLog Error]', err.message || err);
+      // Fallback seguro em memória se a gravação no Firestore falhar
+      fallback();
+    });
   } else {
     // Fallback seguro em memória
-    logData.timestamp = new Date().toISOString();
-    changeLog.push(logData);
-    console.log('[Historico Local]', logData);
+    fallback();
   }
 }
 
