@@ -1196,6 +1196,24 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     const receber = receberRes.status === 'fulfilled' ? receberRes.value : { ok: false, total: 0, count: 0, vencidas: 0 };
     const pagar   = pagarRes.status === 'fulfilled' ? pagarRes.value : { ok: false, total: 0, count: 0, vencidas: 0 };
 
+    const contasReceber = {
+      total: receber.total,
+      count: receber.count,
+      vencidas: receber.vencidas,
+      vencidasValor: receber.vencidasValor || 0,
+      ok: receber.ok,
+      itens: receber.itens || []
+    };
+
+    const contasPagar = {
+      total: pagar.total,
+      count: pagar.count,
+      vencidas: pagar.vencidas,
+      vencidasValor: pagar.vencidasValor || 0,
+      ok: pagar.ok,
+      itens: pagar.itens || []
+    };
+
     res.json({
       periodo: { inicio, fim, period },
       vendas: {
@@ -1208,8 +1226,8 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
         variacao,
         byDay,
       },
-      contasReceber: { total: receber.total, count: receber.count, vencidas: receber.vencidas, vencidasValor: receber.vencidasValor || 0, ok: receber.ok, itens: receber.itens || [] },
-      contasPagar:   { total: pagar.total,   count: pagar.count,   vencidas: pagar.vencidas,   vencidasValor: pagar.vencidasValor || 0,   ok: pagar.ok,   itens: pagar.itens || [] },
+      contasReceber,
+      contasPagar,
     });
   } catch (err) {
     if (err.response?.status === 401) {
