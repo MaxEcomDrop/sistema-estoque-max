@@ -7,6 +7,24 @@ const jwt = require('jsonwebtoken');
 
 // --- Cache e Retry ---
 const apiCache = new Map();
+
+async function fetchWithRetry(fetchFn) {
+  let attempts = 0;
+  while (attempts < 4) {
+    try {
+      return await fetchFn();
+    } catch (err) {
+      if (err.response?.status === 429) {
+        attempts++;
+        await new Promise(r => setTimeout(r, 1000 * attempts));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Rate limit exceeded after retries');
+}
+
 async function fetchWithCache(key, ttlMs, fetchFn) {
   const cached = apiCache.get(key);
   if (cached && Date.now() < cached.exp) return cached.data;
@@ -96,8 +114,10 @@ function pushLog(logData) {
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     }).catch(console.error);
   } else {
+    // Fallback seguro em memória
     logData.timestamp = new Date().toISOString();
-    pushLog(logData);
+    changeLog.push(logData);
+    console.log('[Historico Local]', logData);
   }
 }
 

@@ -1,0 +1,1234 @@
+// ── STATE ──────────────────────────────────────────
+const S = {
+  products:[], filtered:[], selected:new Set(),
+  prevPrices:{}, prevStocks:{}, dupSkus:new Set(),
+  view:'produtos', sort:{field:'nome',dir:'asc'},
+  grouped:false, page:0, PAGE:50,
+  lastSync:null, autoRefresh:parseInt(localStorage.getItem('ar')||'0'),
+  arTimer:null, arCountdown:0,
+  layout:localStorage.getItem('layout')||'list',
+  theme:localStorage.getItem('theme')||(localStorage.getItem('dm')==='1'?'dark':'light'),
+  collapsed:localStorage.getItem('sc')==='1',
+  presets:JSON.parse(localStorage.getItem('presets')||'[]'),
+  undoStack:[], undoTimeout:null, importData:[],
+};
+
+// ── UTILS ──────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const fmt=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(+n||0);
+const fmtN=n=>new Intl.NumberFormat('pt-BR').format(+n||0);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function hl(text,q){if(!q)return esc(text);const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');return esc(text).replace(re,'<mark>$1</mark>');}
+function statusBadge(s){if(s===0)return`<span class="sb2 s-out"><span class="sdot"></span>Sem estoque</span>`;if(s<=3)return`<span class="sb2 s-lo"><span class="sdot"></span>Estoque baixo</span>`;return`<span class="sb2 s-ok"><span class="sdot"></span>Em estoque</span>`;}
+const editIco=`<span class="eh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>`;
+function toast(msg,type=''){
+  const stack=$('noti-stack');if(!stack)return;
+  const id='n'+Date.now()+Math.random().toString(36).slice(2);
+  const div=document.createElement('div');
+  div.className='noti '+(type||'info');div.id=id;
+  div.innerHTML=`<span class="noti-dot"></span><span style="flex:1">${esc(msg)}</span><button class="noti-x" onclick="dismissNoti('${id}')">×</button>`;
+  stack.appendChild(div);
+  setTimeout(()=>dismissNoti(id),4500);
+}
+function dismissNoti(id){const el=$(id);if(!el)return;el.classList.add('out');setTimeout(()=>el?.remove(),200);}
+function vibrate(ms=10){try{if(navigator.vibrate)navigator.vibrate(ms);}catch{}}
+function lbStart(){$('lbar').className='go';}
+function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.className='',300);}
+function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
+
+// ── THEME/SIDEBAR ──────────────────────────────────
+function effectiveDark(){return S.theme==='dark'||(S.theme==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches);}
+function applyTheme(){document.documentElement.setAttribute('data-theme',effectiveDark()?'dark':'light');updateThemeButtons();}
+function setTheme(t){S.theme=t;localStorage.setItem('theme',t);applyTheme();}
+function toggleDark(){setTheme(effectiveDark()?'light':'dark');}
+function updateThemeButtons(){document.querySelectorAll('.theme-opt').forEach(b=>b.classList.toggle('on',b.dataset.theme===S.theme));}
+if(window.matchMedia){try{window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(S.theme==='system')applyTheme();});}catch(e){}}
+function toggleSidebar(){S.collapsed=!S.collapsed;localStorage.setItem('sc',S.collapsed?'1':'0');$('sidebar').classList.toggle('col',S.collapsed);}
+
+// ── LAYOUT ─────────────────────────────────────────
+function setLayout(l){
+  const cc=$('card-container'),lc=$('list-container');
+  const h = Math.max(cc.clientHeight, lc.clientHeight);
+  if(h > 0) $('view-produtos').style.minHeight = h + 'px';
+  S.layout=l;localStorage.setItem('layout',l);
+  ['list','grid','cat'].forEach(k=>{const el=$('lt-'+k);if(el)el.classList.toggle('on',k===l||(k==='cat'&&l==='catalog'));});
+  if(l==='list'){cc.className='';cc.style.display='none';lc.style.display='';}
+  else{lc.style.display='none';cc.className='card-grid '+(l==='grid'?'vg':'vc');renderCards();}
+  setTimeout(()=>{$('view-produtos').style.minHeight='';}, 50);
+}
+function renderCards(){
+  const cc=$('card-container');
+  const q=($('search').value||'').trim();
+  const slice=S.filtered.slice(0,(S.page+1)*S.PAGE);
+  if(!slice.length){cc.innerHTML=`<div class="st-wrap" style="grid-column:1/-1"><p class="st-t">Nenhum produto</p></div>`;return;}
+  cc.innerHTML=slice.map(p=>{
+    const isSel=S.selected.has(p.id);
+    const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+    const badge=statusBadge(p.estoque);
+    return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}">
+      <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">${thumb}
+        <button class="pcard-edit" onclick="event.stopPropagation();openEditor(${p.id})" title="Editar produto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      </div>
+      <div class="pcard-body">
+        <div class="pcard-name plink" title="Clique para editar" onclick="openEditor(${p.id})">${esc(p.nome)}</div>
+        <div class="pcard-sku">${esc(p.codigo||'—')}</div>
+        ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
+        <div class="pcard-meta">
+          <span class="pcard-price">${fmt(p.preco)}</span>
+          <span class="pcard-stock">${fmtN(p.estoque)} un.</span>
+          <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc)" title="Selecionar">
+        </div>
+        ${badge}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── VIEWS ──────────────────────────────────────────
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',integracoes:'Integrações',config:'Configurações'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','integracoes','config'];
+// Gate de senha para a aba Notas Fiscais
+let _nfeUnlocked=false;
+function setView(v){
+  if(v==='notas'&&!_nfeUnlocked){
+    requireSenha(()=>{_nfeUnlocked=true;setView('notas');},{
+      force:true,title:'🔒 Notas Fiscais protegidas',
+      desc:'Digite sua senha para acessar esta área e evitar alterações indevidas.'
+    });
+    return;
+  }
+  vibrate(8);
+  S.view=v;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('.bnav-item').forEach(el=>el.classList.remove('on'));
+  $('view-'+v)?.classList.add('on');
+  $('ni-'+v)?.classList.add('on');
+  if(MAIS_VIEWS.includes(v))$('bn-mais')?.classList.add('on');
+  else $('bn-'+v)?.classList.add('on');
+  $('tb-title').textContent=VIEWS[v]||v;
+  if(v==='inicio')loadDashboard();
+  if(v==='clientes')loadClientes();
+  if(v==='relatorio')renderReport();
+  if(v==='notas')loadNotas();
+  if(v==='pedidos')loadPedidos();
+  if(v==='historico')loadHistorico();
+  if(v==='financeiro')loadFinanceiro();
+  if(v==='integracoes'){ /* no-op */ }
+  closeMaisMenu();
+}
+
+// ── DASHBOARD / INÍCIO ───────────────────────────
+let dashPeriod='30d';
+let _dashLoaded=false;
+let _dashFat=0;
+function setDashPeriod(p,btn){
+  dashPeriod=p;
+  document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  loadDashboard(true);
+}
+function dashHello(){
+  const h=new Date().getHours();
+  return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+}
+async function loadDashboard(force=false){
+  $('dash-hello').textContent=`${dashHello()}! 👋`;
+  // Alertas de estoque vêm dos produtos já carregados
+  renderDashAlerts();
+  if(_dashLoaded&&!force)return;
+  _dashLoaded=true;
+  const setTxt=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+  ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'…'));
+  try{
+    const r=await fetch(`/api/dashboard?period=${dashPeriod}`);
+    const d=await r.json();
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
+      $('dash-receber-list').innerHTML='<div class="st-wrap" style="padding:24px"><p class="st-d">Conecte o Bling para ver os dados.</p></div>';
+      $('dash-pagar-list').innerHTML='<div class="st-wrap" style="padding:24px"><p class="st-d">Conecte o Bling para ver os dados.</p></div>';
+      return;
+    }
+    if(!r.ok)throw new Error(d.error||'Erro');
+    const v=d.vendas||{};
+    // Faturamento
+    setTxt('dash-faturamento',fmt(v.faturamento));
+    const fsub=$('dash-fat-sub');
+    if(fsub){
+      let txt=`${fmtN(v.concluidos||0)} venda${v.concluidos!==1?'s':''} concluída${v.concluidos!==1?'s':''}`;
+      if(v.variacao!==null&&v.variacao!==undefined){
+        const cls=v.variacao>1?'up':v.variacao<-1?'down':'';
+        txt+=` · <span class="hero-trend ${cls}">${v.variacao>0?'+':''}${v.variacao.toFixed(0)}% vs anterior</span>`;
+      }
+      fsub.innerHTML=txt;
+    }
+    // Lucro estimado via margem média do catálogo
+    _dashFat=v.faturamento||0;
+    recomputeDashLucro();
+    // KPIs
+    setTxt('dash-vendas',fmtN(v.concluidos||0));
+    setTxt('dash-vendas-sub',`${fmtN(v.totalPedidos||0)} pedidos no total`);
+    setTxt('dash-ticket',fmt(v.ticketMedio));
+    const cr=d.contasReceber||{},cp=d.contasPagar||{};
+    setTxt('dash-receber',cr.ok?fmt(cr.total):'—');
+    setTxt('dash-receber-sub',cr.ok?`${fmtN(cr.count||0)} conta${cr.count!==1?'s':''}`:'sem permissão Bling');
+    setTxt('dash-pagar',cp.ok?fmt(cp.total):'—');
+    setTxt('dash-pagar-sub',cp.ok?`${fmtN(cp.count||0)} conta${cp.count!==1?'s':''}`:'sem permissão Bling');
+    setTxt('dash-receber-tot',cr.ok?fmt(cr.total):'—');
+    setTxt('dash-pagar-tot',cp.ok?fmt(cp.total):'—');
+    // Contas vencidas (alerta)
+    setTxt('dash-vencidas',fmtN((cr.vencidas||0)+(cp.vencidas||0)));
+    renderContasList('dash-receber-list',cr,'receber');
+    renderContasList('dash-pagar-list',cp,'pagar');
+  }catch(e){
+    ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
+    toast('Erro ao carregar painel: '+e.message,'err');
+  }
+}
+function avgMargem(){
+  const withCost=S.products.filter(p=>p.preco>0&&p.precoCusto>0);
+  if(!withCost.length)return 0;
+  const sum=withCost.reduce((a,p)=>a+((p.preco-p.precoCusto)/p.preco),0);
+  return sum/withCost.length;
+}
+function recomputeDashLucro(){
+  const margem=avgMargem();
+  const lucro=_dashFat*margem;
+  const el=$('dash-lucro');if(el)el.textContent=fmt(lucro);
+  const sub=$('dash-luc-sub');if(sub)sub.textContent=margem>0?`margem média ~${Math.round(margem*100)}%`:'cadastre custos p/ estimar';
+}
+function renderDashAlerts(){
+  const ps=S.products;
+  const set=(id,n)=>{const el=$(id);if(el)el.textContent=fmtN(n);};
+  set('dash-zerados',ps.filter(p=>p.estoque<=0).length);
+  set('dash-criticos',ps.filter(p=>p.estoque>0&&p.estoque<=5).length);
+  const pend=$('pt-cnt-pen')?.textContent;
+  set('dash-pendentes',pend&&!isNaN(+pend)?+pend:(typeof _pedidosCache!=='undefined'?_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length:0));
+}
+function renderContasList(elId,conta,tipo){
+  const el=$(elId);if(!el)return;
+  if(!conta.ok){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p class="st-d">Sem acesso a contas a ${tipo} no Bling.<br><span style="font-size:11px">Verifique as permissões do app OAuth.</span></p></div>`;return;}
+  const itens=conta.itens||[];
+  if(!itens.length){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p class="st-d">Nenhuma conta a ${tipo} em aberto. 🎉</p></div>`;return;}
+  el.innerHTML=itens.map(c=>{
+    const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
+    return `<div class="conta-row"><div class="conta-r-info"><div class="conta-r-nome">${esc(c.contato||'—')}</div><div class="conta-r-venc${c.vencida?' vencida':''}">${c.vencida?'⚠ Vencida · ':''}vence ${venc}</div></div><div class="conta-r-val">${fmt(c.valor)}</div></div>`;
+  }).join('');
+}
+
+// ── MAIS MENU ────────────────────────────────────
+function toggleMaisMenu(){
+  vibrate(8);
+  const ov=$('mais-ov'),menu=$('mais-menu'),btn=$('bn-mais');
+  if(!ov||!menu)return;
+  const isOpen=menu.classList.contains('open');
+  if(isOpen){closeMaisMenu();}
+  else{ov.classList.add('open');menu.classList.add('open');btn?.classList.add('on');}
+}
+function closeMaisMenu(){
+  $('mais-ov')?.classList.remove('open');
+  $('mais-menu')?.classList.remove('open');
+  if(!MAIS_VIEWS.includes(S.view))$('bn-mais')?.classList.remove('on');
+}
+
+// ── LOAD ──────────────────────────────────────────
+async function loadProducts(showToast=false){
+  lbStart();
+  const btn=$('sync-btn'),ico=$('sync-ico');
+  btn.disabled=true;ico.classList.add('spin');
+  try{
+    const r=await fetch('/api/produtos');
+    if(r.status===401){const d=await r.json();if(d.code==='BLING_NOT_CONNECTED'){renderNoBling();return;}if(d.code==='BLING_TOKEN_EXPIRED'){renderExpired();return;}window.location.href='/conectar.html';return;}
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    S.products.forEach(p=>{S.prevPrices[p.id]=p.preco;S.prevStocks[p.id]=p.estoque;});
+    S.products=d.products||[];
+    S.lastSync=new Date();
+    const skuCount={};
+    S.products.forEach(p=>{if(p.codigo)skuCount[p.codigo]=(skuCount[p.codigo]||0)+1;});
+    S.dupSkus=new Set(Object.keys(skuCount).filter(k=>skuCount[k]>1&&k));
+    const cats=[...new Set(S.products.map(p=>p.categoria).filter(Boolean))].sort();
+    const fcat=$('f-cat');
+    fcat.innerHTML='<option value="">Todas</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
+    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();}
+    if(showToast)toast('Produtos atualizados','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{lbDone();btn.disabled=false;ico.classList.remove('spin');}
+}
+function renderNoBling(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><p class="st-t">Bling não conectado</p><p class="st-d">Conecte sua conta para carregar produtos.</p><button class="st-btn" onclick="window.location.href='/conectar.html'">Conectar Bling</button></div></td></tr>`;}
+function renderExpired(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p class="st-t">Sessão Bling expirada</p><button class="st-btn" onclick="window.location.href='/conectar.html'">Reconectar</button></div></td></tr>`;}
+function sync(){loadProducts(true);}
+
+// ── KPI ──────────────────────────────────────────
+function updateKpis(){
+  const ps=S.products,total=ps.length,ok=ps.filter(p=>p.estoque>0).length,out=total-ok;
+  const val=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
+  animNum($('k-total'),total);animNum($('k-ok'),ok);animNum($('k-out'),out);
+  $('k-val').textContent=fmt(val);
+  $('k-total-s').textContent=`${total} produto${total!==1?'s':''} no Bling`;
+  $('k-out-s').textContent=`${out} produto${out!==1?'s':''} sem estoque`;
+  const lowList=ps.filter(p=>p.estoque>0&&p.estoque<=3).map(p=>p.nome).slice(0,5);
+  $('k-ok-tip').textContent=lowList.length?`Estoque baixo:\n${lowList.join('\n')}`:'Todos os produtos com estoque normal.';
+  const outList=ps.filter(p=>p.estoque===0).map(p=>p.nome).slice(0,5);
+  $('k-out-tip').textContent=outList.length?`Zerados:\n${outList.join('\n')}`:'Nenhum produto zerado.';
+  document.title=out>0?`⚠ ${out} críticos — Estoque Max`:'Estoque Max';
+  let link=document.querySelector("link[rel~='icon']");
+  if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
+  link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>EM</text></svg>";
+}
+function updateLowBadge(){const cnt=S.products.filter(p=>p.estoque===0).length;$('badge-low').textContent=cnt>0?cnt:'';}
+function updateSyncTs(){if(!S.lastSync)return;const diff=Math.round((Date.now()-S.lastSync)/1000);$('sync-ts').textContent=diff<60?'Atualizado agora':`Atualizado há ${Math.round(diff/60)} min`;}
+
+// ── FILTER/SORT ──────────────────────────────────
+function applyFilters(){
+  const q=($('search').value||'').toLowerCase().trim();
+  const status=$('f-status').value,cat=$('f-cat').value;
+  const stMin=parseFloat($('f-st-min').value)||(-Infinity),stMax=parseFloat($('f-st-max').value)||Infinity;
+  const prMin=parseFloat($('f-pr-min').value)||(-Infinity),prMax=parseFloat($('f-pr-max').value)||Infinity;
+  let filtered=S.products.filter(p=>{
+    if(q&&!p.nome.toLowerCase().includes(q)&&!p.codigo.toLowerCase().includes(q))return false;
+    if(status==='out'&&p.estoque!==0)return false;
+    if(status==='lo'&&(p.estoque===0||p.estoque>3))return false;
+    if(status==='ok'&&p.estoque<=0)return false;
+    if(cat&&p.categoria!==cat)return false;
+    if(p.estoque<stMin||p.estoque>stMax)return false;
+    if(p.preco<prMin||p.preco>prMax)return false;
+    return true;
+  });
+  const{field,dir}=S.sort;
+  filtered.sort((a,b)=>{let av=a[field],bv=b[field];if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}if(av<bv)return dir==='asc'?-1:1;if(av>bv)return dir==='asc'?1:-1;return 0;});
+  S.filtered=filtered;S.page=0;
+  updateFilterBadge();renderTable();
+}
+function sortBy(field){
+  if(S.sort.field===field)S.sort.dir=S.sort.dir==='asc'?'desc':'asc';
+  else{S.sort.field=field;S.sort.dir='asc';}
+  ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{
+    const el=$('si-'+f);if(!el)return;
+    if(f===field){el.textContent=S.sort.dir==='asc'?'↑':'↓';el.closest('th').classList.add('srt');}
+    else{el.textContent='';el.closest('th')?.classList.remove('srt');}
+  });
+  applyFilters();
+}
+function toggleFilters(){$('fpanel').classList.toggle('open');}
+function clearFilters(){$('f-status').value='';$('f-cat').value='';$('f-st-min').value='';$('f-st-max').value='';$('f-pr-min').value='';$('f-pr-max').value='';applyFilters();}
+function updateFilterBadge(){const cnt=[$('f-status'),$('f-cat'),$('f-st-min'),$('f-st-max'),$('f-pr-min'),$('f-pr-max')].filter(el=>el.value).length;const b=$('fa-cnt');if(cnt>0){b.textContent=cnt;b.style.display='';}else b.style.display='none';}
+function toggleGroup(){S.grouped=!S.grouped;$('grp-lbl').textContent=S.grouped?'Desagrupar':'Agrupar';renderTable();}
+
+// ── RENDER TABLE ──────────────────────────────────
+function renderTable(){
+  if(S.layout!=='list'){renderCards();return;}
+  const tb=$('tbody');
+  const q=($('search').value||'').trim();
+  const slice=S.filtered.slice(0,(S.page+1)*S.PAGE);
+  const hasMore=S.filtered.length>slice.length;
+  if(!slice.length){
+    tb.innerHTML=`<tr><td colspan="6"><div class="st-wrap"><div class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg></div><p class="st-t">Nenhum produto encontrado</p><p class="st-d">Ajuste o filtro ou a busca.</p></div></td></tr>`;
+    $('lm-btn').style.display='none';return;
+  }
+  let html='',lastCat=null;
+  slice.forEach(p=>{
+    if(S.grouped&&p.categoria!==lastCat){lastCat=p.categoria;html+=`<tr class="grp-row"><td colspan="8">${esc(p.categoria||'Sem categoria')}</td></tr>`;}
+    const isDup=S.dupSkus.has(p.codigo)&&p.codigo;
+    const isSel=S.selected.has(p.id);
+    const ppOld=S.prevPrices[p.id];
+    const arr=ppOld!==undefined&&ppOld!==p.preco?(p.preco>ppOld?`<span class="parr up">↑</span>`:`<span class="parr dn">↓</span>`):'';
+    const thumb=p.imagemUrl?`<div class="thumb"><img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\'/><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"></div>`:`<div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+    const nameHl=q?esc(p.nome).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>'):esc(p.nome);
+    html+=`<tr data-id="${p.id}" class="${isSel?'sel':''} ${isDup?'dup-row':''}">
+      <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
+      <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></div></td>
+      <td><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
+      <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmt(p.preco)}${arr}${editIco}</span></td>
+      <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmtN(p.estoque)} un.${editIco}</span></td>
+      <td>${statusBadge(p.estoque)}</td>
+    </tr>`;
+  });
+  tb.innerHTML=html;
+  $('lm-btn').style.display=hasMore?'':'none';
+  $('lm-btn').textContent=`Carregar mais… (${slice.length} de ${S.filtered.length})`;
+  $('cb-all').indeterminate=S.selected.size>0&&!([...S.selected].every(id=>S.filtered.some(p=>p.id===id)));
+}
+function loadMore(){S.page++;renderTable();}
+
+// ── SELECTION ────────────────────────────────────
+function toggleRow(id,checked){if(checked)S.selected.add(id);else S.selected.delete(id);document.querySelector(`tr[data-id="${id}"]`)?.classList.toggle('sel',checked);updateBatchBar();}
+function toggleAllCb(){const checked=$('cb-all').checked;S.filtered.forEach(p=>{if(checked)S.selected.add(p.id);else S.selected.delete(p.id);});renderTable();updateBatchBar();}
+function clearSelection(){S.selected.clear();renderTable();updateBatchBar();}
+function updateBatchBar(){const cnt=S.selected.size;$('bbar').classList.toggle('vis',cnt>0);$('bbar-cnt').textContent=`${cnt} produto${cnt!==1?'s':''} selecionado${cnt!==1?'s':''}`;$('sh-note').textContent=`Esta edição afetará ${cnt} produto${cnt!==1?'s':''}.`;}
+
+// ── INLINE EDIT ──────────────────────────────────
+function editCell(span,field,id,current,nomeProd){
+  const inp=document.createElement('input');
+  inp.className='iinp';inp.type='number';inp.value=current;inp.step=field==='preco'?'0.01':'1';inp.min='0';
+  span.replaceWith(inp);inp.focus();inp.select();
+  const restore=()=>{const p=S.products.find(x=>x.id===id);if(!p)return;const ns=document.createElement('span');ns.className='ev'+(field==='preco'?' pcell':'');ns.innerHTML=(field==='preco'?fmt(p.preco):`${fmtN(p.estoque)} un.`)+editIco;ns.onclick=()=>editCell(ns,field,id,p[field],p.nome);inp.replaceWith(ns);};
+  const save=async()=>{
+    const val=parseFloat(inp.value);if(isNaN(val)||val<0){restore();return;}
+    const p=S.products.find(x=>x.id===id);const prevVal=p?p[field]:null;
+    try{
+      const body={nome_produto:nomeProd,valor_anterior:prevVal!==null?(field==='preco'?fmt(prevVal):`${prevVal} un.`):'—'};
+      body[field]=val;
+      const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok){const d=await r.json();toast(d.error||'Erro ao salvar','err');restore();return;}
+      if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();showUndo(`${field==='preco'?'Preço':'Estoque'} salvo no Bling ✓`);p[field]=val;}
+      restore();
+      const row=document.querySelector(`tr[data-id="${id}"]`);
+      if(row){row.classList.add('flash');setTimeout(()=>row.classList.remove('flash'),500);}
+      if(field==='estoque'){row?.querySelector('td:last-child')&&(row.querySelector('td:last-child').innerHTML=statusBadge(val));updateKpis();updateLowBadge();}
+    }catch(e){toast('Erro de conexão','err');restore();}
+  };
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',save);restore();}});
+}
+
+// ── BULK EDIT ────────────────────────────────────
+function openBulk(){$('bdrop').classList.add('open');$('sheet').classList.add('open');}
+function closeSheet(){$('bdrop').classList.remove('open');$('sheet').classList.remove('open');}
+async function saveBulk(){
+  const preco=$('bulk-preco').value.trim(),estoque=$('bulk-estoque').value.trim();
+  if(!preco&&!estoque){toast('Preencha ao menos um campo','err');return;}
+  const btn=$('bulk-save-btn');btn.disabled=true;btn.textContent='Salvando…';
+  let ok=0,err=0;
+  for(const id of S.selected){
+    const p=S.products.find(x=>x.id===id);if(!p)continue;
+    const body={nome_produto:p.nome};
+    if(preco){body.preco=parseFloat(preco);body.valor_anterior=fmt(p.preco);}
+    if(estoque){body.estoque=parseFloat(estoque);}
+    try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){if(preco)p.preco=parseFloat(preco);if(estoque)p.estoque=parseFloat(estoque);ok++;}else err++;}
+    catch{err++;}
+  }
+  btn.disabled=false;btn.textContent='Salvar alterações';
+  $('bulk-preco').value='';$('bulk-estoque').value='';
+  closeSheet();clearSelection();updateKpis();updateLowBadge();applyFilters();
+  toast(`${ok} produto${ok!==1?'s':''} atualizado${ok!==1?'s':''}${err?' · '+err+' erro(s)':''}`,err?'err':'ok');
+}
+
+// ── QUICK ENTRY ──────────────────────────────────
+function openQuick(){
+  const sel=S.selected.size>0?S.products.filter(p=>S.selected.has(p.id)):S.filtered.slice(0,Math.min(20,S.filtered.length));
+  if(!sel.length){toast('Carregue os produtos primeiro','err');return;}
+  $('qbody').innerHTML=sel.map(p=>`<div class="qi" data-id="${p.id}"><div class="qi-n" title="${esc(p.nome)}">${esc(p.nome.substring(0,40))}</div><div class="qi-s">${esc(p.codigo||'—')}</div><div class="qi-row"><span class="qi-lbl">Preço</span><input class="qi-inp" type="number" data-field="preco" data-id="${p.id}" value="${p.preco}" min="0" step="0.01"></div><div class="qi-row"><span class="qi-lbl">Estoque</span><input class="qi-inp" type="number" data-field="estoque" data-id="${p.id}" value="${p.estoque}" min="0"></div></div>`).join('');
+  $('qpanel').classList.add('open');
+}
+function closeQuick(){$('qpanel').classList.remove('open');}
+async function saveQuick(){
+  const changes={};
+  $('qbody').querySelectorAll('.qi-inp').forEach(inp=>{const id=parseInt(inp.dataset.id),field=inp.dataset.field;if(!changes[id])changes[id]={};changes[id][field]=parseFloat(inp.value);});
+  let ok=0,err=0;
+  for(const[id,vals]of Object.entries(changes)){
+    const p=S.products.find(x=>x.id===parseInt(id));if(!p)continue;
+    if(vals.preco===p.preco&&vals.estoque===p.estoque)continue;
+    const body={nome_produto:p.nome};
+    if(vals.preco!==p.preco)body.preco=vals.preco;
+    if(vals.estoque!==p.estoque)body.estoque=vals.estoque;
+    try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){if(body.preco!==undefined)p.preco=body.preco;if(body.estoque!==undefined)p.estoque=body.estoque;ok++;}else err++;}
+    catch{err++;}
+  }
+  if(ok>0){updateKpis();updateLowBadge();applyFilters();toast(`${ok} produto${ok!==1?'s':''} salvo${ok!==1?'s':''}`, 'ok');closeQuick();}
+  else if(err>0)toast(`${err} erro(s) ao salvar`,'err');
+  else{toast('Nenhuma alteração');closeQuick();}
+}
+
+// ── UNDO ─────────────────────────────────────────
+function showUndo(msg){const el=$('undo-toast');$('undo-msg').textContent=msg;el.classList.add('vis');clearTimeout(S.undoTimeout);S.undoTimeout=setTimeout(()=>el.classList.remove('vis'),5000);}
+async function undoLast(){
+  const entry=S.undoStack.pop();if(!entry){toast('Nada para desfazer');return;}
+  const{id,field,prev,nome}=entry;
+  const body={nome_produto:nome};body[field]=prev;
+  try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){const p=S.products.find(x=>x.id===id);if(p)p[field]=prev;updateKpis();updateLowBadge();applyFilters();toast('Desfeito','ok');$('undo-toast').classList.remove('vis');}else toast('Erro ao desfazer','err');}
+  catch{toast('Erro de conexão','err');}
+}
+
+// ── EXPORT/IMPORT ────────────────────────────────
+function exportCSV(ids=null){
+  const rows=ids?S.products.filter(p=>ids.has(p.id)):S.filtered;
+  if(!rows.length){toast('Nenhum produto para exportar','err');return;}
+  const cols=['id','codigo','nome','categoria','preco','estoque'];
+  const csv=[cols.join(','),...rows.map(p=>cols.map(c=>{const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`estoque_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast(`${rows.length} produto${rows.length!==1?'s':''} exportado${rows.length!==1?'s':''}`, 'ok');
+}
+function batchExport(){exportCSV(S.selected);}
+
+function handleFileSelect(input){if(input.files[0])parseCSV(input.files[0]);}
+function handleDrop(e){e.preventDefault();$('dropz').classList.remove('over');if(e.dataTransfer.files[0])parseCSV(e.dataTransfer.files[0]);}
+function parseCSV(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length<2){toast('Arquivo CSV inválido','err');return;}
+    const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,''));
+    S.importData=[];
+    for(let i=1;i<lines.length;i++){
+      const vals=lines[i].split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+      const row={};headers.forEach((h,j)=>row[h]=vals[j]||'');
+      if(!row.id&&row.codigo){const match=S.products.find(p=>p.codigo===row.codigo);if(match)row.id=match.id;}
+      if(row.id)S.importData.push(row);
+    }
+    if(!S.importData.length){toast('Nenhum produto correspondente','err');return;}
+    $('iprev-head').innerHTML=headers.map(h=>`<th>${esc(h)}</th>`).join('');
+    $('iprev-body').innerHTML=S.importData.slice(0,10).map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h]||'')}</td>`).join('')}</tr>`).join('');
+    $('iprev').style.display='';
+    $('im-btn').style.display='';
+    $('im-btn').textContent=`Importar ${S.importData.length} produto${S.importData.length!==1?'s':''}`;
+  };
+  reader.readAsText(file);
+}
+async function importCSV(){
+  if(!S.importData.length)return;
+  const btn=$('im-btn');btn.disabled=true;btn.textContent='Importando…';
+  try{
+    const r=await fetch('/api/produtos/importar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({produtos:S.importData})});
+    const d=await r.json();
+    toast(`${d.success} importado${d.success!==1?'s':''}${d.errors?.length?' · '+d.errors.length+' erro(s)':''}`,d.errors?.length?'err':'ok');
+    closeModal('im-modal');resetImport();await loadProducts();
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Importar';}
+}
+function resetImport(){S.importData=[];$('iprev').style.display='none';$('im-btn').style.display='none';$('csv-file').value='';}
+
+// ── PRESETS ──────────────────────────────────────
+function savePreset(){const name=prompt('Nome para este filtro:');if(!name)return;const p={name,f:{status:$('f-status').value,cat:$('f-cat').value,stMin:$('f-st-min').value,stMax:$('f-st-max').value,prMin:$('f-pr-min').value,prMax:$('f-pr-max').value}};S.presets=S.presets.filter(x=>x.name!==name);S.presets.push(p);localStorage.setItem('presets',JSON.stringify(S.presets));renderPresets();toast('Filtro salvo','ok');}
+function applyPreset(name){const p=S.presets.find(x=>x.name===name);if(!p)return;$('f-status').value=p.f.status||'';$('f-cat').value=p.f.cat||'';$('f-st-min').value=p.f.stMin||'';$('f-st-max').value=p.f.stMax||'';$('f-pr-min').value=p.f.prMin||'';$('f-pr-max').value=p.f.prMax||'';applyFilters();$('fpanel').classList.add('open');}
+function deletePreset(name,e){e.stopPropagation();S.presets=S.presets.filter(x=>x.name!==name);localStorage.setItem('presets',JSON.stringify(S.presets));renderPresets();}
+function renderPresets(){$('pchips').innerHTML=S.presets.map(p=>`<span class="pchip" onclick="applyPreset('${esc(p.name)}')">${esc(p.name)}<span class="pdx" onclick="deletePreset('${esc(p.name)}',event)">×</span></span>`).join('');}
+
+// ── AUTO REFRESH ─────────────────────────────────
+function cycleAutoRefresh(){const opts=[0,5,15,30];const idx=opts.indexOf(S.autoRefresh);setAutoRefresh(opts[(idx+1)%opts.length]);}
+function setAutoRefresh(mins){
+  S.autoRefresh=mins;localStorage.setItem('ar',mins);clearInterval(S.arTimer);
+  const bar=$('ar-bar');
+  if(mins===0){bar.style.display='none';$('ar-btn').title='Auto-refresh (desativado)';return;}
+  bar.style.display='flex';$('ar-btn').title=`Auto-refresh: ${mins} min (clique para mudar)`;
+  S.arCountdown=mins*60;
+  $('ar-cd').textContent=S.arCountdown;
+  S.arTimer=setInterval(()=>{S.arCountdown--;if(S.arCountdown<=0){S.arCountdown=mins*60;loadProducts(false);}$('ar-cd').textContent=S.arCountdown;},1000);
+}
+
+// ── TAREFAS PANEL ────────────────────────────────
+function renderTarefas(){
+  const ps=S.products;
+  const zerados=ps.filter(p=>p.estoque<=0).length;
+  const criticos=ps.filter(p=>p.estoque>0&&p.estoque<=5).length;
+  const total=zerados+criticos;
+  const el=$('tarefas-panel');if(!el)return;
+  el.style.display=total>0?'':'none';
+  const z=$('tf-zerados'),c=$('tf-criticos'),b=$('tf-total-badge');
+  if(z)z.textContent=zerados;
+  if(c)c.textContent=criticos;
+  if(b)b.textContent=total;
+}
+function filterByStock(min,max){
+  $('f-st-min').value=min;
+  $('f-st-max').value=max;
+  applyFilters();
+}
+
+// ── SECONDARY VIEWS ──────────────────────────────
+let _pedidosCache=[];
+let _pedStatus='all';
+function setTabPedidos(status,btn){
+  _pedStatus=status;
+  document.querySelectorAll('.pt-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderPedidosTable(_pedStatus);
+}
+async function loadPedidos(){
+  const body=$('pedidos-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando pedidos…</p></div>';
+  try{
+    const r=await fetch('/api/pedidos'),d=await r.json();
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+    }
+    _pedidosCache=d.pedidos||[];
+    // Atualiza contadores das abas
+    const pen=_pedidosCache.filter(p=>categorizePed(p.situacao)==='pendente').length;
+    const ok=_pedidosCache.filter(p=>categorizePed(p.situacao)==='concluido').length;
+    const can=_pedidosCache.filter(p=>categorizePed(p.situacao)==='cancelado').length;
+    const setC=(id,n)=>{const el=$(id);if(el){el.textContent=n||'';el.style.display=n?'':'none';}};
+    setC('pt-cnt-all',_pedidosCache.length);setC('pt-cnt-pen',pen);setC('pt-cnt-ok',ok);setC('pt-cnt-can',can);
+    // Atualiza Tarefas panel
+    const tf=$('tf-pend-count');if(tf)tf.textContent=pen;
+    renderPedidosTable(_pedStatus);
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function categorizePed(s){
+  const n=String(s||'').toLowerCase();
+  if(n.includes('cancel'))return'cancelado';
+  if(n.includes('atend')||n.includes('conclui')||n.includes('entregue'))return'concluido';
+  return'pendente';
+}
+function renderPedidosTable(status){
+  const body=$('pedidos-body');
+  const list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
+  if(!list.length){
+    body.innerHTML=`
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <h3>Nenhum pedido</h3>
+        <p>Não há pedidos ${status==='all'?'encontrados':status} no período.</p>
+      </div>
+    `;
+    return;
+  }
+  const rows=list.map(p=>{
+    const cat=categorizePed(p.situacao);
+    const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+    
+    // Novas colunas financeiras
+    const bruto = p.valor || 0;
+    const descontosFrete = (p.frete || 0) + (p.desconto || 0);
+    const impostos = p.impostos || 0;
+    const lucro = p.lucro !== undefined ? p.lucro : bruto;
+    const margem = bruto > 0 ? (lucro / bruto * 100).toFixed(1) : 0;
+    
+    const profitBadgeClass = lucro > 0 ? 'profit-badge' : 'profit-badge neg';
+
+    return`<tr>
+      <td><span class="sku">${esc(String(p.numero||p.id||'-'))}</span></td>
+      <td>${p.data?String(p.data).substring(0,10):'-'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
+      <td class="r" style="color:var(--mu);font-size:12px">${fmt(bruto)}<br><span style="color:#ef4444;font-size:10px">-${fmt(descontosFrete+impostos)}</span></td>
+      <td class="r o-val" style="font-weight:700;color:var(--tx)">${fmt(lucro)} <span class="${profitBadgeClass}">${margem}%</span></td>
+      <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
+    </tr>`;
+  }).join('');
+  body.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th style="width:70px">#</th><th style="width:80px">Data</th><th>Cliente</th><th class="r" style="width:90px">Bruto / Taxas</th><th class="r" style="width:130px">Lucro Líquido</th><th style="width:110px">Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+async function loadHistorico(){
+  const body=$('historico-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  try{
+    const r=await fetch('/api/historico'),d=await r.json();
+    const hist=d.history||[];
+    if(!hist.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma alteração registrada nesta sessão.</p></div>';return;}
+    body.innerHTML=`<table><thead><tr><th>Produto</th><th>Campo</th><th>Antes</th><th>Depois</th><th>Quando</th></tr></thead><tbody>${hist.map(h=>`<tr><td>${esc(h.produto_nome)}</td><td><span class="h-campo">${esc(h.campo)}</span></td><td class="h-from">${esc(h.valor_anterior)}</td><td class="h-to">${esc(h.valor_novo)}</td><td style="color:var(--fa);font-size:12px">${new Date(h.timestamp).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody></table>`;
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+async function loadNotas(){
+  const body=$('notas-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  try{
+    const r=await fetch('/api/notas-fiscais'),d=await r.json();
+    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
+    const notas=d.notas||[];
+    if(!notas.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div>';return;}
+    body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${notas.map(n=>{const s=(n.situacao||'').toLowerCase();const cls=s.includes('autoriza')?'nfe-ok':s.includes('cancel')?'nfe-can':'nfe-pen';return`<tr><td><span class="sku">${n.numero||n.id}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td class="${cls}">${esc(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,20)+'…':'—'}</span></td></tr>`;}).join('')}</tbody></table>`;
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+
+function openEmitirNFe(){
+  $('nfe-pedido-id').value='';$('nfe-obs').value='';
+  openModal('nfe-modal');
+  setTimeout(()=>$('nfe-pedido-id').focus(),80);
+}
+async function emitirNFe(){
+  const pedidoId=($('nfe-pedido-id').value||'').trim();
+  if(!pedidoId){toast('Informe o número do pedido','wa');return;}
+  const btn=$('nfe-emit-btn');btn.disabled=true;btn.textContent='Emitindo…';
+  try{
+    const r=await fetch('/api/nfe/emitir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedidoId,obs:$('nfe-obs').value||''})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro ao emitir NF-e');
+    toast('NF-e emitida com sucesso!','ok');
+    closeModal('nfe-modal');
+    if(S.view==='notas')loadNotas();
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Emitir NF-e';}
+}
+
+function renderReport(){
+  const ps=S.products;
+  $('rep-parado').textContent=fmtN(ps.filter(p=>p.estoque===0).length);
+  $('rep-crit').textContent=fmtN(ps.filter(p=>p.estoque>0&&p.estoque<=3).length);
+  $('rep-imob').textContent=fmt(ps.filter(p=>p.estoque===0).reduce((a,p)=>a+p.preco,0));
+  $('rep-ticket').textContent=ps.length?fmt(ps.reduce((a,p)=>a+p.preco,0)/ps.length):'—';
+  const zero=ps.filter(p=>p.estoque===0).sort((a,b)=>b.preco-a.preco);
+  const body=$('rep-body');
+  if(!zero.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto zerado.</p></div>';return;}
+  body.innerHTML=`<table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th style="text-align:right">Preço</th></tr></thead><tbody>${zero.slice(0,100).map(p=>`<tr><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ── MODALS ───────────────────────────────────────
+function openModal(id){$(id).classList.add('open');}
+function closeModal(id){$(id).classList.remove('open');}
+
+// ── KEYBOARD ─────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  const k=e.key.toLowerCase();
+  if(k==='/')  {e.preventDefault();$('search').focus();}
+  else if(k==='r')  sync();
+  else if(k==='e')  exportCSV();
+  else if(k==='q')  openQuick();
+  else if(k==='b'&&S.selected.size)  openBulk();
+  else if(k==='d')  toggleDark();
+  else if(k==='l')  setLayout('list');
+  else if(k==='g')  setLayout('grid');
+  else if(k==='c')  setLayout('catalog');
+  else if(k==='z')  undoLast();
+  else if(k==='a')  {$('cb-all').checked=true;toggleAllCb();}
+  else if(k==='?')  openModal('sc-modal');
+  else if(k==='escape'){closeSheet();closeQuick();closeModal('sc-modal');closeModal('im-modal');closeModal('create-modal');closeEditor();$('undo-toast').classList.remove('vis');}
+  else if(k==='n'&&S.view==='produtos')openCreate();
+});
+
+// ── EDITOR DRAWER ─────────────────────────────────
+let editorId=null,editorProduct=null;
+async function openEditor(id){
+  editorId=id;editorProduct=null;
+  $('edraw-ov').classList.add('open');$('edraw').classList.add('open');
+  $('edraw-title').textContent='Carregando…';
+  $('edraw-save').disabled=true;
+  $('edraw-bd').innerHTML='<div class="st-wrap"><p class="st-d">Carregando produto…</p></div>';
+  try{
+    const r=await fetch(`/api/produtos/${id}`);
+    if(!r.ok)throw new Error('Falha ao carregar produto');
+    const p=await r.json();editorProduct=p;
+    const sit=String(p.situacao?.valor||p.situacao||'A');
+    const tipo=p.tipo||'P';
+    const preco=p.preco||0;
+    const custo=p.precoCusto||0;
+    const margem=preco&&custo?Math.round(((preco-custo)/preco)*100):null;
+    const mCor=margem!==null?(margem<20?'var(--er-t)':margem<40?'var(--wa-t)':'var(--ok-t)'):'';
+    const curEstoque=typeof p.estoque==='object'?(p.estoque?.saldoVirtualTotal||0):(p.estoque||0);
+    $('edraw-title').textContent=p.nome||'Editar produto';
+    $('edraw-save').disabled=false;
+    $('edraw-bd').innerHTML=`
+      ${p.imagem?.link?`<img class="edraw-img" src="${esc(p.imagem.link)}" alt="">`:''}
+      <div class="df-2">
+        <div class="df"><label>Situação</label><select id="ed-sit">
+          <option value="A" ${sit==='A'?'selected':''}>Ativo</option>
+          <option value="I" ${sit==='I'?'selected':''}>Inativo</option>
+        </select></div>
+        <div class="df"><label>Tipo</label><select id="ed-tipo">
+          <option value="P" ${tipo==='P'?'selected':''}>Produto</option>
+          <option value="S" ${tipo==='S'?'selected':''}>Serviço</option>
+          <option value="K" ${tipo==='K'?'selected':''}>Kit</option>
+        </select></div>
+      </div>
+      <div class="df"><label>Nome do produto</label><input type="text" id="ed-nome" value="${esc(p.nome||'')}"></div>
+      <div class="df-2">
+        <div class="df"><label>SKU / Código</label><input type="text" id="ed-codigo" value="${esc(p.codigo||'')}"></div>
+        <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
+      </div>
+      <div class="edraw-sec">Imagem</div>
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <div id="ed-img-prev" style="width:80px;height:80px;border-radius:12px;background:var(--bord-l);border:1px solid var(--bord);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">${p.imagemUrl?`<img src="${esc(p.imagemUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}</div>
+        <div class="df" style="flex:1"><label>URL da imagem</label><input type="url" id="ed-img-url" value="${esc(p.imagemUrl||'')}" placeholder="https://…" oninput="updateImgPrev('ed-img-prev','ed-img-url')"></div>
+      </div>
+      <div class="edraw-sec">Preços</div>
+      <div class="df-2">
+        <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
+        <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
+      </div>
+      <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
+        Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
+      </div>
+      <div class="edraw-sec">Estoque</div>
+      <div class="df-2">
+        <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
+        <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
+      </div>
+      <div class="edraw-sec">Outros</div>
+      <div class="df-2">
+        <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
+        <div class="df"><label>Categoria</label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||'')}"></div>
+      </div>
+      <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
+    `;
+  }catch(e){
+    $('edraw-bd').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;
+    $('edraw-save').disabled=true;
+  }
+}
+function updateImgPrev(prevId,inputId){
+  const url=$(inputId)?.value.trim();
+  const prev=$(prevId);if(!prev)return;
+  if(url){
+    prev.style.display='';
+    const img=prev.querySelector('img')||Object.assign(document.createElement('img'),{style:'width:100%;height:100%;object-fit:cover'});
+    img.onerror=()=>{prev.style.display='none';};
+    img.src=url;
+    if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
+  }else{prev.style.display='none';}
+}
+function updateMargem(){
+  const preco=parseFloat($('ed-preco')?.value)||0;
+  const custo=parseFloat($('ed-custo')?.value)||0;
+  const el=$('df-margem');if(!el)return;
+  if(preco>0&&custo>0){
+    const m=Math.round(((preco-custo)/preco)*100);
+    const cor=m<20?'var(--er-t)':m<40?'var(--wa-t)':'var(--ok-t)';
+    el.style.display='';
+    el.innerHTML=`Margem: <strong style="color:${cor}">${m}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>`;
+  }else el.style.display='none';
+}
+function closeEditor(){
+  $('edraw-ov').classList.remove('open');$('edraw').classList.remove('open');
+  editorId=null;editorProduct=null;
+}
+async function saveEditorFull(){
+  if(!editorId||!editorProduct)return;
+  const btn=$('edraw-save');btn.disabled=true;btn.textContent='Salvando…';
+  const nome=$('ed-nome').value.trim();
+  if(!nome){toast('Nome é obrigatório','err');btn.disabled=false;btn.textContent='Salvar alterações';return;}
+  const newEstoque=parseFloat($('ed-estoque').value);
+  const updated={...editorProduct,nome,
+    codigo:$('ed-codigo').value.trim(),
+    gtin:$('ed-ean').value.trim(),
+    preco:parseFloat($('ed-preco').value)||0,
+    precoCusto:parseFloat($('ed-custo').value)||0,
+    pesoBruto:parseFloat($('ed-peso').value)||0,
+    unidade:$('ed-unidade').value.trim()||'un',
+    situacao:$('ed-sit').value,
+    tipo:$('ed-tipo').value,
+    descricaoComplementar:$('ed-desc').value,
+    imagemUrl:$('ed-img-url').value.trim()||undefined,
+  };
+  try{
+    const body={_fullUpdate:updated};
+    const p=S.products.find(x=>x.id===editorId);
+    const oldEst=p?p.estoque:null;
+    if(!isNaN(newEstoque)&&newEstoque!==oldEst)body.estoque=newEstoque;
+    const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+    if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;p.imagemUrl=updated.imagemUrl||p.imagemUrl;if(!isNaN(newEstoque))p.estoque=newEstoque;}
+    toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Salvar alterações';}
+}
+
+// ── CRIAR PRODUTO ─────────────────────────────────
+function openCreate(){
+  ['cr-nome','cr-codigo','cr-preco','cr-custo','cr-estoque','cr-descricao','cr-imagem'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  $('cr-unidade').value='un';$('cr-tipo').value='P';
+  const crPrev=$('cr-img-prev');if(crPrev)crPrev.style.display='none';
+  openModal('create-modal');
+  setTimeout(()=>$('cr-nome')?.focus(),100);
+}
+async function saveCreate(){
+  const nome=$('cr-nome').value.trim();
+  const preco=parseFloat($('cr-preco').value);
+  if(!nome){toast('Nome é obrigatório','err');$('cr-nome').focus();return;}
+  if(!preco||preco<=0){toast('Preço de venda é obrigatório','err');$('cr-preco').focus();return;}
+  const btn=$('cr-btn');btn.disabled=true;btn.textContent='Cadastrando…';
+  try{
+    const imgUrl=$('cr-imagem').value.trim();
+    const body={nome,codigo:$('cr-codigo').value.trim(),preco,precoCusto:parseFloat($('cr-custo').value)||0,
+      tipo:$('cr-tipo').value,unidade:$('cr-unidade').value.trim()||'un',situacao:'A',
+      descricaoComplementar:$('cr-descricao').value.trim(),...(imgUrl?{imagemUrl:imgUrl}:{})};
+    const r=await fetch('/api/produtos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro ao criar produto');}
+    const criado=await r.json();
+    const estoque=parseInt($('cr-estoque').value);
+    if(estoque>0&&criado?.id){
+      await fetch(`/api/produtos/${criado.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estoque})}).catch(()=>{});
+    }
+    toast('Produto cadastrado com sucesso!','ok');closeModal('create-modal');await loadProducts(false);
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{btn.disabled=false;btn.textContent='Cadastrar produto';}
+}
+
+// ── FINANCEIRO ────────────────────────────────────
+let finPeriod='30d';
+function setFinPeriod(p,btn){
+  finPeriod=p;
+  document.querySelectorAll('.fp-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  const cr=$('fin-custom-range');
+  if(cr)cr.style.display=p==='custom'?'flex':'none';
+  if(p!=='custom')loadFinanceiro();
+}
+async function loadFinanceiro(){
+  const body=$('fin-margin-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados financeiros…</p></div>';
+  ['fin-bruto','fin-rec','fin-cancelado','fin-pend-val','fin-frete','fin-ticket','fin-desconto','fin-total'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
+  ['fin-sub-total','fin-sub-conc','fin-sub-canc','fin-sub-pend'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
+  try{
+    let url=`/api/financeiro?period=${finPeriod}`;
+    if(finPeriod==='custom'){
+      const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;
+      if(!s||!e){toast('Selecione as datas','wa');return;}
+      url+=`&startDate=${s}&endDate=${e}`;
+    }
+    const r=await fetch(url),d=await r.json();
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+    }
+    if(!r.ok)throw new Error(d.error||'Erro');
+    // KPI Row 1
+    $('fin-bruto').textContent=fmt(d.totalBruto);
+    $('fin-rec').textContent=fmt(d.receitaConcluida);
+    $('fin-cancelado').textContent=fmt(d.totalCancelado);
+    $('fin-pend-val').textContent=fmt(d.totalPendente);
+    // KPI Row 2
+    $('fin-frete').textContent=fmt(d.totalFrete);
+    $('fin-ticket').textContent=fmt(d.ticketMedio);
+    $('fin-desconto').textContent=fmt(d.totalDesconto);
+    $('fin-total').textContent=fmtN(d.totalPedidos);
+    // Sub-labels
+    $('fin-sub-total').textContent=`${fmtN(d.totalPedidos)} pedidos no período`;
+    $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos concluídos`;
+    $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
+    $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
+    renderFinTrend(d);
+    renderDRE(d);
+    // Period label on chart
+    const lbl={today:'Hoje',['7d']:'Últimos 7 dias',['30d']:'Últimos 30 dias',custom:'Período personalizado'};
+    const cr=$('fin-chart-range');
+    if(cr&&d.periodo)cr.textContent=`${lbl[d.periodo.period]||''} · ${d.periodo.inicio} a ${d.periodo.fim}`;
+    // Chart
+    renderFinChart(d.byDay||{},d.periodo?.inicio,d.periodo?.fim);
+    // Margem table
+    const prods=S.products.filter(p=>p.precoCusto>0&&p.preco>0).sort((a,b)=>{const ma=(a.preco-a.precoCusto)/a.preco;const mb=(b.preco-b.precoCusto)/b.preco;return ma-mb;});
+    if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
+    body.innerHTML=`<table><thead><tr><th>Produto</th><th class="r">Custo</th><th class="r">Preço venda</th><th class="r">Lucro unit.</th><th class="r">Margem</th></tr></thead><tbody>${
+      prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
+      return`<tr><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
+    }</tbody></table>`;
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderFinTrend(d){
+  const c=d.comparativo;
+  const sub=$('fin-sub-total');if(!sub)return;
+  // limpa badge anterior
+  sub.querySelectorAll('.fin-trend').forEach(e=>e.remove());
+  if(!c||c.variacao===null||c.variacao===undefined)return;
+  const v=c.variacao;
+  const cls=v>1?'up':v<-1?'down':'flat';
+  const ico=v>1?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>':v<-1?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>':'';
+  const span=document.createElement('span');
+  span.className='fin-trend '+cls;
+  span.innerHTML=`${ico}${v>0?'+':''}${v.toFixed(0)}%`;
+  span.title=`Faturamento vs período anterior (${fmt(c.receitaAnterior)})`;
+  sub.appendChild(span);
+}
+function renderDRE(d){
+  const el=$('dre-list');if(!el)return;
+  const margem=avgMargem();
+  const receita=d.receitaConcluida||0;
+  const cancel=d.totalCancelado||0;
+  const pend=d.totalPendente||0;
+  const temCusto=margem>0;
+  const custo=temCusto?receita*(1-margem):0;
+  const lucro=temCusto?receita*margem:0;
+  const mPct=Math.round(margem*100);
+  const mCor=mPct<20?'var(--er-bg);color:var(--er-t)':mPct<40?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
+  const row=(op,lbl,val,cls='',extra='')=>`<div class="dre-row${cls?' '+cls:''}"><span class="dre-lbl"><span class="dre-op">${op}</span>${lbl}</span><span class="dre-val ${cls==='total'?'pos':''}">${val}${extra}</span></div>`;
+  el.innerHTML=
+    row('','Receita bruta (todos os pedidos)',fmt(d.totalBruto||0))+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos</span><span class="dre-val neg">− ${fmt(cancel)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Pendentes (ainda não recebidos)</span><span class="dre-val neg">− ${fmt(pend)}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada</span><span class="dre-val">${fmt(receita)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'− '+fmt(custo):'—'}</span></div>`+
+    `<div class="dre-row total"><span class="dre-lbl">Lucro líquido estimado</span><span class="dre-val pos">${temCusto?fmt(lucro):'—'}${temCusto?`<span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
+    (temCusto?'':`<p class="sh-note" style="margin-top:10px">Cadastre o <strong>custo</strong> dos produtos no editor para calcular o lucro real.</p>`);
+}
+function renderFinChart(byDay,inicio,fim){
+  const wrap=$('fin-chart');if(!wrap)return;
+  // Build sorted day list
+  const days=[];
+  if(inicio&&fim){
+    let cur=new Date(inicio+'T12:00:00');const end=new Date(fim+'T12:00:00');
+    while(cur<=end){days.push(cur.toISOString().split('T')[0]);cur=new Date(cur.getTime()+86400000);}
+  }else{
+    days.push(...Object.keys(byDay).sort());
+  }
+  if(!days.length){wrap.innerHTML='<p style="color:var(--mu);font-size:12px;text-align:center;padding:40px 0">Nenhum dado no período</p>';return;}
+  const vals=days.map(d=>byDay[d]||0);
+  const max=Math.max(...vals,1);
+  const W=wrap.clientWidth||600,H=130,pad=40,barW=Math.max(6,Math.min(40,Math.floor((W-pad*2)/days.length)-3));
+  const xStep=(W-pad*2)/days.length;
+  const bars=days.map((day,i)=>{
+    const v=vals[i];const bh=Math.max(2,Math.round((v/max)*(H-20)));
+    const x=pad+i*xStep+xStep/2-barW/2;const y=H-bh;
+    const label=day.slice(5);
+    const showLabel=days.length<=14||(i%(Math.ceil(days.length/7))===0);
+    return `<g>
+      <rect class="fin-bar" x="${x.toFixed(1)}" y="${y}" width="${barW}" height="${bh}" rx="3" fill="var(--acc)" opacity=".8">
+        <title>${day}: ${fmt(v)}</title>
+      </rect>
+      ${showLabel?`<text x="${(x+barW/2).toFixed(1)}" y="${H+14}" text-anchor="middle" font-size="10" fill="var(--fa)">${label}</text>`:''}
+    </g>`;
+  }).join('');
+  // Y axis labels
+  const ytop=`<text x="${pad-6}" y="14" text-anchor="end" font-size="10" fill="var(--fa)">${fmtN(max)}</text>`;
+  const ymid=`<text x="${pad-6}" y="${H/2+4}" text-anchor="end" font-size="10" fill="var(--fa)">${fmtN(max/2)}</text>`;
+  wrap.innerHTML=`<svg width="${W}" height="${H+22}" viewBox="0 0 ${W} ${H+22}" style="overflow:visible">
+    <line x1="${pad}" y1="0" x2="${pad}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
+    <line x1="${pad}" y1="${H}" x2="${W-10}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
+    ${ytop}${ymid}${bars}
+  </svg>`;
+}
+
+// ── CONFIRMAÇÃO DE SENHA (estilo Shopee) ─────────
+let _pwCallback=null,_pwCancelCb=null;
+function requireSenha(callback,opts={}){
+  if(sessionStorage.getItem('pw_ok')==='1'&&!opts.force){callback();return;}
+  _pwCallback=callback;_pwCancelCb=opts.onCancel||null;
+  $('pw-title').textContent=opts.title||'Confirme sua senha';
+  $('pw-desc').textContent=opts.desc||'Por segurança, digite sua senha de login para continuar.';
+  $('pw-input').value='';$('pw-err').style.display='none';
+  openModal('pw-modal');
+  setTimeout(()=>$('pw-input').focus(),80);
+}
+async function pwConfirm(){
+  const pw=$('pw-input').value;if(!pw)return;
+  const btn=$('pw-ok');btn.disabled=true;btn.textContent='Verificando…';
+  try{
+    const r=await fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    if(r.ok){
+      sessionStorage.setItem('pw_ok','1');
+      closeModal('pw-modal');
+      const cb=_pwCallback;_pwCallback=null;_pwCancelCb=null;
+      if(cb)cb();
+    }else{
+      const d=await r.json().catch(()=>({}));
+      $('pw-err').textContent=d.error||'Senha incorreta.';$('pw-err').style.display='block';
+      $('pw-input').select();vibrate(40);
+    }
+  }catch(e){$('pw-err').textContent='Erro de conexão.';$('pw-err').style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Confirmar';}
+}
+function pwCancel(){
+  closeModal('pw-modal');
+  const c=_pwCancelCb;_pwCallback=null;_pwCancelCb=null;
+  if(c)c();
+}
+
+// ── CLIENTES (CRM) ───────────────────────────────
+let _clientesCache=[];
+let _clientesLoaded=false;
+async function loadClientes(force=false){
+  if(_clientesLoaded&&!force){renderClientes();return;}
+  const body=$('clientes-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando clientes…</p></div>';
+  try{
+    const r=await fetch('/api/clientes'),d=await r.json();
+    if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+    }
+    if(!r.ok)throw new Error(d.error||'Erro');
+    _clientesCache=d.clientes||[];_clientesLoaded=true;
+    const ufs=[...new Set(_clientesCache.map(c=>c.uf).filter(Boolean))].sort();
+    $('cli-uf').innerHTML='<option value="">Todas UF</option>'+ufs.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
+    renderClientes();
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderClientes(){
+  if(!$('cli-search'))return;
+  const q=($('cli-search').value||'').toLowerCase().trim();
+  const uf=$('cli-uf').value,tipo=$('cli-tipo').value,sort=$('cli-sort').value;
+  let list=_clientesCache.filter(c=>{
+    if(uf&&c.uf!==uf)return false;
+    if(tipo&&c.tipo!==tipo)return false;
+    if(q&&!`${c.nome} ${c.documento} ${c.municipio}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(sort==='nome')list.sort((a,b)=>a.nome.localeCompare(b.nome));
+  else if(sort==='pedidos')list.sort((a,b)=>b.numPedidos-a.numPedidos);
+  else if(sort==='recente')list.sort((a,b)=>(b.ultimoPedido||'').localeCompare(a.ultimoPedido||''));
+  else list.sort((a,b)=>b.totalGasto-a.totalGasto);
+  $('cli-total').textContent=fmtN(_clientesCache.length);
+  const compradores=_clientesCache.filter(c=>c.totalGasto>0);
+  $('cli-ticket').textContent=fmt(compradores.length?compradores.reduce((a,c)=>a+c.totalGasto,0)/compradores.length:0);
+  const top=[..._clientesCache].sort((a,b)=>b.totalGasto-a.totalGasto)[0];
+  $('cli-top').textContent=top&&top.totalGasto>0?top.nome.substring(0,22):'—';
+  $('cli-top-sub').textContent=top&&top.totalGasto>0?fmt(top.totalGasto):'sem compras (90d)';
+  const body=$('clientes-body');
+  if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum cliente encontrado.</p></div>';return;}
+  const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+  const isRank=sort==='gasto'&&!q&&!uf&&!tipo;
+  body.innerHTML=`<table><thead><tr><th style="width:40px">#</th><th>Cliente</th><th>Cidade/UF</th><th class="r">Pedidos</th><th class="r">Total gasto</th><th>Último</th></tr></thead><tbody>${
+    list.map((c,i)=>`<tr style="cursor:pointer" onclick="openClienteFicha('${esc(String(c.id))}')">
+      <td>${isRank&&medal(i)?`<span style="font-size:16px">${medal(i)}</span>`:`<span style="color:var(--fa)">${i+1}</span>`}</td>
+      <td><div class="pinfo"><span class="pname">${esc(c.nome)}</span><span class="pname-sub">${esc(c.documento||c.tipo||'—')}</span></div></td>
+      <td>${c.municipio?esc(c.municipio)+(c.uf?'/'+esc(c.uf):''):'—'}</td>
+      <td class="r">${c.numPedidos||0}</td>
+      <td class="r pcell" style="font-weight:600">${fmt(c.totalGasto)}</td>
+      <td style="color:var(--mu);font-size:12px">${c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'—'}</td>
+    </tr>`).join('')
+  }</tbody></table>`;
+}
+function openClienteFicha(id){
+  const c=_clientesCache.find(x=>String(x.id)===String(id));if(!c)return;
+  const linha=(lbl,val)=>val?`<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--bord-l);font-size:13px"><span style="color:var(--mu)">${lbl}</span><span style="font-weight:500;color:var(--tx);text-align:right;word-break:break-word">${esc(val)}</span></div>`:'';
+  $('cli-ficha').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--acc-bg);color:var(--acc-t);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">${esc((c.nome||'?').charAt(0).toUpperCase())}</div>
+      <div style="min-width:0"><div style="font-size:16px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.nome)}</div><div style="font-size:12px;color:var(--mu)">${esc(c.tipo||'Cliente')}${c.documento?' · '+esc(c.documento):''}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Total gasto (90d)</div><div style="font-size:18px;font-weight:800;color:var(--ok-t)">${fmt(c.totalGasto)}</div></div>
+      <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Pedidos</div><div style="font-size:18px;font-weight:800;color:var(--tx)">${fmtN(c.numPedidos||0)}</div></div>
+    </div>
+    ${linha('E-mail',c.email)}${linha('Telefone',c.telefone)}${linha('Cidade',c.municipio?c.municipio+(c.uf?'/'+c.uf:''):'')}${linha('Último pedido',c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'')}
+  `;
+  openModal('cli-modal');
+}
+
+// ── AUTH ─────────────────────────────────────────
+async function logout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/conectar.html';}
+
+// ── PWA ───────────────────────────────────────────
+let _pwaPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();_pwaPrompt=e;
+  const bar=$('pwa-install-bar');if(bar)bar.style.display='flex';
+});
+function installApp(){
+  if(!_pwaPrompt)return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(()=>{_pwaPrompt=null;const bar=$('pwa-install-bar');if(bar)bar.style.display='none';});
+}
+async function askNotifPerm(){
+  if(!('Notification' in window)){toast('Notificações não suportadas neste navegador','wa');return;}
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){toast('Permissão de notificação negada','wa');return;}
+  try{
+    // FCM token — substitua VAPID_KEY pela chave gerada no Firebase Console
+    // Firebase Console → Project Settings → Cloud Messaging → Web Push Certificates → Generate key pair
+    const VAPID_KEY='BAbdWtP-uqLAfqPy7LifDgR-V3SFvZeJW7SuT35yJpzfx1zqGBO7wMwch9Z-iW7Wdd3j9KdsqqPifb8BFDvYJc8';
+    const messaging=firebase.messaging();
+    const token=await messaging.getToken({vapidKey:VAPID_KEY});
+    if(token){
+      await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+      toast('Notificações push ativadas!','ok');
+      localStorage.setItem('fcm_token',token);
+    }
+  }catch(e){toast('Notificações locais ativadas (FCM: '+e.message+')','ok');}
+}
+function sendLocalNotif(title,body){
+  if(Notification.permission==='granted'){
+    navigator.serviceWorker.getRegistration().then(reg=>{
+      if(reg)reg.showNotification(title,{body,icon:'/manifest.json',tag:'estoque-max',vibrate:[150,50,150]});
+      else new Notification(title,{body});
+    });
+  }
+}
+
+// ── NOTIFICAÇÕES PUSH ────────────────────────────
+let _notifMode='now';
+function setNotifMode(mode){
+  _notifMode=mode;
+  $('nt-now-btn').classList.toggle('on',mode==='now');
+  $('nt-sched-btn').classList.toggle('on',mode==='sched');
+  $('nt-sched-wrap').style.display=mode==='sched'?'':'none';
+  $('nt-send-label').textContent=mode==='sched'?'Agendar notificação':'Enviar para todos';
+}
+function updateNotifPreview(){
+  const title=$('nt-title').value||'Título da notificação';
+  const body=$('nt-body').value||'A mensagem aparece aqui, com até 200 caracteres de conteúdo.';
+  const action=$('nt-action').value;
+  $('np-title').textContent=title;
+  $('np-body').textContent=body;
+  if(action){$('np-act-btn').textContent=action;$('np-actions').style.display='';}
+  else $('np-actions').style.display='none';
+}
+async function sendOrScheduleNotif(){
+  const title=($('nt-title').value||'').trim();
+  const body=($('nt-body').value||'').trim();
+  if(!title||!body){toast('Preencha título e mensagem','wa');return;}
+  const url=($('nt-url').value||'').trim()||'/dashboard.html';
+  const action=($('nt-action').value||'').trim();
+  const btn=$('nt-send-btn');
+  btn.disabled=true;
+  if(_notifMode==='sched'){
+    const dt=$('nt-datetime').value;
+    if(!dt){toast('Informe data e hora para agendamento','wa');btn.disabled=false;return;}
+    $('nt-send-label').textContent='Agendando…';
+    try{
+      const r=await fetch('/api/notif/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body,url,action,sendAt:dt})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Erro');
+      toast('Notificação agendada com sucesso!','ok');
+      $('nt-title').value='';$('nt-body').value='';$('nt-action').value='';$('nt-url').value='';$('nt-datetime').value='';
+      updateNotifPreview();loadNotificacoes();
+    }catch(e){toast('Erro: '+e.message,'err');}
+    finally{btn.disabled=false;$('nt-send-label').textContent='Agendar notificação';}
+  } else {
+    $('nt-send-label').textContent='Enviando…';
+    try{
+      const r=await fetch('/api/push/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body,url,action})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Erro');
+      toast(`Enviado para ${d.sent} dispositivo(s)!`,'ok');
+      $('nt-title').value='';$('nt-body').value='';$('nt-action').value='';$('nt-url').value='';
+      updateNotifPreview();loadNotificacoes();
+    }catch(e){toast('Erro: '+e.message,'err');}
+    finally{btn.disabled=false;$('nt-send-label').textContent='Enviar para todos';}
+  }
+}
+async function loadNotificacoes(){
+  const body=$('notif-history-body');
+  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  try{
+    const r=await fetch('/api/notif/history'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    const si=$('nt-sub-info');
+    if(si)si.textContent=`${d.subscribers||0} dispositivo(s) inscrito(s)`;
+    const list=d.history||[];
+    if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma notificação enviada ou agendada.</p></div>';return;}
+    body.innerHTML=list.map(n=>{
+      const isSched=n.status==='scheduled';
+      const isErr=n.status==='error';
+      const dotCls=isSched?'nh-dot-sched':isErr?'nh-dot-err':'nh-dot-ok';
+      const statusLbl=isSched?'Agendado para '+new Date(n.sendAt).toLocaleString('pt-BR'):isErr?'Erro':'Enviado — '+new Date(n.sentAt||n.createdAt).toLocaleString('pt-BR');
+      return`<div class="nh-row">
+        <div class="nh-dot ${dotCls}" style="margin-top:5px"></div>
+        <div style="flex:1;min-width:0">
+          <div class="nh-title">${esc(n.title)}</div>
+          <div class="nh-body">${esc(n.body)}</div>
+          <div class="nh-meta">
+            <span>${statusLbl}</span>
+            ${n.sent!=null?`<span>· ${n.sent} enviados</span>`:''}
+            ${isSched?`<button class="bts" style="padding:2px 10px;font-size:11px" onclick="cancelNotif('${esc(n.id)}')">Cancelar</button>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+async function cancelNotif(id){
+  if(!confirm('Cancelar esta notificação agendada?'))return;
+  try{
+    const r=await fetch(`/api/notif/schedule/${id}`,{method:'DELETE'});
+    if(!r.ok)throw new Error('Erro ao cancelar');
+    toast('Notificação cancelada','ok');loadNotificacoes();
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+
+// ── INIT ─────────────────────────────────────────
+(function(){
+  applyTheme();
+  if(S.collapsed)$('sidebar').classList.add('col');
+  renderPresets();
+  $('si-nome').textContent='↑';
+  if(S.autoRefresh>0)setAutoRefresh(S.autoRefresh);
+  setLayout(S.layout);
+  setView('inicio');
+  loadProducts();
+  setInterval(updateSyncTs,30000);
+  // Service Worker com Auto-Update forçado
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(reg=>{
+      // Forçar check de update a cada 60s
+      setInterval(()=>reg.update(),60000);
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='activated'){
+            // Auto-reload quando SW novo ativar
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(()=>{});
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='SW_UPDATED') window.location.reload();
+    });
+  }
+})();
+</script>
