@@ -133,9 +133,23 @@ exports.verifyWebhookSignature = (rawBody, signatureHeader, secret) => {
     const expected = hmac.digest('hex');
 
     // algumas implementações usam base64; também aceitamos comparação base64
-    const expectedBase64 = Buffer.from(hmac.digest ? hmac.digest() : expected).toString('base64');
+    // since hmac.digest('hex') was already called, we can't call digest() again without error,
+    // so we recreate the base64 from the hex string.
+    const expectedBase64 = Buffer.from(expected, 'hex').toString('base64');
 
-    return signatureHeader === expected || signatureHeader === expectedBase64;
+    const sigBuffer = Buffer.from(signatureHeader);
+    const expectedBuffer = Buffer.from(expected);
+    const expectedBase64Buffer = Buffer.from(expectedBase64);
+
+    let isValid = false;
+    if (sigBuffer.length === expectedBuffer.length) {
+      isValid = crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+    }
+    if (!isValid && sigBuffer.length === expectedBase64Buffer.length) {
+      isValid = crypto.timingSafeEqual(sigBuffer, expectedBase64Buffer);
+    }
+
+    return isValid;
   } catch (err) {
     console.error('Erro ao verificar assinatura do webhook (TikTok):', err.message);
     return false;
