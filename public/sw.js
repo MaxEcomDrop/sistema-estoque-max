@@ -47,15 +47,23 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Always fetch API calls from network
+  // For API calls: network first, then cache
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(
-      fetch(e.request).catch(() =>
-        new Response(JSON.stringify({ error: 'Offline — verifique sua conexão' }), {
+      fetch(e.request).then(res => {
+        if (res.ok && e.request.method === 'GET') {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(async () => {
+        const cachedRes = await caches.match(e.request);
+        if (cachedRes) return cachedRes;
+        return new Response(JSON.stringify({ error: 'Offline — dados não disponíveis no cache', offline: true }), {
           status: 503,
           headers: { 'Content-Type': 'application/json' }
-        })
-      )
+        });
+      })
     );
     return;
   }

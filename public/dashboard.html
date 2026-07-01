@@ -2157,11 +2157,13 @@ function renderPedidosTable(status){
       <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
       <td>${p.data?String(p.data).substring(0,10):'—'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
+      <td class="r" style="color:#6b7280">${fmt(p.frete||0)}</td>
+      <td class="r" style="color:#6b7280">${fmt(p.taxas||0)}</td>
       <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
       <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
     </tr>`;
   }).join('');
-  body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
+  body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:100px">Frete</th><th class="r" style="width:100px">Taxas</th><th class="r" style="width:110px">Total</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 async function loadHistorico(){
   const body=$('historico-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
