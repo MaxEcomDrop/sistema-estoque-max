@@ -2610,11 +2610,13 @@ async function loadDashboard(force=false){
     setTxt('dash-vencidas',fmtN((cr.vencidas||0)+(cp.vencidas||0)));
     renderContasList('dash-receber-list',cr,'receber');
     renderContasList('dash-pagar-list',cp,'pagar');
-    // Novos cards: Fluxo de Caixa, Contas Vencidas, Calendário
-    renderFluxoCaixa(cr,cp);
-    renderContasVencidas(cr,cp);
-    renderCalendarPreview();
-    renderDashSparkline(v.byDay||{});
+    // Novos cards: Fluxo de Caixa, Contas Vencidas, Calendário — isolados em
+    // try/catch próprio para que uma falha aqui não reverta os números acima,
+    // que já carregaram corretamente.
+    try{renderFluxoCaixa(cr,cp);}catch(e){console.error('[renderFluxoCaixa]',e);}
+    try{renderContasVencidas(cr,cp);}catch(e){console.error('[renderContasVencidas]',e);}
+    try{renderCalendarPreview();}catch(e){console.error('[renderCalendarPreview]',e);}
+    try{renderDashSparkline(v.byDay||{});}catch(e){console.error('[renderDashSparkline]',e);}
     loadEnhancedDashboard();
     loadFinanceiroPrevisao();
   }catch(e){
@@ -4518,6 +4520,8 @@ async function loadFinanceiro(force=false){
     }
     const r=await fetch(url),d=await r.json();
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
+      ['fin-bruto','fin-rec','fin-cancelado','fin-pend-val','fin-frete','fin-ticket','fin-desconto','fin-total'].forEach(id=>{const el=$(id);if(el)el.textContent='—';});
+      ['fin-sub-total','fin-sub-conc','fin-sub-canc','fin-sub-pend'].forEach(id=>{const el=$(id);if(el)el.textContent='sem conexão';});
       body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
     }
     if(!r.ok)throw new Error(d.error||'Erro');
@@ -4542,15 +4546,17 @@ function renderFinFromData(d){
     $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos concluídos`;
     $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
     $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
-    renderFinTrend(d);
-    renderDRE(d);
+    // Blocos abaixo isolados em try/catch próprio para que uma falha em um
+    // deles não impeça a exibição dos KPIs principais já atualizados acima.
+    try{renderFinTrend(d);}catch(e){console.error('[renderFinTrend]',e);}
+    try{renderDRE(d);}catch(e){console.error('[renderDRE]',e);}
     // Period label on chart
     const lbl={today:'Hoje',['7d']:'Últimos 7 dias',['30d']:'Últimos 30 dias',custom:'Período personalizado'};
     const cr=$('fin-chart-range');
     if(cr&&d.periodo)cr.textContent=`${lbl[d.periodo.period]||''} · ${d.periodo.inicio} a ${d.periodo.fim}`;
     // Chart
-    renderFinChart(d.byDay||{},d.periodo?.inicio,d.periodo?.fim);
-    renderCurvaABC();
+    try{renderFinChart(d.byDay||{},d.periodo?.inicio,d.periodo?.fim);}catch(e){console.error('[renderFinChart]',e);}
+    try{renderCurvaABC();}catch(e){console.error('[renderCurvaABC]',e);}
     // Margem table
     const prods=S.products.filter(p=>p.precoCusto>0&&p.preco>0).sort((a,b)=>{const ma=(a.preco-a.precoCusto)/a.preco;const mb=(b.preco-b.precoCusto)/b.preco;return ma-mb;});
     if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
@@ -5442,8 +5448,8 @@ function startVoiceSearch(){
   setLayout(S.layout);
   // Handle ML OAuth callback params
   const _urlP=new URLSearchParams(window.location.search);
-  if(_urlP.get('ml_connected')){toast('Mercado Livre conectado com sucesso!','ok');setView('integracoes');history.replaceState({},'','/dashboard.html');}
-  else if(_urlP.get('ml_error')){toast('Erro ao conectar ML: '+_urlP.get('ml_error'),'err');setView('integracoes');history.replaceState({},'','/dashboard.html');}
+  if(_urlP.get('ml_connected')){toast('Mercado Livre conectado com sucesso!','ok');setView('mercado-livre');history.replaceState({},'','/dashboard.html');}
+  else if(_urlP.get('ml_error')){toast('Erro ao conectar ML: '+_urlP.get('ml_error'),'err');setView('mercado-livre');history.replaceState({},'','/dashboard.html');}
   else setView('inicio');
   loadProducts();
   setInterval(updateSyncTs,30000);
