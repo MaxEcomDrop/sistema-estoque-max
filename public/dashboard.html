@@ -1047,6 +1047,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <span id="dash-fat-pend" style="color:var(--wa-t)"></span>
             <span id="dash-fat-canc" style="color:var(--er-t)"></span>
           </div>
+          <div id="dash-fin-break"></div>
           <svg id="dash-sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="position:absolute;bottom:0;left:0;right:0;width:100%;height:52px;opacity:.35;pointer-events:none"></svg>
         </div>
         <div class="hero-card hero-luc" onclick="setView('financeiro')" style="cursor:pointer">
@@ -2399,6 +2400,8 @@ async function loadDashboard(force=false){
     _dashFat=v.faturamento||0;
     _dashTotalPedidos=v.totalPedidos||0;
     _dashCancelados=v.cancelados||0;
+    _dashFrete=v.freteTotal||0;
+    _dashDesconto=v.descontoTotal||0;
     recomputeDashLucro();
     // KPIs
     setTxt('dash-vendas',fmtN(v.concluidos||0));
@@ -2406,6 +2409,16 @@ async function loadDashboard(force=false){
     _dashPendentes=v.pendentes||0;
     setTxt('dash-pendentes',fmtN(_dashPendentes));
     setTxt('dash-ticket',fmt(v.ticketMedio));
+    // Financial breakdown
+    const finBreak=$('dash-fin-break');
+    if(finBreak){
+      const semFrete=_dashFat-_dashFrete;
+      finBreak.innerHTML=`<div style="font-size:11px;color:var(--mu);display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+        <div><div style="font-size:10px;color:var(--fa)">Frete/Transporte</div><div style="font-weight:600">${fmt(_dashFrete)}</div></div>
+        <div><div style="font-size:10px;color:var(--fa)">Descontos</div><div style="font-weight:600">${fmt(_dashDesconto)}</div></div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;color:var(--fa)">Faturamento (sem frete)</div><div style="font-weight:600">${fmt(semFrete)}</div></div>
+      </div>`;
+    }
     const cr=d.contasReceber||{},cp=d.contasPagar||{};
     setTxt('dash-receber',cr.ok?fmt(cr.total):'—');
     setTxt('dash-receber-sub',cr.ok?`${fmtN(cr.count||0)} conta${cr.count!==1?'s':''}`:'sem permissão Bling');

@@ -1500,6 +1500,10 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     const totalBruto  = sum(allPedidos);
     const aReceberPedidos = sum(pendentes);
 
+    // Custos detalhados (frete, descontos) dos pedidos concluídos
+    const freteTotal = concluidos.reduce((a, p) => a + (Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0), 0);
+    const descontoTotal = concluidos.reduce((a, p) => a + (Number(p.desconto) || 0), 0);
+
     // Comparativo de faturamento com o período anterior
     const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
     const prevFat = prevPedidos.filter(p => categorize(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
@@ -1526,6 +1530,8 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
         ticketMedio: concluidos.length ? faturamento / concluidos.length : 0,
         variacao,
         byDay,
+        freteTotal,
+        descontoTotal,
       },
       contasReceber: { total: receber.total, count: receber.count, vencidas: receber.vencidas, vencidasValor: receber.vencidasValor || 0, ok: receber.ok, itens: receber.itens || [] },
       contasPagar:   { total: pagar.total,   count: pagar.count,   vencidas: pagar.vencidas,   vencidasValor: pagar.vencidasValor || 0,   ok: pagar.ok,   itens: pagar.itens || [] },
