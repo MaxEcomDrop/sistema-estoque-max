@@ -1609,6 +1609,21 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Margem por produto</span><span style="font-size:12px;color:var(--mu);margin-left:6px">(venda vs custo cadastrado no Bling)</span><div class="tr"><button class="bts" onclick="loadFinanceiro()">↻ Atualizar</button></div></div>
         <div class="vtable" id="fin-margin-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para carregar os dados financeiros.</p></div></div>
       </div>
+
+      <!-- Contas Customizadas (Controle de Caixa) -->
+      <div class="tcard" style="margin-top:0">
+        <div class="toolbar">
+          <span style="font-size:14px;font-weight:600;color:var(--tx)">Contas Customizadas</span>
+          <span style="font-size:12px;color:var(--mu);margin-left:6px">Controle de caixa: despesas e receitas extras</span>
+          <div class="tr">
+            <button class="bts" onclick="loadContasCustomizadas()">↻ Carregar</button>
+            <button class="btp" onclick="openNovaContaModal()">+ Nova conta</button>
+          </div>
+        </div>
+        <div id="fin-contas-custom" style="min-height:150px">
+          <div class="st-wrap"><p class="st-d">Clique em Carregar para listar contas customizadas.</p></div>
+        </div>
+      </div>
     </div>
 
     <!-- VIEW CLIENTES (CRM) -->
@@ -1834,6 +1849,53 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   <div class="mbox" style="width:440px;max-width:95vw">
     <div id="cli-ficha"></div>
     <div class="m-foot"><button class="bts" onclick="closeModal('cli-modal')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- NOVA/EDITAR CONTA CUSTOMIZADA -->
+<div class="modal" id="conta-modal" onclick="if(event.target===this)closeContaModal()">
+  <div class="mbox" style="width:420px;max-width:92vw">
+    <div class="m-title" id="conta-modal-title">Nova conta customizada</div>
+    <div style="display:grid;gap:12px;margin:20px 0">
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Tipo *</label>
+        <select id="conta-tipo" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+          <option value="">— Selecione —</option>
+          <option value="pagar">Conta a Pagar</option>
+          <option value="receber">Conta a Receber</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Categoria *</label>
+        <input type="text" id="conta-categoria" placeholder="Ex: Frete, Taxa, Aluguel..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Descrição</label>
+        <input type="text" id="conta-descricao" placeholder="Ex: Frete com Flex - Pedido #123..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Valor (R$) *</label>
+        <input type="number" id="conta-valor" placeholder="0.00" step="0.01" min="0" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Data de Vencimento</label>
+        <input type="date" id="conta-data-vencimento" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Status *</label>
+        <select id="conta-status" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+          <option value="pendente">Pendente</option>
+          <option value="pago">Pago</option>
+          <option value="recebido">Recebido</option>
+        </select>
+      </div>
+    </div>
+    <div id="conta-err" style="display:none;color:var(--er-t);font-size:12px;margin-bottom:12px;font-weight:500"></div>
+    <div class="m-foot">
+      <button class="btp" id="conta-save-btn" onclick="saveContaCustomizada()">Salvar</button>
+      <button class="bts" onclick="closeContaModal()">Cancelar</button>
+      <button class="bts" id="conta-del-btn" style="display:none;flex:0;background:var(--er-bg);color:var(--er-t)" onclick="deleteContaCustomizada()">Deletar</button>
+    </div>
   </div>
 </div>
 
@@ -4224,6 +4286,131 @@ function renderFinChart(byDay,inicio,fim){
     <line x1="${pad}" y1="${H}" x2="${W-10}" y2="${H}" stroke="var(--bord)" stroke-width="1"/>
     ${ytop}${ymid}${bars}
   </svg>`;
+}
+
+// ── CONTAS CUSTOMIZADAS ──────────────────────────
+let _contasCustomCache=[];
+let _contaEditorId=null;
+async function loadContasCustomizadas(){
+  const el=$('fin-contas-custom');
+  el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando contas customizadas…</p></div>';
+  try{
+    const r=await fetch('/api/contas/custom'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao carregar contas');
+    _contasCustomCache=d||[];
+    renderContasCustomizadas();
+  }catch(e){el.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderContasCustomizadas(){
+  const el=$('fin-contas-custom');
+  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma conta customizada. Clique em "+ Nova conta" para criar uma.</p></div>';return;}
+  const pagarList=_contasCustomCache.filter(c=>c.tipo==='pagar').sort((a,b)=>new Date(b.dataCriacao||0)-new Date(a.dataCriacao||0));
+  const receberList=_contasCustomCache.filter(c=>c.tipo==='receber').sort((a,b)=>new Date(b.dataCriacao||0)-new Date(a.dataCriacao||0));
+  const totalPagar=pagarList.reduce((a,c)=>a+(Number(c.valor)||0),0);
+  const totalReceber=receberList.reduce((a,c)=>a+(Number(c.valor)||0),0);
+  const renderLista=(titulo,lista,tipo)=>{
+    if(!lista.length)return '';
+    const total=tipo==='pagar'?totalPagar:totalReceber;
+    return`<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bord-l)">
+        <span style="font-weight:600;color:var(--tx)">${titulo}</span>
+        <span style="font-size:13px;font-weight:700;color:${tipo==='pagar'?'var(--er-t)':'var(--ok-t)'}">${fmt(total)}</span>
+      </div>
+      ${lista.map(c=>{
+        const statusBg=c.status==='pago'||c.status==='recebido'?'var(--ok-bg);color:var(--ok-t)':c.status==='pendente'?'var(--wa-bg);color:var(--wa-t)':'var(--bg);color:var(--mu)';
+        const statusTxt=c.status==='pago'?'Pago':c.status==='recebido'?'Recebido':'Pendente';
+        const dataVenc=c.dataVencimento?new Date(c.dataVencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+        return`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer" onclick="editContaCustomizada('${c.id}')">
+          <div style="min-width:0;flex:1">
+            <div style="font-weight:600;color:var(--tx)">${esc(c.categoria)}</div>
+            <div style="font-size:12px;color:var(--mu);margin-top:2px">${c.descricao?esc(c.descricao):dataVenc}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <span style="font-weight:700;color:var(--tx)">${fmt(Number(c.valor)||0)}</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${statusBg}">${statusTxt}</span>
+          </div>
+        </div>`;}).join('')}
+    </div>`;
+  };
+  el.innerHTML=renderLista('Contas a Pagar',pagarList,'pagar')+renderLista('Contas a Receber',receberList,'receber');
+}
+function openNovaContaModal(){
+  _contaEditorId=null;
+  $('conta-modal-title').textContent='Nova conta customizada';
+  $('conta-tipo').value='';
+  $('conta-categoria').value='';
+  $('conta-descricao').value='';
+  $('conta-valor').value='';
+  $('conta-data-vencimento').value='';
+  $('conta-status').value='pendente';
+  $('conta-err').style.display='none';
+  $('conta-del-btn').style.display='none';
+  openModal('conta-modal');
+  setTimeout(()=>$('conta-tipo').focus(),80);
+}
+function editContaCustomizada(id){
+  const c=_contasCustomCache.find(x=>x.id===id);
+  if(!c)return;
+  _contaEditorId=id;
+  $('conta-modal-title').textContent='Editar conta customizada';
+  $('conta-tipo').value=c.tipo||'';
+  $('conta-categoria').value=c.categoria||'';
+  $('conta-descricao').value=c.descricao||'';
+  $('conta-valor').value=c.valor||'';
+  $('conta-data-vencimento').value=c.dataVencimento||'';
+  $('conta-status').value=c.status||'pendente';
+  $('conta-err').style.display='none';
+  $('conta-del-btn').style.display='flex';
+  openModal('conta-modal');
+}
+function closeContaModal(){
+  closeModal('conta-modal');
+  _contaEditorId=null;
+}
+async function saveContaCustomizada(){
+  const tipo=$('conta-tipo').value.trim();
+  const categoria=$('conta-categoria').value.trim();
+  const descricao=$('conta-descricao').value.trim();
+  const valor=parseFloat($('conta-valor').value||0);
+  const dataVencimento=$('conta-data-vencimento').value;
+  const status=$('conta-status').value.trim();
+  const errEl=$('conta-err');
+  if(!tipo||!categoria||isNaN(valor)||valor<0){
+    errEl.textContent='Preencha os campos obrigatórios corretamente';
+    errEl.style.display='block';
+    return;
+  }
+  const btn=$('conta-save-btn');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    const payload={tipo,categoria,descricao,valor,dataVencimento,status};
+    const url=_contaEditorId?`/api/contas/custom/${_contaEditorId}`:'/api/contas/custom';
+    const method=_contaEditorId?'PUT':'POST';
+    const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao salvar');
+    closeContaModal();
+    await loadContasCustomizadas();
+    toast(_contaEditorId?'Conta atualizada com sucesso':'Conta criada com sucesso','ok');
+  }catch(e){
+    errEl.textContent=e.message;
+    errEl.style.display='block';
+  }finally{btn.disabled=false;btn.textContent=_contaEditorId?'Atualizar':'Salvar';}
+}
+async function deleteContaCustomizada(){
+  if(!_contaEditorId)return;
+  if(!confirm('Tem certeza que deseja deletar esta conta?'))return;
+  const btn=$('conta-save-btn');btn.disabled=true;btn.textContent='Deletando…';
+  try{
+    const r=await fetch(`/api/contas/custom/${_contaEditorId}`,{method:'DELETE'});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao deletar');
+    closeContaModal();
+    await loadContasCustomizadas();
+    toast('Conta deletada com sucesso','ok');
+  }catch(e){
+    $('conta-err').textContent=e.message;
+    $('conta-err').style.display='block';
+  }finally{btn.disabled=false;btn.textContent='Salvar';}
 }
 
 // ── CONFIRMAÇÃO DE SENHA (estilo Shopee) ─────────

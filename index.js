@@ -71,6 +71,16 @@ const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 // TODO: Persistir em banco de dados em produção
 const changeLog = [];
 
+// In-memory contas customizadas (despesas, receitas extras)
+// TODO: Persistir em banco de dados ou Firestore em produção
+const customContas = [];
+let contaIdCounter = 1;
+
+// In-memory calendário (eventos, feriados, datas importantes)
+// TODO: Persistir em banco de dados ou Firestore em produção
+const calendarEvents = [];
+let eventIdCounter = 1;
+
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;
 async function getDepositoId(token) {
@@ -1636,6 +1646,161 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 
 app.get('/api/historico', requireAuthJson, (req, res) => {
   res.json({ history: changeLog.slice().reverse().slice(0, 300) });
+});
+
+// ── Contas Customizadas (Despesas, Receitas, Controle de Caixa) ──────
+
+app.get('/api/contas/custom', requireAuthJson, (req, res) => {
+  const tipo = req.query.tipo; // 'pagar', 'receber', ou undefined para todas
+  let filtered = customContas;
+  if (tipo) filtered = filtered.filter(c => c.tipo === tipo);
+  res.json({ contas: filtered });
+});
+
+app.post('/api/contas/custom', requireAuthJson, (req, res) => {
+  const { tipo, descricao, valor, dataVencimento, categoria, observacao } = req.body;
+
+  if (!tipo || !['pagar', 'receber'].includes(tipo)) {
+    return sendErrorResponse(res, 400, 'Tipo inválido: use "pagar" ou "receber"');
+  }
+  if (!descricao || !valor) {
+    return sendErrorResponse(res, 400, 'Descrição e valor são obrigatórios');
+  }
+
+  const id = contaIdCounter++;
+  const conta = {
+    id,
+    tipo,
+    descricao,
+    valor: Number(valor),
+    dataVencimento: dataVencimento || new Date().toISOString().split('T')[0],
+    categoria: categoria || 'Outras',
+    observacao: observacao || '',
+    status: 'pendente',
+    criada_em: new Date().toISOString(),
+    atualizada_em: new Date().toISOString(),
+  };
+
+  customContas.push(conta);
+  changeLog.push({
+    id: changeLog.length + 1,
+    produto_id: `conta_${id}`,
+    produto_nome: descricao,
+    campo: `conta ${tipo}`,
+    valor_anterior: '—',
+    valor_novo: `${tipo === 'pagar' ? '-' : '+'}R$ ${valor}`,
+    timestamp: new Date().toISOString(),
+  });
+
+  res.json(conta);
+});
+
+app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const conta = customContas.find(c => c.id === id);
+
+    if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+
+    const { descricao, valor, dataVencimento, categoria, observacao, status } = req.body;
+
+    if (descricao) conta.descricao = descricao;
+    if (valor !== undefined) conta.valor = Number(valor);
+    if (dataVencimento) conta.dataVencimento = dataVencimento;
+    if (categoria) conta.categoria = categoria;
+    if (observacao !== undefined) conta.observacao = observacao;
+    if (status) conta.status = status;
+
+    conta.atualizada_em = new Date().toISOString();
+
+    changeLog.push({
+      id: changeLog.length + 1,
+      produto_id: `conta_${id}`,
+      produto_nome: conta.descricao,
+      campo: 'edição de conta',
+      valor_anterior: '—',
+      valor_novo: `status: ${status || conta.status}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json(conta);
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao atualizar conta', err.message);
+  }
+});
+
+app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const idx = customContas.findIndex(c => c.id === id);
+
+    if (idx === -1) return res.status(404).json({ error: 'Conta não encontrada' });
+
+    const conta = customContas[idx];
+    customContas.splice(idx, 1);
+
+    changeLog.push({
+      id: changeLog.length + 1,
+      produto_id: `conta_${id}`,
+      produto_nome: conta.descricao,
+      campo: 'exclusão de conta',
+      valor_anterior: conta.status,
+      valor_novo: 'excluída',
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao deletar conta', err.message);
+  }
+});
+
+// ── Calendário (Eventos, Feriados, Datas Importantes) ──────────────────
+
+app.get('/api/calendario', requireAuthJson, (req, res) => {
+  const mes = req.query.mes; // filtrar por mês (YYYY-MM)
+  let filtered = calendarEvents;
+  if (mes) filtered = filtered.filter(e => e.data.startsWith(mes));
+  res.json({ eventos: filtered });
+});
+
+app.post('/api/calendario', requireAuthJson, (req, res) => {
+  const { tipo, titulo, descricao, data, contaId } = req.body;
+
+  if (!tipo || !['feriado', 'comemorativo', 'vencimento', 'recebimento', 'evento'].includes(tipo)) {
+    return sendErrorResponse(res, 400, 'Tipo de evento inválido');
+  }
+  if (!titulo || !data) {
+    return sendErrorResponse(res, 400, 'Título e data são obrigatórios');
+  }
+
+  const id = eventIdCounter++;
+  const evento = {
+    id,
+    tipo,
+    titulo,
+    descricao: descricao || '',
+    data,
+    contaId: contaId || null,
+    criado_em: new Date().toISOString(),
+  };
+
+  calendarEvents.push(evento);
+  res.json(evento);
+});
+
+app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const idx = calendarEvents.findIndex(e => e.id === id);
+
+    if (idx === -1) return res.status(404).json({ error: 'Evento não encontrado' });
+
+    calendarEvents.splice(idx, 1);
+    res.json({ success: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao deletar evento', err.message);
+  }
 });
 
 // ── Webhook (Bling notificações) ──────────────────────────────────────
