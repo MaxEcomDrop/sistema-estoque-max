@@ -977,7 +977,7 @@ function slotAtual() {
   return 'jantar';
 }
 function checkCronSecret(req) {
-  if (!process.env.CRON_SECRET) return true; // sem secret configurado, libera (uso interno)
+  if (!process.env.CRON_SECRET) return false; // Fail-closed se secret não configurado
   return req.headers['x-cron-secret'] === process.env.CRON_SECRET || req.query.secret === process.env.CRON_SECRET;
 }
 function montaResumo(slot, { fat, lucro, nv, zerados, brl, temMargem }) {
