@@ -610,6 +610,46 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .conta-r-venc{font-size:11px;color:var(--fa);margin-top:1px}
 .conta-r-venc.vencida{color:var(--er-t);font-weight:600}
 .conta-r-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tx)}
+/* FLUXO DE CAIXA */
+.flow-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:14px}
+.flow-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0}
+.flow-item{padding:14px 12px;border-right:1px solid var(--bord-l);text-align:center;display:flex;flex-direction:column;gap:6px}
+.flow-item:last-child{border-right:none}
+.flow-ico{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;margin:0 auto;font-size:14px}
+.flow-in .flow-ico{background:rgba(5,150,105,.15);color:var(--ok-t)}
+.flow-out .flow-ico{background:rgba(220,38,38,.15);color:var(--er-t)}
+.flow-net .flow-ico{background:rgba(59,130,246,.15);color:var(--acc-t)}
+.flow-ico svg{width:15px;height:15px}
+.flow-lbl{font-size:11px;font-weight:600;color:var(--fa)}
+.flow-val{font-size:15px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums}
+.flow-in .flow-val{color:var(--ok-t)}.flow-out .flow-val{color:var(--er-t)}.flow-net .flow-val{color:var(--acc-t)}
+.flow-timeline{padding:12px 16px;border-top:1px solid var(--bord-l);max-height:120px;overflow-y:auto}
+.flow-day{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12px;border-bottom:1px solid var(--bord-l)}
+.flow-day:last-child{border-bottom:none}
+.flow-day-date{color:var(--mu);font-weight:500}
+.flow-day-vals{display:flex;gap:16px}
+.flow-day-in{color:var(--ok-t);font-weight:600}.flow-day-out{color:var(--er-t);font-weight:600}
+/* CONTAS VENCIDAS */
+.venc-wrap{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:14px}
+.venc-list{max-height:140px;overflow-y:auto}
+.venc-item{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bord-l);font-size:12px;gap:10px}
+.venc-item:last-child{border-bottom:none}
+.venc-info{min-width:0;flex:1}
+.venc-tipo{font-size:10px;color:var(--mu);font-weight:600;text-transform:uppercase;margin-bottom:1px}
+.venc-desc{color:var(--tx);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.venc-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--er-bg);color:var(--er-t);white-space:nowrap}
+.venc-val{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tx)}
+/* CALENDÁRIO PREVIEW */
+.cal-preview{background:var(--surf);border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:14px}
+.cal-list{max-height:140px;overflow-y:auto}
+.cal-item{display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--bord-l);align-items:flex-start}
+.cal-item:last-child{border-bottom:none}
+.cal-date{display:flex;flex-direction:column;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;background:var(--bg);font-weight:700;font-size:11px;color:var(--tx);flex-shrink:0;border:1px solid var(--bord-l)}
+.cal-date-day{font-size:13px;line-height:1}.cal-date-mês{font-size:9px;color:var(--mu);margin-top:1px}
+.cal-content{flex:1;min-width:0}
+.cal-tipo{font-size:10px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:2px}
+.cal-titulo{font-size:12px;font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-desc{font-size:11px;color:var(--fa);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes dashIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .dash-kpis .dk-card:nth-child(1){animation-delay:.04s}.dash-kpis .dk-card:nth-child(2){animation-delay:.08s}
 .dash-kpis .dk-card:nth-child(3){animation-delay:.12s}.dash-kpis .dk-card:nth-child(4){animation-delay:.16s}
@@ -1138,6 +1178,47 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <span class="conta-tot" id="dash-pagar-tot" style="color:var(--er-t)">—</span>
           </div>
           <div class="conta-body" id="dash-pagar-list"><div class="st-wrap" style="padding:24px"><p class="st-d">Carregando…</p></div></div>
+        </div>
+      </div>
+
+      <!-- FLUXO DE CAIXA (próximos 7 dias) -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg> Fluxo de caixa (próximos 7 dias)</div>
+      <div class="flow-wrap">
+        <div class="flow-summary">
+          <div class="flow-item flow-in">
+            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></div>
+            <div class="flow-lbl">A Receber</div>
+            <div class="flow-val" id="dash-flow-receber">—</div>
+          </div>
+          <div class="flow-item flow-out">
+            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+            <div class="flow-lbl">A Pagar</div>
+            <div class="flow-val" id="dash-flow-pagar">—</div>
+          </div>
+          <div class="flow-item flow-net">
+            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+            <div class="flow-lbl">Saldo Líquido</div>
+            <div class="flow-val" id="dash-flow-liquido">—</div>
+          </div>
+        </div>
+        <div class="flow-timeline" id="dash-flow-timeline">
+          <div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Carregando fluxo de caixa…</p></div>
+        </div>
+      </div>
+
+      <!-- CONTAS PRÓXIMAS A VENCER -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Contas próximas a vencer</div>
+      <div class="venc-wrap">
+        <div class="venc-list" id="dash-venc-list">
+          <div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Carregando contas…</p></div>
+        </div>
+      </div>
+
+      <!-- PRÓXIMAS DATAS IMPORTANTES (Calendário) -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Próximas datas importantes</div>
+      <div class="cal-preview">
+        <div class="cal-list" id="dash-cal-preview">
+          <div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhum evento cadastrado</p></div>
         </div>
       </div>
 
@@ -2492,6 +2573,10 @@ async function loadDashboard(force=false){
     setTxt('dash-vencidas',fmtN((cr.vencidas||0)+(cp.vencidas||0)));
     renderContasList('dash-receber-list',cr,'receber');
     renderContasList('dash-pagar-list',cp,'pagar');
+    // Novos cards: Fluxo de Caixa, Contas Vencidas, Calendário
+    renderFluxoCaixa(cr,cp);
+    renderContasVencidas(cr,cp);
+    renderCalendarPreview();
     renderDashSparkline(v.byDay||{});
   }catch(e){
     _dashLoaded=false;
@@ -2586,6 +2671,63 @@ function renderContasList(elId,conta,tipo){
   el.innerHTML=itens.map(c=>{
     const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
     return `<div class="conta-row"><div class="conta-r-info"><div class="conta-r-nome">${esc(c.contato||'—')}</div><div class="conta-r-venc${c.vencida?' vencida':''}">${c.vencida?'⚠ Vencida · ':''}vence ${venc}</div></div><div class="conta-r-val">${fmt(c.valor)}</div></div>`;
+  }).join('');
+}
+function renderFluxoCaixa(cr={},cp={}){
+  const crVals=cr.itens||[];
+  const cpVals=cp.itens||[];
+  const hoje=new Date();
+  const proximos7=new Date(hoje.getTime()+7*86400000);
+  const crProx=crVals.filter(c=>c.vencimento&&new Date(c.vencimento+'T23:59:59')>=hoje&&new Date(c.vencimento+'T23:59:59')<=proximos7);
+  const cpProx=cpVals.filter(c=>c.vencimento&&new Date(c.vencimento+'T23:59:59')>=hoje&&new Date(c.vencimento+'T23:59:59')<=proximos7);
+  const totalReceber=crProx.reduce((a,c)=>a+(Number(c.valor)||0),0);
+  const totalPagar=cpProx.reduce((a,c)=>a+(Number(c.valor)||0),0);
+  const liquido=totalReceber-totalPagar;
+  $('dash-flow-receber').textContent=fmt(totalReceber);
+  $('dash-flow-pagar').textContent=fmt(totalPagar);
+  $('dash-flow-liquido').textContent=fmt(liquido);
+  if(liquido<0)$('dash-flow-liquido').style.color='var(--er-t)';
+  else if(liquido>0)$('dash-flow-liquido').style.color='var(--ok-t)';
+  else $('dash-flow-liquido').style.color='var(--tx)';
+  const timelineEl=$('dash-flow-timeline');if(!timelineEl)return;
+  const allVals=[...crProx.map(c=>({...c,tipo:'receber'})),...cpProx.map(c=>({...c,tipo:'pagar'}))];
+  const byDate={};
+  allVals.forEach(c=>{
+    if(!byDate[c.vencimento])byDate[c.vencimento]={in:0,out:0};
+    byDate[c.vencimento][c.tipo==='receber'?'in':'out']+=Number(c.valor)||0;
+  });
+  const sorted=Object.entries(byDate).sort((a,b)=>new Date(a[0])-new Date(b[0])).slice(0,7);
+  if(!sorted.length){timelineEl.innerHTML='<div class="st-wrap" style="padding:8px"><p class="st-d" style="font-size:12px">Nada previsto para os próximos 7 dias</p></div>';return;}
+  timelineEl.innerHTML=sorted.map(([data,vals])=>{
+    const d=new Date(data+'T12:00:00');
+    const lbl=d.toLocaleDateString('pt-BR',{month:'short',day:'numeric'});
+    return`<div class="flow-day"><span class="flow-day-date">${lbl}</span><div class="flow-day-vals"><span class="flow-day-in">+${fmt(vals.in)}</span><span class="flow-day-out">−${fmt(vals.out)}</span></div></div>`;
+  }).join('');
+}
+function renderContasVencidas(cr={},cp={}){
+  const el=$('dash-venc-list');if(!el)return;
+  const crVals=cr.itens||[];
+  const cpVals=cp.itens||[];
+  const vencidas=[...crVals.filter(c=>c.vencida).map(c=>({...c,tipo:'receber'})),...cpVals.filter(c=>c.vencida).map(c=>({...c,tipo:'pagar'}))];
+  if(!vencidas.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhuma conta vencida 🎉</p></div>';return;}
+  el.innerHTML=vencidas.slice(0,5).map(c=>{
+    const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
+    return`<div class="venc-item"><div class="venc-info"><div class="venc-tipo">${c.tipo==='receber'?'A Receber':'A Pagar'}</div><div class="venc-desc">${esc(c.contato||'—')}</div></div><div class="venc-val">${fmt(c.valor)}</div><div class="venc-badge">Vencida</div></div>`;
+  }).join('');
+}
+function renderCalendarPreview(){
+  const el=$('dash-cal-preview');if(!el)return;
+  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhum evento cadastrado. Crie eventos na aba Financeiro.</p></div>';return;}
+  const hoje=new Date();
+  const proximos30=new Date(hoje.getTime()+30*86400000);
+  const eventos=_contasCustomCache.filter(c=>c.dataVencimento&&new Date(c.dataVencimento+'T23:59:59')>=hoje&&new Date(c.dataVencimento+'T23:59:59')<=proximos30);
+  if(!eventos.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhum evento nos próximos 30 dias</p></div>';return;}
+  el.innerHTML=eventos.slice(0,4).map(e=>{
+    const d=new Date(e.dataVencimento+'T12:00:00');
+    const dia=d.getDate();
+    const mes=d.toLocaleDateString('pt-BR',{month:'short'}).substring(0,3);
+    const tipoIco=e.tipo==='pagar'?'📤':e.tipo==='receber'?'📥':'📅';
+    return`<div class="cal-item"><div class="cal-date"><div class="cal-date-day">${dia}</div><div class="cal-date-mês">${mes}</div></div><div class="cal-content"><div class="cal-tipo">${e.tipo===  'pagar'?'A Pagar':e.tipo==='receber'?'A Receber':'Evento'}</div><div class="cal-titulo">${esc(e.categoria)}</div><div class="cal-desc">${e.descricao?esc(e.descricao.substring(0,40)):fmt(Number(e.valor)||0)}</div></div></div>`;
   }).join('');
 }
 
