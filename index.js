@@ -1336,6 +1336,7 @@ app.get('/api/cron/estoque', async (req, res) => {
 
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
 app.get('/api/cron/push', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   const admin = getAdmin();
   if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
   try {
