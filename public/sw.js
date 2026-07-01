@@ -1,7 +1,6 @@
-// Estoque Max — Service Worker v5 — Cache Busting Forçado
-// IMPORTANT: Increment version on every deploy to force cache invalidation
-const SW_VERSION = 'em-v5-' + Date.now();
-
+// Estoque Max — Service Worker v6 — Cache Busting Forçado
+// TIMESTAMP: 1719804000000
+const SW_VERSION = 'em-v6-' + Date.now();
 // Precache apenas o manifest (HTML será servido sempre da rede)
 const PRECACHE = ['/manifest.json'];
 
