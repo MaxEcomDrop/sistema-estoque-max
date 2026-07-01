@@ -251,14 +251,16 @@ tbody tr:hover { background: var(--bg-hover); }
   background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100;
   opacity: 0; pointer-events: none; transition: 0.2s;
 }
-.edraw-ov.on { opacity: 1; pointer-events: auto; }
+.edraw-ov.on, .edraw-ov.open { opacity: 1; pointer-events: auto; }
 .edraw {
   position: fixed; top: 0; right: 0; width: 100%; max-width: 480px; height: 100%;
   background: var(--bg); border-left: 1px solid var(--border);
   z-index: 101; transform: translateX(100%); transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex; flex-direction: column;
 }
-.edraw.on { transform: translateX(0); }
+.edraw.on, .edraw.open { transform: translateX(0); }
+/* Mais menu reaproveita .edraw como bottom-sheet (transform inline translateY) */
+#mais-menu.on, #mais-menu.open { transform: translateY(0) !important; }
 .edraw-hd {
   padding: 16px 24px; border-bottom: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: center;
@@ -351,3 +353,22 @@ tbody tr:hover { background: var(--bg-hover); }
   font-size: 13px; color: var(--text);
 }
 #pwa-install-bar button { height: 28px; font-size: 12px; }
+
+/* ── CALENDÁRIO ── */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 8px; }
+.cal-dow { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-d); padding: 4px 0; text-transform: uppercase; }
+.cal-day {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--rad-s);
+  min-height: 72px; padding: 6px; font-size: 12px; color: var(--text-m); cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px; transition: 0.15s;
+}
+.cal-day:hover { border-color: var(--border-h); background: var(--bg-hover); }
+.cal-day.empty { background: transparent; border: none; cursor: default; }
+.cal-day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.cal-day-num { font-weight: 600; color: var(--text); }
+.cal-ev { font-size: 10px; padding: 1px 5px; border-radius: 4px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev.t-evento { background: var(--accent); }
+.cal-ev.t-vencimento { background: var(--er); }
+.cal-ev.t-recebimento { background: var(--ok); }
+.cal-ev.t-comemorativo { background: var(--wa); }
+.cal-ev.t-feriado { background: var(--primary); }
