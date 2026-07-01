@@ -94,6 +94,38 @@ function safeEqual(a, b) {
   } catch { return false; }
 }
 
+// Rate limit simples em memória para /api/auth/login (proteção contra brute force)
+const _loginAttempts = new Map(); // ip -> { count, firstAt }
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function loginRateLimit(req, res, next) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = _loginAttempts.get(ip);
+  if (entry && now - entry.firstAt < LOGIN_WINDOW_MS) {
+    if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+      const waitMin = Math.ceil((LOGIN_WINDOW_MS - (now - entry.firstAt)) / 60000);
+      return sendErrorResponse(res, 429, `Muitas tentativas de login. Tente novamente em ${waitMin} minuto(s).`);
+    }
+  } else {
+    _loginAttempts.set(ip, { count: 0, firstAt: now });
+  }
+  next();
+}
+
+function registerLoginFailure(req) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const entry = _loginAttempts.get(ip) || { count: 0, firstAt: Date.now() };
+  entry.count += 1;
+  _loginAttempts.set(ip, entry);
+}
+
+function clearLoginFailures(req) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  _loginAttempts.delete(ip);
+}
+
 function requireAuth(req, res, next) {
   try { jwt.verify(req.cookies?.system_token || '', JWT_SECRET); next(); }
   catch { res.clearCookie('system_token'); res.redirect('/login'); }
@@ -241,7 +273,7 @@ app.use(express.static('public', { index: false }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginRateLimit, (req, res) => {
   const { email, password } = req.body || {};
 
   if (!email || !password) {
@@ -255,10 +287,12 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
+    registerLoginFailure(req);
     return sendErrorResponse(res, 401, 'Email ou senha incorretos');
   }
 
   try {
+    clearLoginFailures(req);
     const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('system_token', token, {
       httpOnly: true,
