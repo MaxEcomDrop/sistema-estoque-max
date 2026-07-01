@@ -15,13 +15,13 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-h: rgba(255, 255, 255, 0.15);
   
-  --primary: #ffffff;
-  --primary-bg: #ffffff;
-  --primary-text: #000000;
-  --primary-h: #e5e5e5;
+  --primary: #8b5cf6;
+  --primary-bg: #8b5cf6;
+  --primary-text: #ffffff;
+  --primary-h: #a78bfa;
   
-  --accent: #4f46e5;
-  --accent-h: #4338ca;
+  --accent: #6366f1;
+  --accent-h: #8b5cf6;
   --accent-light: rgba(79, 70, 229, 0.15);
 
   /* Status */

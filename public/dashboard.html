@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <!-- Auth Check -->
+  <script>if(!document.cookie.includes('token=')){window.location.href='/login.html';}</script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Estoque Max</title>
@@ -543,7 +546,7 @@ function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.classNam
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
 
 // ── THEME/SIDEBAR ──────────────────────────────────
-function effectiveDark(){return S.theme==='dark'||(S.theme==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches);}
+function effectiveDark(){return true;}
 function applyTheme(){document.documentElement.setAttribute('data-theme',effectiveDark()?'dark':'light');updateThemeButtons();}
 function setTheme(t){S.theme=t;localStorage.setItem('theme',t);applyTheme();}
 function toggleDark(){setTheme(effectiveDark()?'light':'dark');}
@@ -1043,11 +1046,11 @@ function setTabPedidos(status,btn){
 }
 async function loadPedidos(){
   const body=$('pedidos-body');
-  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando pedidos…</p></div>';
+  body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Carregando pedidos…</p></div></td></tr>';
   try{
     const r=await fetch('/api/pedidos'),d=await r.json();
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
-      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+      body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div></td></tr>';return;
     }
     _pedidosCache=d.pedidos||[];
     // Atualiza contadores das abas
@@ -1072,12 +1075,11 @@ function renderPedidosTable(status){
   const list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
   if(!list.length){
     body.innerHTML=`
-      <div class="empty-state">
+      <tr><td colspan="10"><div class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         <h3>Nenhum pedido</h3>
         <p>Não há pedidos ${status==='all'?'encontrados':status} no período.</p>
-      </div>
-    `;
+      </div></td></tr>`;
     return;
   }
   const rows=list.map(p=>{
@@ -1102,25 +1104,25 @@ function renderPedidosTable(status){
       <td><span class="sb2 ${sb}">${esc(p.situacao)}</span></td>
     </tr>`;
   }).join('');
-  body.innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th style="width:70px">#</th><th style="width:80px">Data</th><th>Cliente</th><th class="r" style="width:90px">Bruto / Taxas</th><th class="r" style="width:130px">Lucro Líquido</th><th style="width:110px">Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  body.innerHTML = rows;
 }
 async function loadHistorico(){
-  const body=$('historico-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  const body=$('historico-body');body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Carregando…</p></div></td></tr>';
   try{
     const r=await fetch('/api/historico'),d=await r.json();
     const hist=d.history||[];
-    if(!hist.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma alteração registrada nesta sessão.</p></div>';return;}
-    body.innerHTML=`<table><thead><tr><th>Produto</th><th>Campo</th><th>Antes</th><th>Depois</th><th>Quando</th></tr></thead><tbody>${hist.map(h=>`<tr><td>${esc(h.produto_nome)}</td><td><span class="h-campo">${esc(h.campo)}</span></td><td class="h-from">${esc(h.valor_anterior)}</td><td class="h-to">${esc(h.valor_novo)}</td><td style="color:var(--fa);font-size:12px">${new Date(h.timestamp).toLocaleString('pt-BR')}</td></tr>`).join('')}</tbody></table>`;
+    if(!hist.length){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Nenhuma alteração registrada nesta sessão.</p></div></td></tr>';return;}
+    body.innerHTML = hist.map(h=>`<tr><td>${esc(h.produto_nome)}</td><td><span class="h-campo">${esc(h.campo)}</span></td><td class="h-from">${esc(h.valor_anterior)}</td><td class="h-to">${esc(h.valor_novo)}</td><td style="color:var(--fa);font-size:12px">${new Date(h.timestamp).toLocaleString('pt-BR')}</td></tr>`).join('');
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 async function loadNotas(){
-  const body=$('notas-body');body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  const body=$('notas-body');body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Carregando…</p></div></td></tr>';
   try{
     const r=await fetch('/api/notas-fiscais'),d=await r.json();
-    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;}
+    if(r.status===401&&d.code==='BLING_NOT_CONNECTED'){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div></td></tr>';return;}
     const notas=d.notas||[];
-    if(!notas.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div>';return;}
-    body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${notas.map(n=>{const s=(n.situacao||'').toLowerCase();const cls=s.includes('autoriza')?'nfe-ok':s.includes('cancel')?'nfe-can':'nfe-pen';return`<tr><td><span class="sku">${n.numero||n.id}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td class="${cls}">${esc(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,20)+'…':'—'}</span></td></tr>`;}).join('')}</tbody></table>`;
+    if(!notas.length){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Nenhuma nota fiscal encontrada.</p></div></td></tr>';return;}
+    body.innerHTML = notas.map(n=>{const s=(n.situacao||'').toLowerCase();const cls=s.includes('autoriza')?'nfe-ok':s.includes('cancel')?'nfe-can':'nfe-pen';return`<tr><td><span class="sku">${n.numero||n.id}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td class="${cls}">${esc(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,20)+'…':'—'}</span></td></tr>`;}).join('');
   }catch(e){body.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 
@@ -1152,8 +1154,8 @@ function renderReport(){
   $('rep-ticket').textContent=ps.length?fmt(ps.reduce((a,p)=>a+p.preco,0)/ps.length):'—';
   const zero=ps.filter(p=>p.estoque===0).sort((a,b)=>b.preco-a.preco);
   const body=$('rep-body');
-  if(!zero.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto zerado.</p></div>';return;}
-  body.innerHTML=`<table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th style="text-align:right">Preço</th></tr></thead><tbody>${zero.slice(0,100).map(p=>`<tr><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('')}</tbody></table>`;
+  if(!zero.length){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Nenhum produto zerado.</p></div></td></tr>';return;}
+  body.innerHTML = zero.slice(0,100).map(p=>`<tr><td><span class="sku">${esc(p.codigo||'—')}</span></td><td>${esc(p.nome)}</td><td><span class="ctag">${esc(p.categoria||'—')}</span></td><td style="text-align:right;font-weight:500;font-variant-numeric:tabular-nums">${fmt(p.preco)}</td></tr>`).join('');
 }
 
 // ── MODALS ───────────────────────────────────────
@@ -1349,7 +1351,7 @@ function setFinPeriod(p,btn){
 }
 async function loadFinanceiro(){
   const body=$('fin-margin-body');
-  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados financeiros…</p></div>';
+  body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Carregando dados financeiros…</p></div></td></tr>';
   ['fin-bruto','fin-rec','fin-cancelado','fin-pend-val','fin-frete','fin-ticket','fin-desconto','fin-total'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
   ['fin-sub-total','fin-sub-conc','fin-sub-canc','fin-sub-pend'].forEach(id=>{const el=$(id);if(el)el.textContent='…';});
   try{
@@ -1361,7 +1363,7 @@ async function loadFinanceiro(){
     }
     const r=await fetch(url),d=await r.json();
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
-      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+      body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div></td></tr>';return;
     }
     if(!r.ok)throw new Error(d.error||'Erro');
     // KPI Row 1
@@ -1389,7 +1391,7 @@ async function loadFinanceiro(){
     renderFinChart(d.byDay||{},d.periodo?.inicio,d.periodo?.fim);
     // Margem table
     const prods=S.products.filter(p=>p.precoCusto>0&&p.preco>0).sort((a,b)=>{const ma=(a.preco-a.precoCusto)/a.preco;const mb=(b.preco-b.precoCusto)/b.preco;return ma-mb;});
-    if(!prods.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div>';return;}
+    if(!prods.length){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Preencha o custo dos produtos no editor para ver as margens.</p></div></td></tr>';return;}
     body.innerHTML=`<table><thead><tr><th>Produto</th><th class="r">Custo</th><th class="r">Preço venda</th><th class="r">Lucro unit.</th><th class="r">Margem</th></tr></thead><tbody>${
       prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
       return`<tr><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
@@ -1510,11 +1512,11 @@ let _clientesLoaded=false;
 async function loadClientes(force=false){
   if(_clientesLoaded&&!force){renderClientes();return;}
   const body=$('clientes-body');
-  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando clientes…</p></div>';
+  body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Carregando clientes…</p></div></td></tr>';
   try{
     const r=await fetch('/api/clientes'),d=await r.json();
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
-      body.innerHTML='<div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div>';return;
+      body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-t">Bling não conectado</p><button class="st-btn" onclick="window.location.href=\'/\'">Conectar</button></div></td></tr>';return;
     }
     if(!r.ok)throw new Error(d.error||'Erro');
     _clientesCache=d.clientes||[];_clientesLoaded=true;
@@ -1544,7 +1546,7 @@ function renderClientes(){
   $('cli-top').textContent=top&&top.totalGasto>0?top.nome.substring(0,22):'—';
   $('cli-top-sub').textContent=top&&top.totalGasto>0?fmt(top.totalGasto):'sem compras (90d)';
   const body=$('clientes-body');
-  if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum cliente encontrado.</p></div>';return;}
+  if(!list.length){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Nenhum cliente encontrado.</p></div></td></tr>';return;}
   const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
   const isRank=sort==='gasto'&&!q&&!uf&&!tipo;
   body.innerHTML=`<table><thead><tr><th style="width:40px">#</th><th>Cliente</th><th>Cidade/UF</th><th class="r">Pedidos</th><th class="r">Total gasto</th><th>Último</th></tr></thead><tbody>${
@@ -1669,14 +1671,14 @@ async function sendOrScheduleNotif(){
 }
 async function loadNotificacoes(){
   const body=$('notif-history-body');
-  body.innerHTML='<div class="st-wrap"><p class="st-d">Carregando…</p></div>';
+  body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Carregando…</p></div></td></tr>';
   try{
     const r=await fetch('/api/notif/history'),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     const si=$('nt-sub-info');
     if(si)si.textContent=`${d.subscribers||0} dispositivo(s) inscrito(s)`;
     const list=d.history||[];
-    if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma notificação enviada ou agendada.</p></div>';return;}
+    if(!list.length){body.innerHTML='<tr><td colspan="10"><div class="st-wrap"><p class="st-d">Nenhuma notificação enviada ou agendada.</p></div></td></tr>';return;}
     body.innerHTML=list.map(n=>{
       const isSched=n.status==='scheduled';
       const isErr=n.status==='error';
