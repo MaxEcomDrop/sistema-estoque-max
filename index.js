@@ -2157,7 +2157,6 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
 
 // ── Integração Mercado Livre Avançada ────────────────────────────────
 app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
@@ -2167,7 +2166,7 @@ app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
     const from = new Date(); from.setDate(from.getDate() - 30);
     const fromStr = from.toISOString();
     // Buscar ordens recentes
-    const { data: orders } = await axios.get(https://api.mercadolibre.com/orders/search?seller=&order.date_created.from=, { headers: mlHeaders(ml.token) });
+    const { data: orders } = await axios.get(https://api.mercadolibre.com/orders/search?seller= + ml.sellerId + &order.date_created.from= + fromStr, { headers: mlHeaders(ml.token) });
     
     // Obter todos os detalhes e taxas não é trivial com 1 req, mas orders.results tem .total_amount e .paid_amount
     // Para simplificar, retornaremos a lista basica e processaremos no dashboard
@@ -2186,7 +2185,7 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
   const fromStr = from.toISOString();
 
   try {
-    const { data: ordersData } = await axios.get(https://api.mercadolibre.com/orders/search?seller=&order.date_created.from=, { headers: mlHeaders(ml.token) });
+    const { data: ordersData } = await axios.get(https://api.mercadolibre.com/orders/search?seller= + ml.sellerId + &order.date_created.from= + fromStr, { headers: mlHeaders(ml.token) });
     
     let faturamento = 0;
     let taxas = 0;
@@ -2217,3 +2216,5 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+module.exports = app;
