@@ -64,6 +64,18 @@ const NODE_ENV            = process.env.NODE_ENV || 'development';
 // In-memory change log (resets on cold start)
 // TODO: Persistir em banco de dados em produção
 const changeLog = [];
+function pushLog(logData) {
+  const admin = getAdmin();
+  if (admin) {
+    admin.firestore().collection('historico').add({
+      ...logData,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    }).catch(console.error);
+  } else {
+    logData.timestamp = new Date().toISOString();
+    pushLog(logData);
+  }
+}
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;
@@ -266,7 +278,7 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
   res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
 });
 
-app.get('/api/webhook/bling', async (req, res) => {
+app.get('/api/auth/callback', async (req, res) => {
   const { code, error } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
@@ -362,7 +374,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
-    changeLog.push({
+    pushLog({
       id: changeLog.length + 1, produto_id: criado?.id || '—',
       produto_nome: req.body.nome || 'Novo produto', campo: 'criação',
       valor_anterior: '—', valor_novo: req.body.nome || '—',
@@ -494,7 +506,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      changeLog.push({
+      pushLog({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: _fullUpdate.nome || `#${id}`, campo: 'edição completa',
         valor_anterior: '—', valor_novo: 'campos atualizados',
@@ -520,7 +532,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { ...prod, preco: Number(preco) },
         { headers: blingHeaders(token) }
       );
-      changeLog.push({
+      pushLog({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'preço',
         valor_anterior: valor_anterior || '—',
@@ -534,7 +546,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
         { headers: blingHeaders(token) }
       );
-      changeLog.push({
+      pushLog({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'estoque',
         valor_anterior: valor_anterior || '—',
@@ -577,7 +589,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
       }
-      changeLog.push({
+      pushLog({
         id: changeLog.length + 1,
         produto_id: p.id,
         produto_nome: p.nome || `#${p.id}`,
@@ -907,7 +919,7 @@ app.get('/api/cron/resumo', async (req, res) => {
     const { title, body } = montaResumo(slot, { fat, lucro: fat * prod.margem, nv: concl.length, zerados: prod.zerados, brl, temMargem: prod.margem > 0 });
     const sent = await pushParaTodos(admin, { title, body, tipo: 'resumo' });
     res.json({ ok: true, slot, sent, fat, nv: concl.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message }); }
 });
 
 // Cron: alerta de estoque zerado/crítico
@@ -923,7 +935,7 @@ app.get('/api/cron/estoque', async (req, res) => {
     const body = `${prod.zerados} produto(s) zerado(s)` + (prod.criticos ? ` e ${prod.criticos} crítico(s) (≤5)` : '') + '. Toque para repor.';
     const sent = await pushParaTodos(admin, { title: '⚠️ Alerta de estoque', body, tipo: 'estoque' });
     res.json({ ok: true, sent, zerados: prod.zerados, criticos: prod.criticos });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message }); }
 });
 
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
@@ -954,7 +966,7 @@ app.get('/api/cron/push', async (req, res) => {
         batch.update(doc.ref, { status: 'sent', sent: successCount, sentAt: admin.firestore.FieldValue.serverTimestamp() });
         sent++;
       } catch (e) {
-        batch.update(doc.ref, { status: 'error', error: e.message });
+        batch.update(doc.ref, { status: 'error', error: process.env.NODE_ENV === 'production' ? 'Erro interno no servidor' : e.message });
       }
     }
     await batch.commit();
