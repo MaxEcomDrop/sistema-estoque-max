@@ -10,15 +10,21 @@ Sistema pronto para produção! Siga este guia para colocar sua aplicação no a
 1. Acesse [Bling.com.br](https://www.bling.com.br)
 2. Vá em **Configurações → Integrações → Chaves de Acesso**
 3. Copie:
-   - **Client ID**: `56f15479eddae7460b8028e56f2d5f8a64970fe0`
-   - **Client Secret**: `ef779c0b849b7ef04446320077e5a109e9e3c81c9abe8b9c0d437759b43b`
+   - **Client ID**: `SEU_CLIENT_ID_AQUI`
+   - **Client Secret**: `SEU_CLIENT_SECRET_AQUI`
 
 **Configure no Bling:**
 1. Vá em **Configurações → Integrações → Aplicações**
 2. Crie uma nova aplicação ou edite a existente
-3. Configure as URLs:
+3. Configure as URLs (troque pelo domínio real do seu projeto no Vercel):
    - **URL de Callback**: `https://sistema-estoque-max.vercel.app/api/auth/callback`
    - **URL de Webhook**: `https://sistema-estoque-max.vercel.app/api/webhook/bling`
+
+**Configure no Mercado Livre (opcional):**
+1. Crie um app em https://developers.mercadolivre.com.br/
+2. **URL de Redirect**: `https://sistema-estoque-max.vercel.app/api/ml/callback`
+
+**IMPORTANTE:** a URL de callback/redirect cadastrada no Bling e no Mercado Livre precisa ser **idêntica, caractere por caractere**, ao valor de `BLING_REDIRECT_URI`/`ML_REDIRECT_URI` configurado no Vercel. Qualquer diferença causa o erro `redirect_uri_mismatch`.
 
 ### 2️⃣ Deploy no Vercel
 
@@ -47,11 +53,21 @@ No dashboard do Vercel:
 3. Adicione:
 
 ```env
-BLING_CLIENT_ID=56f15479eddae7460b8028e56f2d5f8a64970fe0
-BLING_CLIENT_SECRET=ef779c0b849b7ef04446320077e5a109e9e3c81c9abe8b9c0d437759b43b
+BLING_CLIENT_ID=SEU_CLIENT_ID_AQUI
+BLING_CLIENT_SECRET=SEU_CLIENT_SECRET_AQUI
 BLING_REDIRECT_URI=https://sistema-estoque-max.vercel.app/api/auth/callback
+ADMIN_EMAIL=seu@email.com
+ADMIN_PASSWORD=defina_uma_senha_forte
 JWT_SECRET=gerar-chave-aleatoria-aqui
 NODE_ENV=production
+
+# Opcional — Mercado Livre (sem isso a aba fica desativada)
+ML_CLIENT_ID=
+ML_CLIENT_SECRET=
+ML_REDIRECT_URI=https://sistema-estoque-max.vercel.app/api/ml/callback
+
+# Opcional — login com Google e persistência do token do Mercado Livre
+FIREBASE_SERVICE_ACCOUNT=
 ```
 
 **Gerar JWT_SECRET:**

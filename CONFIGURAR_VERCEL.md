@@ -12,8 +12,8 @@
 1. Acesse: https://www.bling.com.br
 2. Vá em **Configurações → Integrações → Chaves de Acesso**
 3. Anote:
-   - **Client ID**: `56f15479eddae7460b8028e56f2d5f8a64970fe0`
-   - **Client Secret**: `ef779c0b849b7ef04446320077e5a109e9e3c81c9abe8b9c0d437759b43b`
+   - **Client ID**: `SEU_CLIENT_ID_AQUI`
+   - **Client Secret**: `SEU_CLIENT_SECRET_AQUI`
 
 ### Passo 2: Configure no Vercel Dashboard
 
@@ -21,18 +21,41 @@
 2. Selecione seu projeto: `sistema-estoque-max`
 3. Clique em **Settings**
 4. Vá em **Environment Variables**
-5. Adicione estas 3 variáveis:
+5. Adicione estas variáveis (troque `sistema-estoque-max.vercel.app` pelo domínio real do seu projeto, se for diferente):
 
 ```
 Nome: BLING_CLIENT_ID
-Valor: 56f15479eddae7460b8028e56f2d5f8a64970fe0
+Valor: SEU_CLIENT_ID_AQUI
 
 Nome: BLING_CLIENT_SECRET
-Valor: ef779c0b849b7ef04446320077e5a109e9e3c81c9abe8b9c0d437759b43b
+Valor: SEU_CLIENT_SECRET_AQUI
 
 Nome: BLING_REDIRECT_URI
 Valor: https://sistema-estoque-max.vercel.app/api/auth/callback
+
+Nome: ADMIN_EMAIL
+Valor: seu@email.com
+
+Nome: ADMIN_PASSWORD
+Valor: defina_uma_senha_forte
+
+Nome: JWT_SECRET
+Valor: (gere com: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 ```
+
+**Opcional — Mercado Livre** (aba fica desativada sem isso, mostrando erro ao clicar em "Conectar"):
+```
+Nome: ML_CLIENT_ID
+Valor: obtenha em https://developers.mercadolivre.com.br/
+
+Nome: ML_CLIENT_SECRET
+Valor: obtenha em https://developers.mercadolivre.com.br/
+
+Nome: ML_REDIRECT_URI
+Valor: https://sistema-estoque-max.vercel.app/api/ml/callback
+```
+
+**IMPORTANTE:** a URL cadastrada aqui em `BLING_REDIRECT_URI`/`ML_REDIRECT_URI` precisa ser **idêntica, caractere por caractere**, à URL de callback cadastrada nos apps do Bling e do Mercado Livre. Qualquer diferença (http vs https, barra no final, domínio errado) causa o erro `redirect_uri_mismatch`.
 
 6. Clique em **Save**
 
