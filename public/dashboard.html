@@ -1738,6 +1738,40 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
     </div>
 
+    <!-- VIEW CALENDÁRIO -->
+    <div class="view" id="view-calendario">
+      <div class="view-header">
+        <h2 style="margin:0">📅 Calendário</h2>
+        <p style="margin:4px 0 0;color:var(--mu);font-size:12px">Datas importantes, feriados, contas a pagar/receber e eventos customizados</p>
+      </div>
+
+      <!-- Filtros e ações -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <select id="cal-mes" onchange="renderCalendario()" style="height:40px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;flex:1;min-width:140px">
+          <option value="">Todos os meses</option>
+          <option value="01">Janeiro</option>
+          <option value="02">Fevereiro</option>
+          <option value="03">Março</option>
+          <option value="04">Abril</option>
+          <option value="05">Maio</option>
+          <option value="06">Junho</option>
+          <option value="07">Julho</option>
+          <option value="08">Agosto</option>
+          <option value="09">Setembro</option>
+          <option value="10">Outubro</option>
+          <option value="11">Novembro</option>
+          <option value="12">Dezembro</option>
+        </select>
+        <button class="bts" onclick="loadCalendario(true)" style="flex:0">↻ Atualizar</button>
+        <button class="btp" onclick="setView('financeiro')" style="flex:0">⚙ Gerenciar na Aba Financeiro</button>
+      </div>
+
+      <!-- Lista de eventos por data -->
+      <div id="cal-eventos-list" style="min-height:200px">
+        <div class="st-wrap"><p class="st-d">Carregando calendário…</p></div>
+      </div>
+    </div>
+
     <!-- VIEW CONFIGURAÇÕES -->
     <!-- VIEW INTEGRAÇÕES -->
     <div class="view" id="view-integracoes">
@@ -2316,6 +2350,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span>Histórico</span>
     </button>
+    <button class="mais-item" onclick="closeMaisMenu();setView('calendario')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>Calendário</span>
+    </button>
     <button class="mais-item" onclick="closeMaisMenu();setView('notas')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       <span>NF-e</span>
@@ -2454,8 +2492,8 @@ function renderCards(){
 }
 
 // ── VIEWS ──────────────────────────────────────────
-const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',notificacoes:'Notificações Push',integracoes:'Integrações',config:'Configurações'};
-const MAIS_VIEWS=['clientes','relatorio','notas','historico','notificacoes','integracoes','config'];
+const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',calendario:'Calendário',notificacoes:'Notificações Push',integracoes:'Integrações',config:'Configurações'};
+const MAIS_VIEWS=['clientes','relatorio','notas','historico','calendario','notificacoes','integracoes','config'];
 // Gate de senha para a aba Notas Fiscais
 let _nfeUnlocked=false;
 function setView(v){
@@ -2483,6 +2521,7 @@ function setView(v){
   if(v==='pedidos')loadPedidos();
   if(v==='historico')loadHistorico();
   if(v==='financeiro')loadFinanceiro();
+  if(v==='calendario')loadCalendario();
   if(v==='notificacoes')loadNotificacoes();
   if(v==='integracoes')loadIntegracoes();
   closeMaisMenu();
@@ -2728,6 +2767,53 @@ function renderCalendarPreview(){
     const mes=d.toLocaleDateString('pt-BR',{month:'short'}).substring(0,3);
     const tipoIco=e.tipo==='pagar'?'📤':e.tipo==='receber'?'📥':'📅';
     return`<div class="cal-item"><div class="cal-date"><div class="cal-date-day">${dia}</div><div class="cal-date-mês">${mes}</div></div><div class="cal-content"><div class="cal-tipo">${e.tipo===  'pagar'?'A Pagar':e.tipo==='receber'?'A Receber':'Evento'}</div><div class="cal-titulo">${esc(e.categoria)}</div><div class="cal-desc">${e.descricao?esc(e.descricao.substring(0,40)):fmt(Number(e.valor)||0)}</div></div></div>`;
+  }).join('');
+}
+async function loadCalendario(force=false){
+  const el=$('cal-eventos-list');
+  el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando eventos do calendário…</p></div>';
+  try{
+    const r=await fetch('/api/calendario'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao carregar calendário');
+    const eventos=d.eventos||[];
+    renderCalendario(eventos);
+  }catch(e){el.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function renderCalendario(eventos=null){
+  const el=$('cal-eventos-list');if(!el)return;
+  const mesFiltro=$('cal-mes')?.value||'';
+  if(!eventos){eventos=_contasCustomCache||[];}
+  let filtrados=eventos;
+  if(mesFiltro)filtrados=filtrados.filter(e=>e.dataVencimento&&e.dataVencimento.startsWith('2026-'+mesFiltro));
+  filtrados.sort((a,b)=>new Date(a.dataVencimento||'9999')- new Date(b.dataVencimento||'9999'));
+  if(!filtrados.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum evento encontrado para o período selecionado.</p></div>';return;}
+  const byDate={};
+  filtrados.forEach(e=>{
+    const data=e.dataVencimento||'—';
+    if(!byDate[data])byDate[data]=[];
+    byDate[data].push(e);
+  });
+  el.innerHTML=Object.entries(byDate).map(([data,evts])=>{
+    const d=new Date(data+'T12:00:00');
+    const diasDiff=Math.floor((d-new Date())/(1000*86400));
+    let badge='';
+    if(diasDiff<0)badge='<span style="background:var(--er-bg);color:var(--er-t);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">Vencido</span>';
+    else if(diasDiff===0)badge='<span style="background:var(--wa-bg);color:var(--wa-t);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">Hoje</span>';
+    else if(diasDiff===1)badge='<span style="background:var(--acc-bg);color:var(--acc-t);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">Amanhã</span>';
+    return `<div style="margin-bottom:16px;border-left:3px solid var(--bord);padding-left:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:700;color:var(--tx)">${data}</span>
+        ${badge}
+      </div>
+      ${evts.map(e=>`<div style="background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--fa);text-transform:uppercase;margin-bottom:2px">${e.tipo||'Evento'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(e.categoria||e.titulo||'—')}</div>
+          ${e.descricao?`<div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(e.descricao.substring(0,60))}</div>`:''}
+        </div>
+        ${e.valor?`<div style="text-align:right;font-weight:700;color:var(--tx);white-space:nowrap">${fmt(Number(e.valor)||0)}</div>`:''}
+      </div>`).join('')}
+    </div>`;
   }).join('');
 }
 
@@ -5152,6 +5238,7 @@ const _ptrFnMap={
   historico:()=>loadHistorico(),
   relatorio:()=>renderReport(),
   financeiro:()=>loadFinanceiro(),
+  calendario:()=>loadCalendario(true),
   clientes:()=>loadClientes(true),
   integracoes:()=>loadIntegracoes(),
   notificacoes:()=>loadNotificacoes(),
