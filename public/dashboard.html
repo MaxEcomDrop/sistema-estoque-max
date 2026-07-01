@@ -361,9 +361,9 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .plink{cursor:pointer;transition:color .12s;display:inline-block}
 .plink:hover{color:var(--acc-t)!important;text-decoration:underline;text-underline-offset:2px}
 /* EDITOR DRAWER */
-.edraw-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
+.edraw-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
 .edraw-ov.open{opacity:1;pointer-events:all}
-.edraw{position:fixed;right:-100%;top:0;bottom:0;width:480px;max-width:97vw;background:var(--surf);border-left:1px solid var(--bord);z-index:900;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
+.edraw{position:fixed;right:-100%;top:0;bottom:0;width:480px;max-width:100vw;background:var(--surf);border-left:1px solid var(--bord);z-index:1200;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
 .edraw.open{right:0}
 .edraw-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bord);flex-shrink:0}
 .edraw-title{font-size:14px;font-weight:600;color:var(--tx);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1244,7 +1244,29 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     </div>
 
     <!-- VIEW PRODUTOS -->
-    <div class="view" id="view-produtos">
+          <div style="margin-top:30px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        <h2 style="font-size:16px;font-weight:700;color:var(--tx)">Mercado Livre (Integração Direta)</h2>
+        <span class="st-badge s-ok">Conectado</span>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card">
+          <div class="dash-lbl">Faturamento ML</div>
+          <div class="dash-val" id="ml-faturamento">—</div>
+          <div class="dash-sub">Pedidos: <span id="ml-pedidos-count">—</span></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-lbl">Taxas ML</div>
+          <div class="dash-val" id="ml-taxas" style="color:var(--er-t)">—</div>
+          <div class="dash-sub">Comissões e tarifas</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-lbl">Lucro Bruto ML</div>
+          <div class="dash-val" id="ml-lucro-bruto" style="color:var(--ok-t)">—</div>
+          <div class="dash-sub">Faturamento - Taxas</div>
+        </div>
+      </div>
+
+<div class="view" id="view-produtos">
       <!-- Painel de Tarefas (aparece só quando há alertas) -->
       <div class="tarefas-panel" id="tarefas-panel" style="display:none">
         <div class="tf-header">
@@ -2301,6 +2323,9 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   <button class="bnav-item" id="bn-financeiro" onclick="setView('financeiro')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Financeiro</span>
   </button>
+  <button class="bnav-item" id="bn-mercado-livre" onclick="setView('mercado-livre')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span>ML</span>
+  </button>
   <button class="bnav-item" id="bn-mais" onclick="toggleMaisMenu()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg><span>Mais</span>
   </button>
@@ -2378,8 +2403,36 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js">async function loadMLDashboard() {
+  try {
+    const r = await fetch('/api/ml/dashboard?period=30');
+    const data = await r.json();
+    if(r.ok) {
+      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
+      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
+      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
+      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar ML', e);
+  }
+}
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js">async function loadMLDashboard() {
+  try {
+    const r = await fetch('/api/ml/dashboard?period=30');
+    const data = await r.json();
+    if(r.ok) {
+      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
+      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
+      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
+      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar ML', e);
+  }
+}
+</script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
@@ -2389,6 +2442,20 @@ firebase.initializeApp({
   messagingSenderId:"1023327647246",
   appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
 });
+async function loadMLDashboard() {
+  try {
+    const r = await fetch('/api/ml/dashboard?period=30');
+    const data = await r.json();
+    if(r.ok) {
+      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
+      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
+      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
+      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar ML', e);
+  }
+}
 </script>
 <script>
 // ── STATE ──────────────────────────────────────────
@@ -3175,7 +3242,7 @@ async function loadProducts(showToast=false){
     const _sf=localStorage.getItem('sf')||'nome',_sd=localStorage.getItem('sd')||'asc';
     ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{const el=$('si-'+f);if(!el)return;if(f===_sf){el.textContent=_sd==='asc'?'\u2191':'\u2193';el.closest('th')?.classList.add('srt');}else{el.textContent='';el.closest('th')?.classList.remove('srt');}});
     updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
-    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();if(!_dashLoaded)loadDashboard();}
+    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();if(!_dashLoaded){loadDashboard();loadMLDashboard();}}
     else{renderDashAlerts();recomputeDashLucro();}
     if(showToast)toast('Produtos atualizados','ok');
   }catch(e){toast('Erro: '+e.message,'err');}
@@ -3836,8 +3903,11 @@ async function openPedidoDetalhe(id){
         ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
         <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
       </div>
-    `;
-  }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+    ;
+    if(btn){btn.style.opacity='1';btn.style.pointerEvents='all';}
+    if(typeof editorId !== 'undefined' && editorId !== null && $('edraw-save')) { $('edraw-ov').classList.add('open');$('edraw').classList.add('open'); } else { openModal('ped-modal'); }
+  }catch(e){
+    if(btn){btn.style.opacity='1';btn.style.pointerEvents='all';}$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 function exportPedidosCSV(){
   let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);
@@ -5470,6 +5540,23 @@ function startVoiceSearch(){
     });
   }
 })();
+async function loadMLDashboard() {
+  try {
+    const r = await fetch('/api/ml/dashboard?period=30');
+    const data = await r.json();
+    if(r.ok) {
+      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
+      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
+      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
+      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
+    }
+  } catch(e) {
+    console.warn('Erro ao carregar ML', e);
+  }
+}
 </script>
 </body>
 </html>
+
+
+

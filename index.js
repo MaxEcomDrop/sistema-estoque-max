@@ -69,16 +69,16 @@ const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 
 // In-memory change log (resets on cold start)
 // TODO: Persistir em banco de dados em produção
-const changeLog = [];
+let changeLog = [];
 
 // In-memory contas customizadas (despesas, receitas extras)
 // TODO: Persistir em banco de dados ou Firestore em produção
-const customContas = [];
+let customContas = [];
 let contaIdCounter = 1;
 
 // In-memory calendário (eventos, feriados, datas importantes)
 // TODO: Persistir em banco de dados ou Firestore em produção
-const calendarEvents = [];
+let calendarEvents = [];
 let eventIdCounter = 1;
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
@@ -387,7 +387,7 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
   res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
 });
 
-app.get(['/api/auth/callback', '/api/webhook/bling'], async (req, res) => {
+app.get('/api/auth/callback', async (req, res) => {
   const { code, error } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
@@ -695,6 +695,7 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
       valor_anterior: '—', valor_novo: req.body.nome || '—',
       timestamp: new Date().toISOString(),
     });
+    saveInMemoryData();
     res.json(criado);
   } catch (err) {
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
@@ -829,6 +830,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         valor_anterior: '—', valor_novo: 'campos atualizados',
         timestamp: new Date().toISOString(),
       });
+    saveInMemoryData();
       return res.json({ success: true });
     } catch (err) {
       const detail = err.response?.data?.error?.message || err.response?.data || err.message;
@@ -856,6 +858,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         valor_novo: `R$ ${Number(preco).toFixed(2)}`,
         timestamp: new Date().toISOString(),
       });
+    saveInMemoryData();
     }
     if (precoCusto !== undefined) {
       const { data: current } = await axios.get(
@@ -875,6 +878,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         valor_novo: `R$ ${Number(precoCusto).toFixed(2)}`,
         timestamp: new Date().toISOString(),
       });
+    saveInMemoryData();
     }
     if (estoque !== undefined) {
       const depositoId = await getDepositoId(token);
@@ -890,6 +894,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         valor_novo: `${Number(estoque)} un.${motivo ? ' — ' + motivo : ''}`,
         timestamp: new Date().toISOString(),
       });
+    saveInMemoryData();
     }
     res.json({ success: true });
     } catch (err) {
@@ -918,6 +923,7 @@ app.delete('/api/produtos/:id', requireAuthJson, async (req, res) => {
       valor_anterior: 'produto ativo', valor_novo: 'excluído',
       timestamp: new Date().toISOString(),
     });
+    saveInMemoryData();
     res.json({ success: true });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -949,6 +955,7 @@ app.post('/api/produtos/:id/duplicar', requireAuthJson, async (req, res) => {
       valor_anterior: `origem #${id}`, valor_novo: 'produto criado',
       timestamp: new Date().toISOString(),
     });
+    saveInMemoryData();
     res.json({ success: true, id: created?.data?.id });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -997,6 +1004,7 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
         valor_novo: `preço=${p.preco ?? '—'}, estoque=${p.estoque ?? '—'}`,
         timestamp: new Date().toISOString(),
       });
+    saveInMemoryData();
       success++;
     } catch (err) {
       errors.push({ id: p.id, nome: p.nome, error: err.response?.data?.error?.message || err.message });
@@ -1737,6 +1745,7 @@ app.post('/api/contas/custom', requireAuthJson, (req, res) => {
   };
 
   customContas.push(conta);
+    saveInMemoryData();
   changeLog.push({
     id: changeLog.length + 1,
     produto_id: `conta_${id}`,
@@ -1746,6 +1755,7 @@ app.post('/api/contas/custom', requireAuthJson, (req, res) => {
     valor_novo: `${tipo === 'pagar' ? '-' : '+'}R$ ${valor}`,
     timestamp: new Date().toISOString(),
   });
+    saveInMemoryData();
 
   res.json(conta);
 });
@@ -1777,6 +1787,7 @@ app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
       valor_novo: `status: ${status || conta.status}`,
       timestamp: new Date().toISOString(),
     });
+    saveInMemoryData();
 
     res.json(conta);
   } catch (err) {
@@ -1793,6 +1804,7 @@ app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
 
     const conta = customContas[idx];
     customContas.splice(idx, 1);
+    saveInMemoryData();
 
     changeLog.push({
       id: changeLog.length + 1,
@@ -1803,6 +1815,7 @@ app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
       valor_novo: 'excluída',
       timestamp: new Date().toISOString(),
     });
+    saveInMemoryData();
 
     res.json({ success: true });
   } catch (err) {
@@ -1841,6 +1854,7 @@ app.post('/api/calendario', requireAuthJson, (req, res) => {
   };
 
   calendarEvents.push(evento);
+    saveInMemoryData();
   res.json(evento);
 });
 
@@ -1852,6 +1866,7 @@ app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
     if (idx === -1) return res.status(404).json({ error: 'Evento não encontrado' });
 
     calendarEvents.splice(idx, 1);
+    saveInMemoryData();
     res.json({ success: true });
   } catch (err) {
     sendErrorResponse(res, 500, 'Erro ao deletar evento', err.message);
@@ -1933,7 +1948,7 @@ app.get('/api/notas-fiscais/sync/status', requireAuthJson, async (req, res) => {
   try {
     let all = [];
     for (let pg = 1; pg <= 3; pg++) {
-      const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfes', {
+      const { data } = await axios.get('https://www.bling.com.br/Api/v3/nfe', {
         headers: { Authorization: `Bearer ${token}` },
         params: { limite: 100, pagina: pg },
       });
@@ -2143,3 +2158,62 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
+// ── Integração Mercado Livre Avançada ────────────────────────────────
+app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  try {
+    const from = new Date(); from.setDate(from.getDate() - 30);
+    const fromStr = from.toISOString();
+    // Buscar ordens recentes
+    const { data: orders } = await axios.get(https://api.mercadolibre.com/orders/search?seller=&order.date_created.from=, { headers: mlHeaders(ml.token) });
+    
+    // Obter todos os detalhes e taxas não é trivial com 1 req, mas orders.results tem .total_amount e .paid_amount
+    // Para simplificar, retornaremos a lista basica e processaremos no dashboard
+    res.json(orders.results || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  
+  const days = parseInt(req.query.period) || 30;
+  const from = new Date(); from.setDate(from.getDate() - days);
+  const fromStr = from.toISOString();
+
+  try {
+    const { data: ordersData } = await axios.get(https://api.mercadolibre.com/orders/search?seller=&order.date_created.from=, { headers: mlHeaders(ml.token) });
+    
+    let faturamento = 0;
+    let taxas = 0;
+    let freteCobrado = 0;
+    let concluidoCount = 0;
+    
+    (ordersData.results || []).forEach(o => {
+      if (o.status === 'paid' || o.status === 'closed' || o.status === 'delivered' || o.status === 'shipped') {
+        concluidoCount++;
+        faturamento += o.total_amount || 0;
+        // The fee is usually stored in order_items -> sale_fee
+        if (o.order_items) {
+           o.order_items.forEach(it => {
+              taxas += it.sale_fee || 0;
+           });
+        }
+      }
+    });
+
+    res.json({
+      periodo: days,
+      faturamento,
+      taxas,
+      lucroBruto: faturamento - taxas,
+      pedidosConcluidos: concluidoCount
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
