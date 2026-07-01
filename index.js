@@ -469,8 +469,8 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const receitaConcluida = sum(concluidos,  valorPedido);
     const totalCancelado   = sum(cancelados,  valorPedido);
     const totalPendente    = sum(pendentes,   valorPedido);
-    const totalFrete       = sum(allPedidos, p => p.totalFrete || p.frete);
-    const totalDesconto    = sum(allPedidos, p => p.desconto);
+    const totalFrete       = sum(allPedidos, p => p.transporte?.frete || p.frete || 0);
+    const totalDesconto    = sum(allPedidos, p => p.desconto?.valor || p.totalDescontos || 0);
 
     // Comparativo com período anterior (faturamento concluído)
     const prevConcluidos = prevPedidos.filter(p => categorize(p.situacao) === 'concluido');
@@ -639,25 +639,43 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    const pedidosBling = await fetchWithCache(`pedidos_recentes_${token.substring(0,10)}`, 30000, async () => {
+    const pedidosBling = await fetchWithCache(`pedidos_recentes_${token.substring(0,10)}`, 45000, async () => {
       let all = [];
       for (let pg = 1; pg <= 2; pg++) {
-        const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+        const { data } = await fetchWithRetry(() => axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
           headers: { Authorization: `Bearer ${token}` },
           params: { limite: 100, pagina: pg },
-        });
+        }));
         const items = Array.isArray(data?.data) ? data.data : [];
         all = all.concat(items);
         if (items.length < 100) break;
+      }
+
+      // Fetch deeper details for the first 12 orders
+      const top12 = all.slice(0, 12);
+      for (let i = 0; i < top12.length; i += 3) {
+        const batch = top12.slice(i, i + 3);
+        await Promise.all(batch.map(async (p) => {
+          try {
+            const { data: detailData } = await fetchWithRetry(() => axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${p.id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            }));
+            const d = detailData?.data || {};
+            p.transporte = d.transporte || p.transporte;
+            p.desconto = d.desconto || p.desconto;
+            p.tributos = d.tributos || {};
+          } catch(e) { }
+        }));
+        if (i + 3 < top12.length) await new Promise(r => setTimeout(r, 1100)); 
       }
       return all;
     });
 
     const pedidos = pedidosBling.map(p => {
       const valorBruto = p.totalProdutos || p.totalVenda || p.total || 0;
-      const frete = p.frete || p.transporte?.fretePorConta || 0;
-      const desconto = p.desconto?.valor || p.desconto || 0;
-      const impostosEstimados = valorBruto * 0.06;
+      const frete = p.transporte?.fretePorConta || p.transporte?.frete || p.frete || 0;
+      const desconto = p.desconto?.valor || p.totalDescontos || p.desconto || 0;
+      const impostosEstimados = p.tributos?.total || (valorBruto * 0.06);
       let lucroLiquido = valorBruto - frete - desconto - impostosEstimados;
       
       return {
