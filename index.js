@@ -366,15 +366,68 @@ function resolvePeriodo(period, startDate, endDate) {
 
 // ── Páginas ──────────────────────────────────────────────────────────
 
-app.get('/login', (req, res) => res.sendFile(__dirname + '/public/login.html'));
-app.get('/', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
-app.get('/index.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/index.html'));
-app.get('/dashboard.html', requireAuth, (req, res) => res.sendFile(__dirname + '/public/dashboard.html'));
-app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV }));
+// Identifica exatamente qual deploy está no ar (Vercel/Render expõem o SHA
+// do commit em variáveis próprias). Aparece no rodapé do painel e em /health
+// — serve para confirmar se uma atualização realmente chegou ao servidor,
+// em vez de adivinhar por cache do navegador/CDN.
+const BUILD_SHA = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || 'dev').slice(0, 7);
+const BUILD_TIME = new Date().toISOString();
+
+// HTML nunca deve ficar em cache — sem isso, navegador e CDN podem seguir
+// servindo uma versão antiga do painel mesmo depois de um novo deploy.
+function noCache(res) {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+}
+
+app.get('/login', (req, res) => { noCache(res); res.sendFile(__dirname + '/public/login.html'); });
+app.get('/', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/index.html'); });
+app.get('/index.html', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/index.html'); });
+app.get('/dashboard.html', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/dashboard.html'); });
+app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV, build: BUILD_SHA, buildTime: BUILD_TIME }));
+
+// Diagnóstico ao vivo: mostra o que o servidor REALMENTE tem configurado
+// agora, sem expor segredos — só para descobrir na hora onde uma
+// integração está travando (env var ausente, redirect_uri errado, etc).
+app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
+  let blingConectado = false, mlConectado = false, firestoreOk = false;
+  try { blingConectado = !!(await ensureBlingToken(req, res)); } catch {}
+  try { mlConectado = !!(await ensureMLToken())?.token; } catch {}
+  const admin = getAdmin();
+  if (admin) {
+    try { await admin.firestore().collection('_diag').doc('ping').set({ t: Date.now() }); firestoreOk = true; } catch (e) { firestoreOk = false; }
+  }
+  res.json({
+    build: BUILD_SHA,
+    buildTime: BUILD_TIME,
+    ambiente: NODE_ENV,
+    host: req.get('host'),
+    bling: {
+      clientIdConfigurado: !!BLING_CLIENT_ID,
+      redirectUriConfigurada: BLING_REDIRECT_URI || null,
+      urlEsperadaPeloRequest: `${req.protocol}://${req.get('host')}/api/auth/callback`,
+      conectado: blingConectado,
+    },
+    mercadoLivre: {
+      clientIdConfigurado: !!ML_CLIENT_ID,
+      redirectUriConfigurada: ML_REDIRECT_URI || null,
+      urlEsperadaPeloRequest: `${req.protocol}://${req.get('host')}/api/ml/callback`,
+      conectado: mlConectado,
+    },
+    firebase: {
+      configurado: !!admin,
+      firestoreRespondendo: firestoreOk,
+    },
+    adminEmailConfigurado: !!ADMIN_EMAIL,
+    jwtSecretConfigurado: !!JWT_SECRET,
+  });
+});
 
 // Arquivos estáticos (fontes, imagens) — vem DEPOIS das rotas de página
 // para que /index.html e /dashboard.html passem pela autenticação acima
-app.use(express.static('public', { index: false }));
+app.use(express.static('public', { index: false, maxAge: NODE_ENV === 'production' ? '1d' : 0 }));
 
 // ── Login ────────────────────────────────────────────────────────────
 
@@ -836,8 +889,11 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const receitaConcluida = sum(concluidos,  valorPedido);
     const totalCancelado   = sum(cancelados,  valorPedido);
     const totalPendente    = sum(pendentes,   valorPedido);
-    const totalFrete       = sum(allPedidos, p => p.totalFrete || p.frete);
-    const totalDesconto    = sum(allPedidos, p => p.desconto);
+    // Bling retorna frete aninhado em transporte.frete (não como campo
+    // plano) — ler o caminho errado aqui fazia o total de frete ficar
+    // sempre zero, mesmo com pedidos tendo frete cobrado de verdade.
+    const totalFrete       = sum(allPedidos, p => Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || Number(p.frete) || 0);
+    const totalDesconto    = sum(allPedidos, p => Number(p.desconto) || Number(p.descontoValor) || 0);
 
     // Comparativo com período anterior (faturamento concluído)
     const prevConcluidos = prevPedidos.filter(p => categorize(p.situacao) === 'concluido');
