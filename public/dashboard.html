@@ -945,6 +945,27 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 /* MMM – long-press ring feedback */
 .lp-ring{position:fixed;pointer-events:none;border-radius:50%;background:rgba(99,102,241,.18);z-index:9999;animation:lpRingAnim 500ms ease-out forwards}
 @keyframes lpRingAnim{0%{transform:scale(0);opacity:.8}100%{transform:scale(1);opacity:0}}
+
+/* NNN – Polish geral: transição de abas, foco visível, responsividade fina */
+.view.on{animation:viewIn .22s ease-out}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.view.on,.mbox,.sheet{animation:none}}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+.btp:focus-visible,.bts:focus-visible,.bti:focus-visible{outline-offset:1px}
+.btp:active,.bts:active{transform:scale(.97)}
+@media(max-width:560px){
+  .df-2{grid-template-columns:1fr}
+  .edraw{width:100%;max-width:100%}
+  .mbox{padding:18px 16px;border-radius:14px}
+  .fk-grid{grid-template-columns:1fr 1fr}
+  .cfg-row{flex-wrap:wrap;gap:8px}
+}
+/* Barras de rolagem consistentes com o tema */
+*{scrollbar-width:thin;scrollbar-color:var(--bord) transparent}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:var(--bord);border-radius:8px}
+*::-webkit-scrollbar-thumb:hover{background:var(--fa)}
+*::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
@@ -1244,29 +1265,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     </div>
 
     <!-- VIEW PRODUTOS -->
-          <div style="margin-top:30px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
-        <h2 style="font-size:16px;font-weight:700;color:var(--tx)">Mercado Livre (Integração Direta)</h2>
-        <span class="st-badge s-ok">Conectado</span>
-      </div>
-      <div class="dash-grid">
-        <div class="dash-card">
-          <div class="dash-lbl">Faturamento ML</div>
-          <div class="dash-val" id="ml-faturamento">—</div>
-          <div class="dash-sub">Pedidos: <span id="ml-pedidos-count">—</span></div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-lbl">Taxas ML</div>
-          <div class="dash-val" id="ml-taxas" style="color:var(--er-t)">—</div>
-          <div class="dash-sub">Comissões e tarifas</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-lbl">Lucro Bruto ML</div>
-          <div class="dash-val" id="ml-lucro-bruto" style="color:var(--ok-t)">—</div>
-          <div class="dash-sub">Faturamento - Taxas</div>
-        </div>
-      </div>
-
-<div class="view" id="view-produtos">
+    <div class="view" id="view-produtos">
       <!-- Painel de Tarefas (aparece só quando há alertas) -->
       <div class="tarefas-panel" id="tarefas-panel" style="display:none">
         <div class="tf-header">
@@ -1859,10 +1858,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- VENDAS ML -->
       <div class="cfg-card">
-        <div class="cfg-title">Vendas no Mercado Livre (últimas 30 dias)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
+        <div class="cfg-title">Vendas no Mercado Livre (últimos 30 dias)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:8px">
           <div style="background:var(--bg);border-radius:10px;padding:12px">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Total de vendas</div>
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Vendas concluídas</div>
             <div style="font-size:18px;font-weight:700;color:var(--ok-t)" id="ml-sales-count">—</div>
           </div>
           <div style="background:var(--bg);border-radius:10px;padding:12px">
@@ -1872,6 +1871,18 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div style="background:var(--bg);border-radius:10px;padding:12px">
             <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Ticket médio</div>
             <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-sales-avg">—</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px;border-left:3px solid var(--wa)">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Taxas ML (comissão)</div>
+            <div style="font-size:18px;font-weight:700;color:var(--wa-t)" id="ml-taxas">—</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Frete cobrado</div>
+            <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-frete">—</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px;border-left:3px solid var(--ok)">
+            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Lucro bruto (após taxas)</div>
+            <div style="font-size:18px;font-weight:700;color:var(--ok-t)" id="ml-lucro">—</div>
           </div>
         </div>
         <div id="ml-sales-list" style="margin-top:12px"></div>
@@ -1957,9 +1968,21 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
       </div>
       <div class="cfg-card">
-        <div class="cfg-title">Conta &amp; Integração</div>
-        <div class="cfg-row"><span class="cfg-row-lbl">Integração Bling</span><button class="bts" onclick="window.location.href='/'">Reconectar</button></div>
+        <div class="cfg-title">Conta</div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Usuário</span><span class="cfg-row-val" id="cfg-acc-email">—</span></div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Método de login</span><span class="cfg-row-val" id="cfg-acc-provider">—</span></div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Sessão válida até</span><span class="cfg-row-val" id="cfg-acc-exp">—</span></div>
         <div class="cfg-row"><span class="cfg-row-lbl">Sessão</span><button class="bts" onclick="logout()" style="color:var(--er-t)">Sair da conta</button></div>
+      </div>
+      <div class="cfg-card">
+        <div class="cfg-title">Integrações</div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Bling ERP</span><span style="display:flex;align-items:center;gap:8px"><span class="sb2 s-lo" id="cfg-int-bling">Verificando…</span><button class="bts" onclick="window.location.href='/'">Reconectar</button></span></div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Mercado Livre</span><span style="display:flex;align-items:center;gap:8px"><span class="sb2 s-lo" id="cfg-int-ml">Verificando…</span><button class="bts" onclick="setView('mercado-livre')">Abrir</button></span></div>
+        <div class="cfg-row"><span class="cfg-row-lbl">Firebase (push/dados)</span><span class="sb2 s-lo" id="cfg-int-fb">Verificando…</span></div>
+      </div>
+      <div class="cfg-card">
+        <div class="cfg-title">Segurança</div>
+        <div class="cfg-desc" style="margin-bottom:0">Sua sessão usa cookie httpOnly assinado (JWT, 7 dias). Login protegido contra força bruta (5 tentativas / 15 min). A senha do painel é definida pela variável <strong>ADMIN_PASSWORD</strong> no servidor — para trocá-la, atualize a variável no Render/Vercel e faça um novo deploy.</div>
       </div>
       <div class="cfg-card">
         <div class="cfg-title">Sobre</div>
@@ -2403,36 +2426,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js">async function loadMLDashboard() {
-  try {
-    const r = await fetch('/api/ml/dashboard?period=30');
-    const data = await r.json();
-    if(r.ok) {
-      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
-      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
-      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
-      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
-    }
-  } catch(e) {
-    console.warn('Erro ao carregar ML', e);
-  }
-}
-</script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js">async function loadMLDashboard() {
-  try {
-    const r = await fetch('/api/ml/dashboard?period=30');
-    const data = await r.json();
-    if(r.ok) {
-      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
-      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
-      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
-      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
-    }
-  } catch(e) {
-    console.warn('Erro ao carregar ML', e);
-  }
-}
-</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
@@ -2442,20 +2437,6 @@ firebase.initializeApp({
   messagingSenderId:"1023327647246",
   appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
 });
-async function loadMLDashboard() {
-  try {
-    const r = await fetch('/api/ml/dashboard?period=30');
-    const data = await r.json();
-    if(r.ok) {
-      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
-      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
-      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
-      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
-    }
-  } catch(e) {
-    console.warn('Erro ao carregar ML', e);
-  }
-}
 </script>
 <script>
 // ── STATE ──────────────────────────────────────────
@@ -2581,6 +2562,7 @@ function setView(v){
   if(v==='calendario')loadCalendario();
   if(v==='integracoes')loadIntegracoes();
   if(v==='mercado-livre')loadMercadoLivre();
+  if(v==='config')loadConfig();
   closeMaisMenu();
   const fab=$('fab-scan');if(fab)fab.style.display=v==='produtos'?'':'none';
   const fab2=$('fab-add');if(fab2){fab2.style.display=v==='produtos'?'':'none';if(v==='produtos')fab2.classList.remove('fab-hide');}
@@ -3200,14 +3182,30 @@ async function loadMercadoLivre(){
       return;
     }
     if(badge){badge.textContent='Conectado';badge.className='sb2 s-ok';}
-    const[mlQuestions,mlListings,mlMetrics]=await Promise.all([fetch('/api/ml/perguntas').then(r=>r.json()),fetch('/api/ml/anuncios').then(r=>r.json()),fetch('/api/ml/metricas').then(r=>r.json())]);
+    const[mlQuestions,mlListings,mlMetrics,mlDash]=await Promise.all([
+      fetch('/api/ml/perguntas').then(r=>r.json()).catch(()=>({})),
+      fetch('/api/ml/anuncios').then(r=>r.json()).catch(()=>({})),
+      fetch('/api/ml/metricas').then(r=>r.json()).catch(()=>({})),
+      fetch('/api/ml/dashboard?period=30').then(r=>r.json()).catch(()=>({})),
+    ]);
     const sellerInfo=$('ml-seller-detail');
     if(sellerInfo)sellerInfo.innerHTML=`<div style="display:flex;gap:12px"><div style="width:36px;height:36px;border-radius:9px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#333;flex-shrink:0">ML</div><div><div style="font-size:13px;font-weight:700">${esc(mlStatus.apelido||'Vendedor ML')}</div><div style="font-size:11px;color:var(--mu);margin-top:1px">🔗 Independente do Bling</div></div></div>`;
-    const qtdVendas=(mlMetrics.ultimosPedidos||[]).length||0;
-    const totalVendas=(mlMetrics.ultimosPedidos||[]).reduce((a,p)=>a+(p.total||0),0)||0;
-    $('ml-sales-count').textContent=fmtN(qtdVendas);
-    $('ml-sales-total').textContent=fmt(totalVendas);
-    $('ml-sales-avg').textContent=fmt(qtdVendas>0?totalVendas/qtdVendas:0);
+    // KPIs financeiros do ML (faturamento, taxas, frete, lucro) — /api/ml/dashboard
+    const setML=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+    if(mlDash&&!mlDash.error&&mlDash.faturamento!==undefined){
+      setML('ml-sales-count',fmtN(mlDash.pedidosConcluidos||0));
+      setML('ml-sales-total',fmt(mlDash.faturamento));
+      setML('ml-sales-avg',fmt(mlDash.ticketMedio||0));
+      setML('ml-taxas',fmt(mlDash.taxas||0));
+      setML('ml-frete',fmt(mlDash.frete||0));
+      setML('ml-lucro',fmt(mlDash.lucroBruto||0));
+    }else{
+      const qtdVendas=(mlMetrics.ultimosPedidos||[]).length||0;
+      const totalVendas=(mlMetrics.ultimosPedidos||[]).reduce((a,p)=>a+(p.total||0),0)||0;
+      setML('ml-sales-count',fmtN(qtdVendas));
+      setML('ml-sales-total',fmt(totalVendas));
+      setML('ml-sales-avg',fmt(qtdVendas>0?totalVendas/qtdVendas:0));
+    }
     const questionsList=$('ml-questions-list');
     if(mlQuestions.perguntas?.length){questionsList.innerHTML=mlQuestions.perguntas.slice(0,3).map(q=>`<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid var(--acc)"><div style="font-size:12px;font-weight:600">${esc(q.comprador)}</div><div style="font-size:12px;margin:4px 0">${esc(q.texto)}</div><div style="font-size:11px;color:var(--wa-t)">⏳ Pendente</div></div>`).join('');}else{questionsList.innerHTML='<div style="padding:14px;text-align:center;color:var(--mu);font-size:12px">✓ Sem perguntas</div>';}
     const listingsList=$('ml-listings-list');
@@ -3242,7 +3240,7 @@ async function loadProducts(showToast=false){
     const _sf=localStorage.getItem('sf')||'nome',_sd=localStorage.getItem('sd')||'asc';
     ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{const el=$('si-'+f);if(!el)return;if(f===_sf){el.textContent=_sd==='asc'?'\u2191':'\u2193';el.closest('th')?.classList.add('srt');}else{el.textContent='';el.closest('th')?.classList.remove('srt');}});
     updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
-    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();if(!_dashLoaded){loadDashboard();loadMLDashboard();}}
+    if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();if(!_dashLoaded)loadDashboard();}
     else{renderDashAlerts();recomputeDashLucro();}
     if(showToast)toast('Produtos atualizados','ok');
   }catch(e){toast('Erro: '+e.message,'err');}
@@ -3333,6 +3331,27 @@ function renderMetaBar(){
   }
 }
 function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseInt(inp.value)||0);S.estoqueMin=v;localStorage.setItem('em_min',v);updateLowBadge();updateKpis();renderTable();toast(`Alerta de estoque: abaixo de ${v} un.`,'ok');}
+
+// ── CONFIGURAÇÕES · Conta e status das integrações ─
+let _cfgLoaded=false;
+async function loadConfig(){
+  if(_cfgLoaded)return;_cfgLoaded=true;
+  try{
+    const me=await fetch('/api/auth/me').then(r=>r.json());
+    if(me.email){
+      $('cfg-acc-email').textContent=me.email;
+      $('cfg-acc-provider').textContent=me.provider==='firebase'?'Google (Firebase)':'Email e senha';
+      if(me.expiraEm)$('cfg-acc-exp').textContent=new Date(me.expiraEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    }
+  }catch(e){console.error('[loadConfig me]',e);}
+  try{
+    const st=await fetch('/api/integracoes/status').then(r=>r.json());
+    const set=(id,on,lblOn,lblOff)=>{const el=$(id);if(!el)return;el.textContent=on?lblOn:lblOff;el.className='sb2 '+(on?'s-ok':'s-out');};
+    set('cfg-int-bling',st.bling?.conectado,'Conectado','Desconectado');
+    set('cfg-int-ml',st.mercadoLivre?.conectado,'Conectado','Desconectado');
+    set('cfg-int-fb',st.firebase?.conectado,'Ativo','Não configurado');
+  }catch(e){console.error('[loadConfig status]',e);}
+}
 function updateSyncTs(){
   const el=$('sync-ts');if(!el)return;
   if(!S.lastSync){el.textContent='';el.style.color='';return;}
@@ -3903,11 +3922,8 @@ async function openPedidoDetalhe(id){
         ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
         <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
       </div>
-    ;
-    if(btn){btn.style.opacity='1';btn.style.pointerEvents='all';}
-    if(typeof editorId !== 'undefined' && editorId !== null && $('edraw-save')) { $('edraw-ov').classList.add('open');$('edraw').classList.add('open'); } else { openModal('ped-modal'); }
-  }catch(e){
-    if(btn){btn.style.opacity='1';btn.style.pointerEvents='all';}$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+    `;
+  }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 function exportPedidosCSV(){
   let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);
@@ -5540,20 +5556,6 @@ function startVoiceSearch(){
     });
   }
 })();
-async function loadMLDashboard() {
-  try {
-    const r = await fetch('/api/ml/dashboard?period=30');
-    const data = await r.json();
-    if(r.ok) {
-      document.getElementById('ml-faturamento').textContent = fmt(data.faturamento || 0);
-      document.getElementById('ml-taxas').textContent = fmt(data.taxas || 0);
-      document.getElementById('ml-lucro-bruto').textContent = fmt(data.lucroBruto || 0);
-      document.getElementById('ml-pedidos-count').textContent = data.pedidosConcluidos || 0;
-    }
-  } catch(e) {
-    console.warn('Erro ao carregar ML', e);
-  }
-}
 </script>
 </body>
 </html>
