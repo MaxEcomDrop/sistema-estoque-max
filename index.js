@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
@@ -49,7 +48,21 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors());
+
+// Cabeçalhos de segurança. A app é same-origin (frontend e API no mesmo
+// domínio), então não há CORS aberto — a API deixa de ser invocável por
+// qualquer site de terceiros com Access-Control-Allow-Origin: *.
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  if (NODE_ENV === 'production') {
+    res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
 
 // ── Carregar Variáveis de Ambiente Seguramente ───────────────────────
 // Validar variáveis de ambiente ANTES de carregar qualquer rota
@@ -71,15 +84,53 @@ const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 // TODO: Persistir em banco de dados em produção
 let changeLog = [];
 
-// In-memory contas customizadas (despesas, receitas extras)
-// TODO: Persistir em banco de dados ou Firestore em produção
+// Contas customizadas e eventos de calendário: cache em memória com
+// persistência no Firestore (quando FIREBASE_SERVICE_ACCOUNT configurado).
+// Sem Firestore, funcionam em memória e se perdem no restart — comportamento
+// anterior preservado como fallback.
 let customContas = [];
 let contaIdCounter = 1;
-
-// In-memory calendário (eventos, feriados, datas importantes)
-// TODO: Persistir em banco de dados ou Firestore em produção
 let calendarEvents = [];
 let eventIdCounter = 1;
+let _persistLoaded = false;
+
+async function loadPersistedData() {
+  if (_persistLoaded) return;
+  _persistLoaded = true;
+  const admin = getAdmin();
+  if (!admin) return;
+  try {
+    const doc = await admin.firestore().collection('app_state').doc('data').get();
+    if (!doc.exists) return;
+    const d = doc.data() || {};
+    if (Array.isArray(d.customContas)) customContas = d.customContas;
+    if (Array.isArray(d.calendarEvents)) calendarEvents = d.calendarEvents;
+    if (Array.isArray(d.changeLog)) changeLog = d.changeLog;
+    contaIdCounter = customContas.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
+    eventIdCounter = calendarEvents.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0) + 1;
+    console.log(`[Persistência] ${customContas.length} conta(s), ${calendarEvents.length} evento(s) e ${changeLog.length} log(s) restaurados do Firestore`);
+  } catch (e) {
+    console.error('[loadPersistedData]', e.message);
+  }
+}
+
+// Grava o estado em memória no Firestore, com debounce para agrupar
+// mutações consecutivas. Sem Firestore configurado é um no-op seguro
+// (mantém o comportamento apenas-memória).
+let _saveTimer = null;
+function saveInMemoryData() {
+  const admin = getAdmin();
+  if (!admin) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    admin.firestore().collection('app_state').doc('data').set({
+      customContas,
+      calendarEvents,
+      changeLog: changeLog.slice(-500),
+      updatedAt: new Date().toISOString(),
+    }).catch(e => console.error('[saveInMemoryData]', e.message));
+  }, 1500);
+}
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;
@@ -388,9 +439,10 @@ app.get('/api/auth/url', requireAuthJson, (req, res) => {
 });
 
 app.get('/api/auth/callback', async (req, res) => {
-  const { code, error } = req.query;
+  const { code, error, state } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
+  if (state !== 'estoque_max') return res.redirect('/?error=invalid_state');
 
   try {
     const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
@@ -410,37 +462,44 @@ app.get('/api/auth/callback', async (req, res) => {
 });
 
 // Firebase Authentication endpoint
-app.post('/api/auth/firebase', async (req, res) => {
-  const { idToken, email } = req.body || {};
+app.post('/api/auth/firebase', loginRateLimit, async (req, res) => {
+  const { idToken } = req.body || {};
 
-  if (!idToken || !email) {
-    return sendErrorResponse(res, 400, 'ID token e email são obrigatórios');
+  if (!idToken) {
+    return sendErrorResponse(res, 400, 'ID token é obrigatório');
   }
 
   if (!ADMIN_EMAIL || !JWT_SECRET) {
     return sendErrorResponse(res, 500, 'Configuração incompleta: ADMIN_EMAIL ou JWT_SECRET não definidos');
   }
 
-  try {
-    // Try to verify Firebase token with Admin SDK
-    const admin = getAdmin();
-    let firebaseUser = null;
+  // Sem o Admin SDK não há como verificar a assinatura do token — recusar
+  // em vez de confiar cegamente no que o cliente enviou.
+  const admin = getAdmin();
+  if (!admin) {
+    return sendErrorResponse(res, 503,
+      'Login com Google indisponível: FIREBASE_SERVICE_ACCOUNT não configurado no servidor. Use email e senha.');
+  }
 
-    if (admin) {
-      try {
-        firebaseUser = await admin.auth().verifyIdToken(idToken);
-      } catch (err) {
-        console.error('[Firebase Auth]', err.message);
-        return sendErrorResponse(res, 401, 'Token do Firebase inválido ou expirado');
-      }
+  try {
+    let firebaseUser;
+    try {
+      firebaseUser = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      console.error('[Firebase Auth]', err.message);
+      registerLoginFailure(req);
+      return sendErrorResponse(res, 401, 'Token do Firebase inválido ou expirado');
     }
 
-    // Check if email matches authorized user
-    if (!safeEqual(email, ADMIN_EMAIL)) {
+    // A autorização usa o email DE DENTRO do token verificado — nunca o que
+    // o cliente alega no body. Qualquer conta Google que não seja a do
+    // administrador é recusada aqui.
+    const verifiedEmail = String(firebaseUser.email || '').toLowerCase();
+    if (!firebaseUser.email_verified || !safeEqual(verifiedEmail, String(ADMIN_EMAIL).toLowerCase())) {
+      registerLoginFailure(req);
       return sendErrorResponse(res, 403, 'Email não autorizado. Entre em contato com o administrador.');
     }
 
-    // Create JWT token for app
     clearLoginFailures(req);
     const token = jwt.sign({ email: ADMIN_EMAIL, provider: 'firebase' }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('system_token', token, {
@@ -452,6 +511,20 @@ app.post('/api/auth/firebase', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     sendErrorResponse(res, 500, 'Erro ao autenticar', err.message);
+  }
+});
+
+// Informações da sessão atual (para a aba Configurações → Conta)
+app.get('/api/auth/me', requireAuthJson, (req, res) => {
+  try {
+    const payload = jwt.verify(req.cookies?.system_token || '', JWT_SECRET);
+    res.json({
+      email: payload.email,
+      provider: payload.provider || 'senha',
+      expiraEm: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+    });
+  } catch {
+    res.status(401).json({ error: 'Não autenticado' });
   }
 });
 
@@ -484,6 +557,7 @@ async function refreshMLToken(refreshToken) {
 }
 
 async function ensureMLToken() {
+  if (!ML_CLIENT_ID || !ML_CLIENT_SECRET) return null;
   if (_mlTokenCache.token && Date.now() < _mlTokenCache.expiresAt) return _mlTokenCache;
   const admin = getAdmin();
   if (!admin) return null;
@@ -509,9 +583,10 @@ app.get('/api/ml/auth/url', requireAuthJson, (req, res) => {
 });
 
 app.get('/api/ml/callback', async (req, res) => {
-  const { code, error } = req.query;
+  const { code, error, state } = req.query;
   if (error) return res.redirect(`/dashboard.html?ml_error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/dashboard.html?ml_error=no_code');
+  if (state !== 'estoque_max_ml') return res.redirect('/dashboard.html?ml_error=invalid_state');
   try {
     const params = new URLSearchParams({
       grant_type: 'authorization_code', client_id: ML_CLIENT_ID,
@@ -1707,13 +1782,15 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 
 // ── Histórico ────────────────────────────────────────────────────
 
-app.get('/api/historico', requireAuthJson, (req, res) => {
+app.get('/api/historico', requireAuthJson, async (req, res) => {
+  await loadPersistedData();
   res.json({ history: changeLog.slice().reverse().slice(0, 300) });
 });
 
 // ── Contas Customizadas (Despesas, Receitas, Controle de Caixa) ──────
 
-app.get('/api/contas/custom', requireAuthJson, (req, res) => {
+app.get('/api/contas/custom', requireAuthJson, async (req, res) => {
+  await loadPersistedData();
   const tipo = req.query.tipo; // 'pagar', 'receber', ou undefined para todas
   let filtered = customContas;
   if (tipo) filtered = filtered.filter(c => c.tipo === tipo);
@@ -1825,7 +1902,8 @@ app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
 
 // ── Calendário (Eventos, Feriados, Datas Importantes) ──────────────────
 
-app.get('/api/calendario', requireAuthJson, (req, res) => {
+app.get('/api/calendario', requireAuthJson, async (req, res) => {
+  await loadPersistedData();
   const mes = req.query.mes; // filtrar por mês (YYYY-MM)
   let filtered = calendarEvents;
   if (mes) filtered = filtered.filter(e => e.data.startsWith(mes));
@@ -2161,20 +2239,26 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
   const fromStr = from.toISOString();
 
   try {
-    const { data: ordersData } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}`, { headers: mlHeaders(ml.token) });
+    const { data: ordersData } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}&sort=date_desc&limit=50`, { headers: mlHeaders(ml.token) });
 
     let faturamento = 0;
     let taxas = 0;
+    let frete = 0;
     let concluidoCount = 0;
+    let canceladoCount = 0;
+    const byDay = {};
 
     (ordersData.results || []).forEach(o => {
+      if (o.status === 'cancelled') { canceladoCount++; return; }
       if (o.status === 'paid' || o.status === 'closed' || o.status === 'delivered' || o.status === 'shipped') {
         concluidoCount++;
         faturamento += o.total_amount || 0;
-        // A taxa geralmente fica em order_items -> sale_fee
-        if (o.order_items) {
-          o.order_items.forEach(it => { taxas += it.sale_fee || 0; });
-        }
+        // Comissão do ML fica em order_items[].sale_fee (por unidade)
+        (o.order_items || []).forEach(it => { taxas += (it.sale_fee || 0) * (it.quantity || 1); });
+        // Frete cobrado do comprador fica em payments[].shipping_cost
+        (o.payments || []).forEach(p => { frete += p.shipping_cost || 0; });
+        const day = String(o.date_created || '').substring(0, 10);
+        if (day) byDay[day] = (byDay[day] || 0) + (o.total_amount || 0);
       }
     });
 
@@ -2182,8 +2266,13 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
       periodo: days,
       faturamento,
       taxas,
+      frete,
       lucroBruto: faturamento - taxas,
       pedidosConcluidos: concluidoCount,
+      pedidosCancelados: canceladoCount,
+      totalPedidos: ordersData.paging?.total ?? (ordersData.results || []).length,
+      ticketMedio: concluidoCount ? faturamento / concluidoCount : 0,
+      byDay,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2207,6 +2296,7 @@ if (require.main === module) {
   app.listen(process.env.PORT || 3000, () => {
     console.log(`✅ Servidor iniciado em http://localhost:${process.env.PORT || 3000}`);
     console.log(`📝 Ambiente: ${NODE_ENV}`);
+    loadPersistedData();
   });
 }
 
