@@ -773,35 +773,136 @@ button,a,select,label{touch-action:manipulation}
 .mcard-chev{width:15px;height:15px;color:var(--fa);flex-shrink:0}
 .mlist-foot{padding:12px 16px;font-size:12px;color:var(--mu);font-weight:600;text-align:center;background:var(--bg);border-top:1px solid var(--bord-l)}
 
-/* ════ MODO APP NATIVO (Ferrari) — só no celular ════ */
+/* ═══════════════════════════════════════════════════════════════════
+   MODO APP NATIVO (projeto Ferrari) — celular ≤900px
+   Um único padrão visual do topo ao rodapé:
+   ritmo de 16px nas laterais · raio 18px em toda superfície ·
+   header de app · dock flutuante · sheets com alça · inputs preenchidos
+   ═══════════════════════════════════════════════════════════════════ */
 @media(max-width:900px){
-  /* Barra superior e navegação inferior translúcidas com blur, estilo iOS */
-  @supports(backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
-    .topbar{background:color-mix(in srgb,var(--surf) 80%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px)}
-    .bnav{background:color-mix(in srgb,var(--surf) 86%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px)}
+
+  /* ── 1 · CABEÇALHO — barra de app: título forte + ações circulares ── */
+  .topbar{
+    height:56px;padding:0 16px;gap:8px;border-bottom:none;
+    background:color-mix(in srgb,var(--bg) 78%,transparent);
+    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+    box-shadow:none;
   }
-  .bnav-item{transition:transform .12s}
-  .bnav-item:active{transform:scale(.9)}
-  /* Transição suave ao trocar de aba, como navegação nativa */
-  .view.on{animation:viewIn .22s cubic-bezier(.3,.8,.4,1) both}
-  /* Superfícies mais arredondadas e título com peso de app */
-  .tcard,.kpi,.fin-chart-wrap,.dre-card{border-radius:16px}
-  .tb-title{font-weight:800;letter-spacing:-.3px}
-  .kpi-val{letter-spacing:-.8px}
-  /* Chips de período: trilho único com swipe lateral (nada de quebrar em 2 linhas) */
-  .fin-period-bar,.dash-period{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-direction:row;align-items:center;gap:6px;max-width:100%}
+  .tb-title{font-size:21px;font-weight:800;letter-spacing:-.6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sync-ts{display:none}
+  .tb-right{gap:8px}
+  .bti{width:38px;height:38px;border:none;border-radius:50%;background:var(--surf);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+  .bti:active{transform:scale(.9)}
+  /* Sincronizar vira botão circular só com o ícone */
+  #sync-btn{font-size:0;gap:0;width:38px;height:38px;padding:0;justify-content:center;border-radius:50%;box-shadow:0 3px 12px rgba(99,102,241,.4)}
+  #sync-btn svg{width:16px;height:16px}
+  #sync-btn:active{transform:scale(.9)}
+
+  /* ── 2 · RITMO DA PÁGINA — 16px nas laterais, 12px entre blocos ── */
+  .content{padding:12px 16px calc(104px + env(safe-area-inset-bottom,0px));gap:12px}
+  .tcard,.kpi,.fin-chart-wrap,.dre-card,.fk-card,.fk-sm,.dk-card{border-radius:18px}
+  .tcard{box-shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.04)}
+
+  /* ── 3 · CARDS DE INFORMAÇÃO — números tabulares, hierarquia clara ── */
+  .kpi{padding:16px}
+  .kpi-lbl{margin-bottom:6px;font-size:10.5px}
+  .kpi-val{font-size:24px;letter-spacing:-1px}
+  .kpi-sub{font-size:11px;margin-top:4px}
+  .hero-card{border-radius:22px;padding:20px}
+  .hero-val{font-size:30px}
+  .dash-kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .dk-card{padding:14px 16px}
+  .fk-sm{padding:14px 16px}
+  .fk-sm-val{font-size:18px}
+
+  /* ── 4 · FILTROS E BUSCA — campo preenchido, chips-pílula em trilho ── */
+  .sinp{height:44px;border:none;background:var(--bg);border-radius:13px;font-size:16px}
+  .sinp:focus{background:var(--surf);box-shadow:0 0 0 2px var(--acc)}
+  .toolbar{padding:12px 14px;gap:8px}
+  .toolbar select{min-height:40px;border-radius:999px;border:1px solid var(--bord-l);background:var(--surf);padding:0 14px;font-size:13px;font-weight:600;color:var(--tx)}
+  .fin-period-bar,.dash-period{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-direction:row;align-items:center;gap:6px;max-width:100%;scroll-snap-type:x proximity}
   .fin-period-bar::-webkit-scrollbar,.dash-period::-webkit-scrollbar{display:none}
   .dash-period{border:none;background:none;padding:0}
-  .fp-btn,.dp-btn{flex-shrink:0;min-height:36px;border-radius:999px;padding:6px 14px;border:1px solid var(--bord-l);background:var(--surf)}
-  .fp-btn.on,.dp-btn.on{border-color:var(--acc);background:var(--acc);color:#fff;box-shadow:0 2px 10px rgba(79,70,229,.3)}
-  /* Botões com resposta tátil */
-  .btp:active,.bts:active,.st-btn:active{transform:scale(.96)}
-  /* Modais deslizam de baixo, como sheet nativo */
+  .fp-btn,.dp-btn{flex-shrink:0;scroll-snap-align:start;min-height:38px;border-radius:999px;padding:7px 15px;border:1px solid var(--bord-l);background:var(--surf);font-size:13px}
+  .fp-btn.on,.dp-btn.on{border-color:transparent;background:var(--acc);color:#fff;box-shadow:0 3px 12px rgba(79,70,229,.35);font-weight:700}
+
+  /* ── 5 · BOTÕES — altura de toque generosa e resposta tátil ── */
+  .content .btp{min-height:44px;border-radius:14px;font-size:14px;padding:0 18px}
+  .content .bts{min-height:42px;border-radius:13px}
+  .btp:active,.bts:active,.st-btn:active,.mcard:active .mcard-v{transform:scale(.96)}
+
+  /* ── 6 · NAVEGAÇÃO — dock flutuante com pílula no item ativo ── */
+  .bnav{
+    left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    height:64px;padding:0 4px;border-radius:32px;
+    border:1px solid var(--bord-l);
+    background:color-mix(in srgb,var(--surf) 88%,transparent);
+    backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+    box-shadow:0 -1px 0 rgba(0,0,0,.02),0 12px 32px rgba(0,0,0,.16);
+  }
+  .bnav-item{gap:2px;font-size:9.5px;padding:8px 0 7px;transition:transform .14s,color .15s;border-radius:24px}
+  .bnav-item svg{width:22px;height:22px;position:relative;z-index:1}
+  .bnav-item span{position:relative;z-index:1}
+  .bnav-item.on::after{display:none}
+  .bnav-item.on::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:48px;height:30px;border-radius:15px;background:color-mix(in srgb,var(--acc) 14%,transparent)}
+  .bnav-item.on{color:var(--acc);font-weight:700}
+  .bnav-item:active{transform:scale(.88)}
+  .bnav-badge{top:2px;right:calc(50% - 22px)}
+  /* Tudo que ancorava no rodapé antigo sobe junto com o dock */
+  .content{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+  #noti-stack{bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+  .bbar,.undo{bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+  .stb{bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+  .fab-scan,.fab-add{bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+  .mais-menu{border-radius:24px 24px 0 0;z-index:950}
+
+  /* ── 7 · TRANSIÇÃO DE ABA — navegação com vida, como app ── */
+  .view.on{animation:viewIn .24s cubic-bezier(.3,.8,.4,1) both}
+
+  /* ── 8 · POPUPS — sheets nativos: sobem de baixo, com alça ── */
   .modal{align-items:flex-end}
-  .mbox{animation:sheetIn .26s cubic-bezier(.3,.8,.4,1) both;border-radius:18px 18px 0 0;width:100%;max-width:100%;max-height:92vh;margin:0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+  .mbox{
+    animation:sheetIn .28s cubic-bezier(.3,.8,.4,1) both;
+    border-radius:22px 22px 0 0;border-bottom:none;
+    width:100%;max-width:100%;max-height:92vh;max-height:92dvh;margin:0;
+    padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px));
+  }
+  .mbox::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:var(--bord);margin:0 auto 14px}
+
+  /* ── 9 · EDITOR DE PRODUTO — página cheia com formulário nativo ── */
+  .edraw{width:100vw;max-width:100vw;border-left:none}
+  .edraw-hd{padding:14px 16px;position:sticky;top:0;background:var(--surf);z-index:2}
+  .edraw-hd,.edraw-hd *{font-size:16px}
+  .edraw-bd{padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+  .edraw-bd input,.edraw-bd select,.edraw-bd textarea{min-height:46px;border-radius:13px;background:var(--bg);border:1.5px solid transparent;padding:10px 14px}
+  .edraw-bd input:focus,.edraw-bd select:focus,.edraw-bd textarea:focus{background:var(--surf);border-color:var(--acc)}
+  .edraw-actions{position:sticky;bottom:0;background:var(--surf);padding:12px 0 calc(4px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--bord-l)}
+  .edraw-actions .btp{min-height:48px;border-radius:14px;flex:2;justify-content:center}
+  .edraw-actions .bts{min-height:48px;border-radius:14px;justify-content:center}
+
+  /* ── 10 · TABELAS RESTANTES — respiro de app, não planilha ── */
+  .twrap th,.vtable th{font-size:10.5px;letter-spacing:.5px;padding:10px 12px}
+  .twrap td,.vtable td{padding:13px 12px;font-size:13px}
+
+  /* ── 11 · ESTADOS VAZIOS — centrados e calmos ── */
+  .st-wrap{padding:44px 24px}
+  .st-btn{min-height:44px;border-radius:14px}
+
+  /* ── 12 · RETOQUES DE CARROCERIA (achados no test-drive) ── */
+  /* Barra "Auto-sync ativo" some no celular — o refresh continua rodando
+     em silêncio; status não pode roubar meia tela do usuário */
+  #ar-bar{display:none!important}
+  /* Abas de Pedidos: trilho único com swipe, sem quebrar em 2 linhas */
+  .ped-tab-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;align-items:center}
+  .ped-tab-bar::-webkit-scrollbar{display:none}
+  .ped-tab-bar .pt-btn{flex-shrink:0;min-height:44px}
+  .ped-tab-bar .bts{flex-shrink:0;margin-bottom:0!important}
+  /* Rótulos do dock nunca cortam */
+  .bnav-item{padding:8px 1px 7px}
+  .bnav-item span{font-size:9px;white-space:nowrap;overflow:visible}
 }
 @keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@keyframes sheetIn{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@keyframes sheetIn{from{transform:translateY(48px);opacity:.5}to{transform:none;opacity:1}}
 @media(max-width:600px){
   .kpi-row{grid-template-columns:1fr 1fr}
   .kpi-val{font-size:24px;letter-spacing:-1px}
