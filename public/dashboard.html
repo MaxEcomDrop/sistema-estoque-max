@@ -2,6 +2,9 @@
 <html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4f46e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1607,6 +1610,24 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div><div class="fk-sm-label">Total de pedidos</div><div class="fk-sm-val" id="fin-total">—</div></div>
         </div>
       </div>
+      <!-- Canais de venda: Bling x Mercado Livre lado a lado, com taxas -->
+      <div class="tcard" style="margin-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:12px">Taxas e frete por canal</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div style="background:var(--bg);border-radius:11px;padding:14px;border-left:3px solid var(--acc)">
+            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:6px;background:#eef2ff;color:#4338ca;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">B</span>Bling (todos os canais)</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Frete cobrado</span><strong id="fin-canal-bling-frete">—</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Descontos dados</span><strong id="fin-canal-bling-desc">—</strong></div>
+          </div>
+          <div style="background:var(--bg);border-radius:11px;padding:14px;border-left:3px solid #ffc400">
+            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:6px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">ML</span>Mercado Livre (direto)</div>
+            <div id="fin-canal-ml-body">
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Taxas/comissão</span><strong id="fin-canal-ml-taxa">—</strong></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Frete cobrado</span><strong id="fin-canal-ml-frete">—</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
       <!-- Gráfico de vendas -->
       <div class="fin-chart-wrap">
         <div class="fin-chart-title">Receita diária (pedidos concluídos)</div>
@@ -1981,6 +2002,14 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="cfg-row"><span class="cfg-row-lbl">Firebase (push/dados)</span><span class="sb2 s-lo" id="cfg-int-fb">Verificando…</span></div>
       </div>
       <div class="cfg-card">
+        <div class="cfg-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Diagnóstico ao vivo</span>
+          <button class="bts" onclick="loadDiagnostico()">↻ Verificar agora</button>
+        </div>
+        <div class="cfg-desc">Mostra exatamente o que o servidor tem configurado neste momento — útil para achar o que está travando um redirecionamento ou uma integração, em vez de adivinhar.</div>
+        <div id="cfg-diag-body" style="margin-top:8px"><div class="st-wrap" style="padding:16px"><p class="st-d">Clique em "Verificar agora".</p></div></div>
+      </div>
+      <div class="cfg-card">
         <div class="cfg-title">Segurança</div>
         <div class="cfg-desc" style="margin-bottom:0">Sua sessão usa cookie httpOnly assinado (JWT, 7 dias). Login protegido contra força bruta (5 tentativas / 15 min). A senha do painel é definida pela variável <strong>ADMIN_PASSWORD</strong> no servidor — para trocá-la, atualize a variável no Render/Vercel e faça um novo deploy.</div>
       </div>
@@ -1988,9 +2017,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="cfg-title">Sobre</div>
         <div class="cfg-row"><span class="cfg-row-lbl">Sistema</span><span class="cfg-row-val">Estoque Max</span></div>
         <div class="cfg-row"><span class="cfg-row-lbl">Integrado a</span><span class="cfg-row-val">Bling ERP</span></div>
-        <div class="cfg-row" style="cursor:pointer" onclick="sync()" title="Força recarregamento de todos os dados da API">
+        <div class="cfg-row"><span class="cfg-row-lbl">Build no ar</span><span class="cfg-row-val" id="cfg-build">—</span></div>
+        <div class="cfg-row" style="cursor:pointer" onclick="forceHardReload()" title="Limpa todo cache local (localStorage de filtros, Service Worker) e recarrega direto do servidor">
           <span class="cfg-row-lbl">Dados</span>
-          <span class="cfg-row-val" style="color:var(--acc)">Limpar cache e sincronizar ↺</span>
+          <span class="cfg-row-val" style="color:var(--acc)">Forçar atualização completa ↺</span>
         </div>
       </div>
     </div>
@@ -3123,9 +3153,33 @@ async function loadMLAnuncios(){
     if(!r.ok)throw new Error(d.error||'Erro');
     if(!d.anuncios.length){body.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Nenhum anúncio encontrado.</p></div>';return;}
     const mlSitMap={active:'Ativo',paused:'Pausado',closed:'Encerrado',under_review:'Em revisão'};
-    body.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px"><select id="ml-anu-status" onchange="$('ml-anuncios-body').dataset.loaded='';loadMLAnuncios()" style="height:32px;padding:0 8px;background:var(--bg);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;color:var(--tx);font-family:inherit"><option value="active">Ativos</option><option value="paused">Pausados</option><option value="closed">Encerrados</option></select><span style="font-size:12px;color:var(--mu)">${d.total} anúncios</span></div>`+
-    `<table><thead><tr><th>Anúncio</th><th class="r">Preço</th><th class="r">Qtd</th><th>Status</th></tr></thead><tbody>${d.anuncios.map(a=>{const sc=a.situacao==='active'?'ok':a.situacao==='paused'?'lo':'out';return`<tr style="cursor:pointer" onclick="window.open('${esc(a.link||'')}','_blank')" title="Abrir no Mercado Livre"><td><div class="pinfo">${a.thumb?`<img src="${esc(a.thumb)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0" loading="lazy">`:'<span style="width:32px;height:32px;background:var(--bg);border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0;display:inline-block"></span>'}<span class="pname" style="max-width:180px">${esc(a.titulo)}</span></div></td><td class="r">${fmt(a.preco)}</td><td class="r">${fmtN(a.qtd)}</td><td><span class="sb2 s-${sc}">${mlSitMap[a.situacao]||esc(a.situacao)}</span></td></tr>`;}).join('')}</tbody></table>`;
+    body.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px"><select id="ml-anu-status" onchange="$('ml-anuncios-body').dataset.loaded='';loadMLAnuncios()" style="height:32px;padding:0 8px;background:var(--bg);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;color:var(--tx);font-family:inherit"><option value="active">Ativos</option><option value="paused">Pausados</option><option value="closed">Encerrados</option></select><span style="font-size:12px;color:var(--mu)">${d.total} anúncios</span><span style="font-size:11px;color:var(--mu)">· clique no preço/qtd para editar e enviar ao Mercado Livre</span></div>`+
+    `<table><thead><tr><th>Anúncio</th><th class="r">Preço</th><th class="r">Qtd</th><th>Status</th></tr></thead><tbody>${d.anuncios.map(a=>{const sc=a.situacao==='active'?'ok':a.situacao==='paused'?'lo':'out';return`<tr data-ml-id="${esc(a.id)}"><td style="cursor:pointer" onclick="window.open('${esc(a.link||'')}','_blank')" title="Abrir no Mercado Livre"><div class="pinfo">${a.thumb?`<img src="${esc(a.thumb)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0" loading="lazy">`:'<span style="width:32px;height:32px;background:var(--bg);border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0;display:inline-block"></span>'}<span class="pname" style="max-width:180px">${esc(a.titulo)}</span></div></td><td class="r"><span class="ev" onclick="editMLCell(this,'preco','${esc(a.id)}',${a.preco},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmt(a.preco)}${editIco}</span></td><td class="r"><span class="ev" onclick="editMLCell(this,'estoque','${esc(a.id)}',${a.qtd},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmtN(a.qtd)}${editIco}</span></td><td><span class="sb2 s-${sc}">${mlSitMap[a.situacao]||esc(a.situacao)}</span></td></tr>`;}).join('')}</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:14px"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+// Edição inline de preço/estoque de um anúncio do Mercado Livre — envia
+// direto pro ML via PATCH /api/ml/anuncios/:id (mesmo padrão do editCell
+// usado nos produtos do Bling).
+function editMLCell(span,field,itemId,current,titulo){
+  const inp=document.createElement('input');
+  inp.className='iinp';inp.type='number';inp.value=current;inp.step=field==='preco'?'0.01':'1';inp.min=field==='preco'?'0.01':'0';
+  inp.inputMode=field==='preco'?'decimal':'numeric';
+  span.replaceWith(inp);inp.focus();inp.select();
+  const restore=(val)=>{const ns=document.createElement('span');ns.className='ev';ns.innerHTML=(field==='preco'?fmt(val):fmtN(val))+editIco;ns.onclick=()=>editMLCell(ns,field,itemId,val,titulo);inp.replaceWith(ns);};
+  const save=async()=>{
+    const val=parseFloat(inp.value);
+    if(isNaN(val)||val<0||(field==='preco'&&val<=0)){toast('Valor inválido','err');restore(current);return;}
+    try{
+      const body={titulo_produto:titulo};body[field]=val;
+      const r=await fetch(`/api/ml/anuncios/${itemId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok){toast(d.error||'Erro ao salvar no Mercado Livre','err');restore(current);return;}
+      toast(`${field==='preco'?'Preço':'Estoque'} atualizado no Mercado Livre ✓`,'ok');
+      restore(val);
+    }catch(e){toast('Erro de conexão','err');restore(current);}
+  };
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',save);restore(current);}});
 }
 
 async function loadMLMetricas(){
@@ -3271,8 +3325,15 @@ function renderExpired(){$('tbody').innerHTML=`<tr><td colspan="8"><div class="s
 function sync(){
   _dashLoaded=false;_pedidosLoaded=false;_clientesLoaded=false;_notasLoaded=false;_finCacheKey='';_finCache={};
   loadProducts(true);
+  // Também atualiza de imediato a aba que estiver aberta agora — sem isso,
+  // clicar em Sincronizar não refletia nada até trocar de aba e voltar.
   if(S.view==='inicio')loadDashboard(true);
   if(S.view==='financeiro')loadFinanceiro(true);
+  if(S.view==='clientes')loadClientes(true);
+  if(S.view==='pedidos')loadPedidos();
+  if(S.view==='notas')loadNotas();
+  if(S.view==='mercado-livre')loadMercadoLivre(true);
+  if(S.view==='calendario')loadCalendario();
 }
 
 // ── KPI ──────────────────────────────────────────
@@ -3351,6 +3412,61 @@ async function loadConfig(){
     set('cfg-int-ml',st.mercadoLivre?.conectado,'Conectado','Desconectado');
     set('cfg-int-fb',st.firebase?.conectado,'Ativo','Não configurado');
   }catch(e){console.error('[loadConfig status]',e);}
+  try{
+    const h=await fetch('/health').then(r=>r.json());
+    const b=$('cfg-build');if(b)b.textContent=`${h.build||'?'} · ${h.buildTime?new Date(h.buildTime).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}`;
+  }catch(e){console.error('[loadConfig health]',e);}
+}
+
+// Mostra exatamente o que o servidor tem configurado agora — para achar
+// na hora onde um redirecionamento/integração está travando, sem adivinhar.
+async function loadDiagnostico(){
+  const body=$('cfg-diag-body');
+  body.innerHTML='<div class="st-wrap" style="padding:16px"><p class="st-d">Verificando…</p></div>';
+  try{
+    const d=await fetch('/api/diagnostico').then(r=>r.json());
+    const row=(lbl,val,ok)=>`<div class="cfg-row"><span class="cfg-row-lbl">${esc(lbl)}</span><span class="cfg-row-val" style="${ok===false?'color:var(--er-t)':ok===true?'color:var(--ok-t)':''};font-family:monospace;font-size:11.5px;word-break:break-all;text-align:right">${esc(String(val))}</span></div>`;
+    const urlMatch=(a,b)=>a&&b&&a.replace(/\/$/,'')===b.replace(/\/$/,'');
+    const blingMatch=urlMatch(d.bling.redirectUriConfigurada,d.bling.urlEsperadaPeloRequest);
+    const mlMatch=urlMatch(d.mercadoLivre.redirectUriConfigurada,d.mercadoLivre.urlEsperadaPeloRequest);
+    body.innerHTML=`
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:4px 0 6px">SERVIDOR</div>
+      ${row('Build no ar',d.build,null)}
+      ${row('Host respondendo',d.host,null)}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">BLING</div>
+      ${row('BLING_REDIRECT_URI configurada',d.bling.redirectUriConfigurada||'⚠️ NÃO CONFIGURADA',!!d.bling.redirectUriConfigurada)}
+      ${row('URL que este domínio precisa',d.bling.urlEsperadaPeloRequest,null)}
+      ${row('As duas batem?',blingMatch?'✓ Sim':'✗ NÃO — é isso que quebra o redirecionamento',blingMatch)}
+      ${row('Conectado agora',d.bling.conectado?'✓ Sim':'✗ Não',d.bling.conectado)}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">MERCADO LIVRE</div>
+      ${row('ML_CLIENT_ID configurado',d.mercadoLivre.clientIdConfigurado?'✓ Sim':'✗ NÃO CONFIGURADO',d.mercadoLivre.clientIdConfigurado)}
+      ${row('ML_REDIRECT_URI configurada',d.mercadoLivre.redirectUriConfigurada||'⚠️ NÃO CONFIGURADA',!!d.mercadoLivre.redirectUriConfigurada)}
+      ${row('URL que este domínio precisa',d.mercadoLivre.urlEsperadaPeloRequest,null)}
+      ${row('As duas batem?',mlMatch?'✓ Sim':'✗ NÃO — é isso que quebra o redirecionamento',mlMatch)}
+      ${row('Conectado agora',d.mercadoLivre.conectado?'✓ Sim':'✗ Não',d.mercadoLivre.conectado)}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">FIREBASE / PERSISTÊNCIA</div>
+      ${row('FIREBASE_SERVICE_ACCOUNT configurado',d.firebase.configurado?'✓ Sim':'✗ NÃO — dados de contas/calendário não persistem entre reinícios',d.firebase.configurado)}
+      ${row('Firestore respondendo',d.firebase.firestoreRespondendo?'✓ Sim':'✗ Não',d.firebase.firestoreRespondendo)}
+    `;
+  }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:16px"><p class="st-d">Erro ao verificar: ${esc(e.message)}</p></div>`;}
+}
+
+// Limpa TUDO que pode estar segurando uma versão antiga (Service Worker,
+// caches do navegador, filtros salvos) e força buscar o servidor de novo.
+async function forceHardReload(){
+  if(!confirm('Isso vai limpar filtros salvos e o cache local do app, e recarregar a página. Continuar?'))return;
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){console.error('[forceHardReload]',e);}
+  localStorage.removeItem('flt');
+  window.location.href='/dashboard.html?_fresh='+Date.now();
 }
 function updateSyncTs(){
   const el=$('sync-ts');if(!el)return;
@@ -4632,6 +4748,11 @@ function renderFinFromData(d){
     $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos concluídos`;
     $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
     $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
+    // Taxas e frete por canal — Bling já veio nesta mesma resposta,
+    // Mercado Livre é buscado à parte (endpoint próprio, pode não estar conectado)
+    if($('fin-canal-bling-frete'))$('fin-canal-bling-frete').textContent=fmt(d.totalFrete);
+    if($('fin-canal-bling-desc'))$('fin-canal-bling-desc').textContent=fmt(d.totalDesconto);
+    try{loadFinCanalML();}catch(e){console.error('[loadFinCanalML]',e);}
     // Blocos abaixo isolados em try/catch próprio para que uma falha em um
     // deles não impeça a exibição dos KPIs principais já atualizados acima.
     try{renderFinTrend(d);}catch(e){console.error('[renderFinTrend]',e);}
@@ -4650,6 +4771,20 @@ function renderFinFromData(d){
       prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
       return`<tr style="cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto"><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
     }</tbody></table>`;
+}
+async function loadFinCanalML(){
+  const taxaEl=$('fin-canal-ml-taxa'),freteEl=$('fin-canal-ml-frete');
+  if(!taxaEl||!freteEl)return;
+  taxaEl.textContent='…';freteEl.textContent='…';
+  try{
+    const status=await fetch('/api/ml/status').then(r=>r.json());
+    if(!status.connected){taxaEl.textContent='não conectado';freteEl.textContent='não conectado';return;}
+    const dash=await fetch('/api/ml/dashboard?period=30').then(r=>r.json());
+    if(dash&&!dash.error&&dash.faturamento!==undefined){
+      taxaEl.textContent=fmt(dash.taxas||0);
+      freteEl.textContent=fmt(dash.frete||0);
+    }else{taxaEl.textContent='—';freteEl.textContent='—';}
+  }catch(e){taxaEl.textContent='—';freteEl.textContent='—';}
 }
 function renderFinTrend(d){
   const c=d.comparativo;
