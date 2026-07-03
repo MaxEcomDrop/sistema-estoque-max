@@ -445,6 +445,21 @@ function situacaoPT(s) {
   return _SIT_PT_MAP[raw.toLowerCase().replace(/\s+/g,'_')] || raw;
 }
 
+// Situação de NF-e no Bling v3 vem como NÚMERO — este é o mapa oficial.
+// Sem ele a UI mostrava o número cru (ou "[object Object]").
+const _BLING_NFE_SIT = {
+  1: 'Pendente', 2: 'Cancelada', 3: 'Aguardando recibo', 4: 'Rejeitada',
+  5: 'Autorizada', 6: 'Emitida DANFE', 7: 'Registrada', 8: 'Aguardando protocolo',
+  9: 'Denegada', 10: 'Consultando situação', 11: 'Bloqueada',
+};
+function nfeSituacaoPT(s) {
+  if (s && typeof s === 'object') s = s.nome ?? s.valor ?? s.id;
+  if (typeof s === 'number' || /^\d+$/.test(String(s ?? ''))) {
+    return _BLING_NFE_SIT[Number(s)] || `Situação ${s}`;
+  }
+  return String(s || '—');
+}
+
 // Datas SEMPRE no fuso do negócio (Brasil), nunca em UTC do servidor.
 // Servidores da Vercel rodam em UTC: às 21h de Brasília, toISOString() já
 // devolve o dia SEGUINTE — o filtro "Hoje" passava a buscar pedidos de
@@ -721,18 +736,22 @@ app.get('/api/auth/me', requireAuthJson, (req, res) => {
 // In-memory cache for ML access_token (TTL ~6h) to avoid Firestore round-trips
 let _mlTokenCache = { token: null, expiresAt: 0, sellerId: null };
 
+// Retorna true se persistiu no Firestore. Sem persistência a conexão do ML
+// morre junto com a instância serverless — quem chama precisa saber disso.
 async function saveMLTokens(accessToken, refreshToken, sellerId, expiresIn) {
   const expiresAt = Date.now() + ((expiresIn || 21600) - 120) * 1000;
   _mlTokenCache = { token: accessToken, expiresAt, sellerId };
   const admin = getAdmin();
-  if (!admin) return;
+  if (!admin) { console.error('[saveMLTokens] Firebase Admin indisponível — token só em memória'); return false; }
   try {
     await admin.firestore().collection('ml_auth').doc('tokens').set({
       accessToken, refreshToken, sellerId: String(sellerId || ''),
       accessExpiresAt: expiresAt,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-  } catch (e) { console.error('[saveMLTokens]', e.message); }
+    console.log('[ML OAuth] tokens persistidos no Firestore (seller', String(sellerId || '?') + ')');
+    return true;
+  } catch (e) { console.error('[saveMLTokens] Firestore falhou:', e.message); return false; }
 }
 
 async function refreshMLToken(refreshToken) {
@@ -802,7 +821,11 @@ app.get('/api/ml/callback', async (req, res) => {
     const { data } = await axios.post('https://api.mercadolibre.com/oauth/token', params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     });
-    await saveMLTokens(data.access_token, data.refresh_token, data.user_id, data.expires_in || 21600);
+    console.log('[ML OAuth] troca de código OK (seller', String(data.user_id || '?') + ')');
+    const persisted = await saveMLTokens(data.access_token, data.refresh_token, data.user_id, data.expires_in || 21600);
+    // Sem Firestore o token morre com a instância e a conexão "some" em
+    // segundos — melhor avisar na hora do que fingir que conectou.
+    if (!persisted) return res.redirect('/dashboard.html?ml_error=storage_failed&ml_detail=' + encodeURIComponent('Token obtido, mas o Firestore não gravou — veja Diagnóstico ao vivo (Firestore respondendo).'));
     res.redirect('/dashboard.html?ml_connected=1');
   } catch (err) {
     console.error('[ML OAuth]', err.response?.data || err.message);
@@ -974,8 +997,33 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       descricao:  p.descricaoComplementar || p.descricao || '',
       categoria:  p.categoria?.descricao || '',
       situacao:   String((typeof p.situacao === 'object' ? (p.situacao?.valor || p.situacao?.nome) : p.situacao) || 'A'),
-      imagemUrl:  p.imagem?.link || p.imageThumbnailURL || '',
+      // A listagem do Bling v3 traz a miniatura em `imagemURL`; o detalhe traz
+      // `midia.imagens.{internas,externas}[].link`. Os campos antigos
+      // (imagem.link / imageThumbnailURL) NÃO existem — por isso todos os
+      // produtos apareciam com placeholder mesmo tendo foto no Bling.
+      imagemUrl:  p.imagemURL
+               || p.midia?.imagens?.internas?.[0]?.link
+               || p.midia?.imagens?.externas?.[0]?.link
+               || p.imagem?.link || '',
     }));
+
+    // Imagens enviadas pelo próprio painel têm prioridade (aparecem na hora,
+    // sem esperar o Bling processar a URL externa). Só os metadados são
+    // lidos (select) — o base64 pesado fica fora desta consulta.
+    const admin = getAdmin();
+    if (admin) {
+      try {
+        const snap = await admin.firestore().collection('produto_imagens').select('updatedAt').get();
+        const overrides = new Map(snap.docs.map(d => [d.id, d.updateTime?.toMillis() || Date.now()]));
+        if (overrides.size) {
+          const base = `${req.protocol}://${req.get('host')}`;
+          for (const prod of products) {
+            const v = overrides.get(String(prod.id));
+            if (v) prod.imagemUrl = `${base}/img/produto/${prod.id}?v=${v}`;
+          }
+        }
+      } catch (e) { console.error('[produtos] override de imagens:', e.message); }
+    }
 
     res.json({ total: products.length, products });
   } catch (err) {
@@ -1009,7 +1057,9 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
-    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', req.body, {
+    const body = { ...req.body };
+    if (body.imagemUrl) { body.midia = { imagens: { externas: [{ link: body.imagemUrl }] } }; delete body.imagemUrl; }
+    const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', body, {
       headers: blingHeaders(token),
     });
     const criado = data?.data || data;
@@ -1025,6 +1075,51 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
     const detail = err.response?.data?.error?.message || err.response?.data || err.message;
     sendErrorResponse(res, 500, 'Erro ao criar produto', detail);
   }
+});
+
+// ── Upload de imagem de produto ─────────────────────────────────────
+// O Bling v3 só aceita imagem por URL pública (midia.imagens.externas), não
+// upload binário. Fluxo: o editor comprime no navegador (canvas), manda o
+// dataURL para cá, guardamos no Firestore e servimos numa URL pública que
+// também é cadastrada no Bling. Nada de campo de URL manual.
+const IMG_MIMES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+app.post('/api/produtos/:id/imagem', requireAuthJson, async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+  try {
+    const produtoId = validateNumericId(req.params.id, 'ID do produto');
+    const m = String(req.body?.dataUrl || '').match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if (!m) return res.status(400).json({ error: 'Envie um dataURL de imagem JPG, PNG ou WEBP' });
+    const [, mime, b64] = m;
+    // Firestore limita o documento a ~1MB — o front comprime bem abaixo disso
+    if (b64.length > 950_000) return res.status(413).json({ error: 'Imagem grande demais mesmo após compressão (máx ~700KB)' });
+    await admin.firestore().collection('produto_imagens').doc(String(produtoId)).set({
+      data: b64, mime, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    // URL pública (com cache-buster) que o navegador e o Bling vão usar
+    const url = `${req.protocol}://${req.get('host')}/img/produto/${produtoId}?v=${Date.now()}`;
+    res.json({ url });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    sendErrorResponse(res, 500, 'Erro ao salvar imagem', err.message);
+  }
+});
+
+// Público de propósito: o Bling e as tags <img> precisam acessar sem cookie.
+// Imagem de produto de e-commerce não é dado sensível.
+app.get('/img/produto/:id', async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(404).end();
+  try {
+    if (!isValidNumericId(req.params.id)) return res.status(400).end();
+    const doc = await admin.firestore().collection('produto_imagens').doc(String(req.params.id)).get();
+    if (!doc.exists) return res.status(404).end();
+    const { data, mime } = doc.data();
+    res.set('Content-Type', mime || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(data, 'base64'));
+  } catch { res.status(500).end(); }
 });
 
 // Busca pedidos de venda num intervalo (paginado)
@@ -1043,8 +1138,7 @@ async function fetchPedidos(token, inicio, fim, maxPg = 3) {
 }
 
 const categorizePedido = s => {
-  const raw = String(s?.nome || s?.valor || s || '');
-  const n = (situacaoPT(raw)).toLowerCase();
+  const n = situacaoPT(s).toLowerCase();
   if (n.includes('cancel') || n.includes('devolv') || n.includes('reembolsad') || n.includes('suspenso') || n.includes('falhou')) return 'cancelado';
   if (n.includes('atend') || n.includes('conclui') || n.includes('entregue') || n.includes('faturad') || n.includes('despachad') || n.includes('enviado') || n.includes('encerrad')) return 'concluido';
   return 'pendente';
@@ -1199,10 +1293,11 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     // Atualização completa via drawer editor
     if (_fullUpdate) {
       try {
-      // Converte imagemUrl (campo frontend) para formato Bling
+      // Converte imagemUrl (campo frontend) para o formato do Bling v3:
+      // imagens ficam em midia.imagens.externas[].link ("imagem.link" não existe)
       const payload = { ..._fullUpdate };
       if (payload.imagemUrl !== undefined) {
-        if (payload.imagemUrl) payload.imagem = { link: payload.imagemUrl };
+        if (payload.imagemUrl) payload.midia = { imagens: { externas: [{ link: payload.imagemUrl }] } };
         delete payload.imagemUrl;
       }
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
@@ -1429,7 +1524,7 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       numero:    p.numero,
       data:      p.data,
       valor:     Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
-      situacao:  situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      situacao:  situacaoPT(p.situacao),
       contato:   p.contato?.nome || '—',
     }));
 
@@ -1465,7 +1560,7 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       id:          p.id,
       numero:      p.numero,
       data:        p.data,
-      situacao:    situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      situacao:    situacaoPT(p.situacao),
       contato:     p.contato?.nome || '—',
       contatoDoc:  p.contato?.numeroDocumento || '',
       contatoTel:  p.contato?.celular || p.contato?.telefone || '',
@@ -1502,7 +1597,7 @@ app.get('/api/notas-fiscais', requireAuthJson, async (req, res) => {
       serie:       n.serie || '1',
       dataEmissao: n.dataEmissao || n.data || '',
       total:       n.totalProdutos || n.total || n.valor || 0,
-      situacao:    String(n.situacao?.nome || n.situacao?.valor || n.situacao || '—'),
+      situacao:    nfeSituacaoPT(n.situacao),
       chave:       n.chaveAcesso || n.chave || '',
       contato:     n.contato?.nome || '—',
     }));
@@ -1540,7 +1635,7 @@ app.get('/api/nfe/:id/detalhe', requireAuthJson, async (req, res) => {
       total: n.totalProdutos || n.total || n.valor || 0,
       totalFrete: Number(n.totalFrete || 0),
       totalDesconto: Number(n.totalDesconto || 0),
-      situacao: String(n.situacao?.nome || n.situacao?.valor || n.situacao || '—'),
+      situacao: nfeSituacaoPT(n.situacao),
       chave: n.chaveAcesso || n.chave || '',
       contato: n.contato?.nome || '—',
       contatoDoc: n.contato?.numeroDocumento || '',
@@ -2305,7 +2400,7 @@ app.get('/api/pedidos/sync/status', requireAuthJson, async (req, res) => {
       numero:     p.numero,
       data:       p.data,
       valor:      Number(p.totalVenda || p.totalProdutos || 0),
-      situacao:   situacaoPT(p.situacao?.nome || p.situacao?.valor || p.situacao),
+      situacao:   situacaoPT(p.situacao),
       contato:    p.contato?.nome || '—',
       status:     p.situacao?.valor || p.situacao,
       frete:      Number(p.transporte?.frete || p.frete || 0),
@@ -2353,7 +2448,7 @@ app.get('/api/notas-fiscais/sync/status', requireAuthJson, async (req, res) => {
       serie:      n.serie || '1',
       data:       n.dataEmissao || n.data,
       valor:      Number(n.totalNota || n.total || 0),
-      situacao:   n.situacao?.nome || n.situacao || '—',
+      situacao:   nfeSituacaoPT(n.situacao),
       contato:    n.destinatario?.nome || n.cliente?.nome || '—',
       chave:      n.chave || n.numeroNFe || '—',
       status:     n.situacao?.valor || n.situacao,
