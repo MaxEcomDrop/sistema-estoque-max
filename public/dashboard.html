@@ -3709,7 +3709,9 @@ async function loadDiagnostico(){
       ${d.firebase.configurado?row('Projeto configurado no servidor',d.firebase.projetoConfigurado||'—',d.firebase.projetoBate):''}
       ${d.firebase.configurado?row('Projeto que o login com Google espera','erp-max-sistema',null):''}
       ${d.firebase.configurado?row('Os dois batem?',d.firebase.projetoBate?'✓ Sim':'✗ NÃO — é isso que faz o login com Google sempre falhar',d.firebase.projetoBate):''}
-      ${row('Firestore respondendo',d.firebase.firestoreRespondendo?'✓ Sim':'✗ Não',d.firebase.firestoreRespondendo)}
+      ${row('Firestore respondendo',d.firebase.firestoreRespondendo?'✓ Sim':'✗ NÃO — sem ele os tokens do Bling/ML não têm onde ficar salvos',d.firebase.firestoreRespondendo)}
+      ${!d.firebase.firestoreRespondendo&&d.firebase.firestoreErro?row('Erro cru do Firestore',d.firebase.firestoreErro,false):''}
+      ${!d.firebase.firestoreRespondendo?`<div style="font-size:12px;color:var(--mu);padding:10px 12px;background:var(--wa-bg);border-radius:10px;margin-top:8px;line-height:1.5"><strong>Como resolver:</strong> abra <strong>console.firebase.google.com</strong> → projeto <strong>erp-max-sistema</strong> → <strong>Firestore Database</strong> → <strong>Criar banco de dados</strong> (modo produção, região southamerica-east1). Se já existir, ative a API "Cloud Firestore" no Google Cloud. Depois toque em Verificar agora.</div>`:''}
     `;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:16px"><p class="st-d">Erro ao verificar: ${esc(e.message)}</p></div>`;}
 }
