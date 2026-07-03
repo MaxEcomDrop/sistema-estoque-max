@@ -337,6 +337,9 @@ const _TRANSP_TIPO = {
   'recipient':'Destinatário','sender':'Remetente','free':'Frete grátis',
 };
 function situacaoPT(s) {
+  // Bling às vezes manda o objeto de situação sem .nome/.valor (ex.: só
+  // {id}); sem essa guarda, String(objeto) virava "[object Object]" na UI.
+  if (s && typeof s === 'object') s = s.nome || s.valor || s.descricao || null;
   const raw = String(s || '—');
   return _SIT_PT_MAP[raw.toLowerCase().replace(/\s+/g,'_')] || raw;
 }
@@ -837,7 +840,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       peso:       p.pesoBruto || 0,
       descricao:  p.descricaoComplementar || p.descricao || '',
       categoria:  p.categoria?.descricao || '',
-      situacao:   String(p.situacao?.valor || p.situacao || 'A'),
+      situacao:   String((typeof p.situacao === 'object' ? (p.situacao?.valor || p.situacao?.nome) : p.situacao) || 'A'),
       imagemUrl:  p.imagem?.link || p.imageThumbnailURL || '',
     }));
 
