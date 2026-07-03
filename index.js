@@ -25,18 +25,23 @@ function validateEnvironment() {
 
 // Firebase Admin SDK (lazy init para não quebrar se env var ausente)
 let _fbAdmin = null;
+let _fbAdminProjectId = null; // exposto em /api/diagnostico p/ conferir se bate com o projeto do login.html
+let _fbAdminInitError = null;
 function getAdmin() {
   if (_fbAdmin) return _fbAdmin;
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) return null;
   try {
     const admin = require('firebase-admin');
+    const cred = JSON.parse(raw);
     if (!admin.apps.length) {
-      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+      admin.initializeApp({ credential: admin.credential.cert(cred) });
     }
+    _fbAdminProjectId = cred.project_id || null;
     _fbAdmin = admin;
-  } catch (e) { 
-    console.error('⚠️  Firebase Admin init error:', e.message); 
+  } catch (e) {
+    _fbAdminInitError = e.message;
+    console.error('⚠️  Firebase Admin init error:', e.message);
   }
   return _fbAdmin;
 }
@@ -419,6 +424,15 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
     firebase: {
       configurado: !!admin,
       firestoreRespondendo: firestoreOk,
+      // Precisa ser exatamente "erp-max-sistema" (mesmo projeto do
+      // firebase.initializeApp em login.html) — se o FIREBASE_SERVICE_ACCOUNT
+      // configurado no servidor for de outro projeto Firebase, o login com
+      // Google falha sempre com "Token do Firebase inválido ou expirado",
+      // mesmo com tudo aparentemente certo.
+      projetoConfigurado: _fbAdminProjectId,
+      projetoEsperado: 'erp-max-sistema',
+      projetoBate: admin ? (_fbAdminProjectId === 'erp-max-sistema') : null,
+      erroInicializacao: _fbAdminInitError,
     },
     adminEmailConfigurado: !!ADMIN_EMAIL,
     jwtSecretConfigurado: !!JWT_SECRET,
@@ -549,8 +563,15 @@ app.post('/api/auth/firebase', loginRateLimit, async (req, res) => {
     // administrador é recusada aqui.
     const verifiedEmail = String(firebaseUser.email || '').toLowerCase();
     if (!firebaseUser.email_verified || !safeEqual(verifiedEmail, String(ADMIN_EMAIL).toLowerCase())) {
+      console.error(`[Firebase Auth] Login recusado: conta Google "${verifiedEmail || '—'}" (verificado=${!!firebaseUser.email_verified}) não é o ADMIN_EMAIL configurado no servidor.`);
       registerLoginFailure(req);
-      return sendErrorResponse(res, 403, 'Email não autorizado. Entre em contato com o administrador.');
+      // Devolve o email que a PESSOA MESMA usou (não o ADMIN_EMAIL) — ajuda
+      // a perceber na hora se entrou com a conta Google errada, sem vazar
+      // qual é o email do administrador para quem estiver só tentando a esmo.
+      return sendErrorResponse(res, 403,
+        verifiedEmail
+          ? `A conta Google "${verifiedEmail}" não é a administradora deste sistema. Entre com a conta correta ou use email e senha.`
+          : 'Email não autorizado. Entre em contato com o administrador.');
     }
 
     clearLoginFailures(req);
