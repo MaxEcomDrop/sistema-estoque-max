@@ -706,6 +706,45 @@ app.get('/api/ml/anuncios', requireAuthJson, async (req, res) => {
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar anúncios', e.message); }
 });
 
+// Edita preço e/ou estoque de um anúncio e MANDA a alteração de volta para
+// o Mercado Livre (PUT /items/:id) — até aqui só existia leitura de
+// anúncios; não havia como editar e enviar dados para o ML, só para o Bling.
+app.patch('/api/ml/anuncios/:id', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
+  const { preco, estoque, titulo_produto } = req.body || {};
+  if (preco === undefined && estoque === undefined) {
+    return res.status(400).json({ error: 'Informe preco e/ou estoque' });
+  }
+  const payload = {};
+  if (preco !== undefined) {
+    const p = Number(preco);
+    if (!(p > 0)) return res.status(400).json({ error: 'Preço inválido' });
+    payload.price = p;
+  }
+  if (estoque !== undefined) {
+    const q = Number(estoque);
+    if (!(q >= 0) || !Number.isFinite(q)) return res.status(400).json({ error: 'Estoque inválido' });
+    payload.available_quantity = q;
+  }
+  try {
+    const { data } = await axios.put(`https://api.mercadolibre.com/items/${req.params.id}`, payload, { headers: mlHeaders(ml.token) });
+    changeLog.push({
+      id: changeLog.length + 1, produto_id: `ml_${req.params.id}`,
+      produto_nome: titulo_produto || req.params.id, campo: 'Mercado Livre',
+      valor_anterior: '—',
+      valor_novo: [preco !== undefined ? `preço R$ ${Number(preco).toFixed(2)}` : null, estoque !== undefined ? `${Number(estoque)} un.` : null].filter(Boolean).join(' · '),
+      timestamp: new Date().toISOString(),
+    });
+    saveInMemoryData();
+    res.json({ success: true, item: { id: data.id, price: data.price, available_quantity: data.available_quantity } });
+  } catch (err) {
+    // A API do ML retorna o motivo da rejeição em cause[] (ex: preço abaixo do mínimo, item pausado etc.)
+    const detail = err.response?.data?.cause?.[0]?.message || err.response?.data?.message || err.message;
+    sendErrorResponse(res, err.response?.status || 500, 'Erro ao atualizar anúncio no Mercado Livre', detail);
+  }
+});
+
 app.get('/api/ml/metricas', requireAuthJson, async (req, res) => {
   const ml = await ensureMLToken();
   if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });

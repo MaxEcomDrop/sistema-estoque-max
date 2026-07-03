@@ -3153,9 +3153,33 @@ async function loadMLAnuncios(){
     if(!r.ok)throw new Error(d.error||'Erro');
     if(!d.anuncios.length){body.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Nenhum anúncio encontrado.</p></div>';return;}
     const mlSitMap={active:'Ativo',paused:'Pausado',closed:'Encerrado',under_review:'Em revisão'};
-    body.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px"><select id="ml-anu-status" onchange="$('ml-anuncios-body').dataset.loaded='';loadMLAnuncios()" style="height:32px;padding:0 8px;background:var(--bg);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;color:var(--tx);font-family:inherit"><option value="active">Ativos</option><option value="paused">Pausados</option><option value="closed">Encerrados</option></select><span style="font-size:12px;color:var(--mu)">${d.total} anúncios</span></div>`+
-    `<table><thead><tr><th>Anúncio</th><th class="r">Preço</th><th class="r">Qtd</th><th>Status</th></tr></thead><tbody>${d.anuncios.map(a=>{const sc=a.situacao==='active'?'ok':a.situacao==='paused'?'lo':'out';return`<tr style="cursor:pointer" onclick="window.open('${esc(a.link||'')}','_blank')" title="Abrir no Mercado Livre"><td><div class="pinfo">${a.thumb?`<img src="${esc(a.thumb)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0" loading="lazy">`:'<span style="width:32px;height:32px;background:var(--bg);border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0;display:inline-block"></span>'}<span class="pname" style="max-width:180px">${esc(a.titulo)}</span></div></td><td class="r">${fmt(a.preco)}</td><td class="r">${fmtN(a.qtd)}</td><td><span class="sb2 s-${sc}">${mlSitMap[a.situacao]||esc(a.situacao)}</span></td></tr>`;}).join('')}</tbody></table>`;
+    body.innerHTML=`<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px"><select id="ml-anu-status" onchange="$('ml-anuncios-body').dataset.loaded='';loadMLAnuncios()" style="height:32px;padding:0 8px;background:var(--bg);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;color:var(--tx);font-family:inherit"><option value="active">Ativos</option><option value="paused">Pausados</option><option value="closed">Encerrados</option></select><span style="font-size:12px;color:var(--mu)">${d.total} anúncios</span><span style="font-size:11px;color:var(--mu)">· clique no preço/qtd para editar e enviar ao Mercado Livre</span></div>`+
+    `<table><thead><tr><th>Anúncio</th><th class="r">Preço</th><th class="r">Qtd</th><th>Status</th></tr></thead><tbody>${d.anuncios.map(a=>{const sc=a.situacao==='active'?'ok':a.situacao==='paused'?'lo':'out';return`<tr data-ml-id="${esc(a.id)}"><td style="cursor:pointer" onclick="window.open('${esc(a.link||'')}','_blank')" title="Abrir no Mercado Livre"><div class="pinfo">${a.thumb?`<img src="${esc(a.thumb)}" style="width:32px;height:32px;object-fit:contain;border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0" loading="lazy">`:'<span style="width:32px;height:32px;background:var(--bg);border-radius:5px;border:1px solid var(--bord-l);flex-shrink:0;display:inline-block"></span>'}<span class="pname" style="max-width:180px">${esc(a.titulo)}</span></div></td><td class="r"><span class="ev" onclick="editMLCell(this,'preco','${esc(a.id)}',${a.preco},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmt(a.preco)}${editIco}</span></td><td class="r"><span class="ev" onclick="editMLCell(this,'estoque','${esc(a.id)}',${a.qtd},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmtN(a.qtd)}${editIco}</span></td><td><span class="sb2 s-${sc}">${mlSitMap[a.situacao]||esc(a.situacao)}</span></td></tr>`;}).join('')}</tbody></table>`;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:14px"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+// Edição inline de preço/estoque de um anúncio do Mercado Livre — envia
+// direto pro ML via PATCH /api/ml/anuncios/:id (mesmo padrão do editCell
+// usado nos produtos do Bling).
+function editMLCell(span,field,itemId,current,titulo){
+  const inp=document.createElement('input');
+  inp.className='iinp';inp.type='number';inp.value=current;inp.step=field==='preco'?'0.01':'1';inp.min=field==='preco'?'0.01':'0';
+  inp.inputMode=field==='preco'?'decimal':'numeric';
+  span.replaceWith(inp);inp.focus();inp.select();
+  const restore=(val)=>{const ns=document.createElement('span');ns.className='ev';ns.innerHTML=(field==='preco'?fmt(val):fmtN(val))+editIco;ns.onclick=()=>editMLCell(ns,field,itemId,val,titulo);inp.replaceWith(ns);};
+  const save=async()=>{
+    const val=parseFloat(inp.value);
+    if(isNaN(val)||val<0||(field==='preco'&&val<=0)){toast('Valor inválido','err');restore(current);return;}
+    try{
+      const body={titulo_produto:titulo};body[field]=val;
+      const r=await fetch(`/api/ml/anuncios/${itemId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok){toast(d.error||'Erro ao salvar no Mercado Livre','err');restore(current);return;}
+      toast(`${field==='preco'?'Preço':'Estoque'} atualizado no Mercado Livre ✓`,'ok');
+      restore(val);
+    }catch(e){toast('Erro de conexão','err');restore(current);}
+  };
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.removeEventListener('blur',save);restore(current);}});
 }
 
 async function loadMLMetricas(){
