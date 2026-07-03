@@ -758,6 +758,27 @@ html{-webkit-text-size-adjust:100%}
 body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
 button,a,select,label{touch-action:manipulation}
 
+/* ── Dropzone de imagem do produto ── */
+.img-drop{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px dashed var(--bord);border-radius:14px;background:var(--bg);cursor:pointer;transition:border-color .15s,background .15s;color:var(--mu)}
+.img-drop:hover,.img-drop.over{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 6%,var(--bg))}
+.img-drop svg{width:22px;height:22px;flex-shrink:0;color:var(--acc)}
+.img-drop strong{display:block;font-size:13px;color:var(--tx);font-weight:600}
+.img-drop span{display:block;font-size:11px;color:var(--mu);margin-top:2px}
+
+/* ── PASSE PREMIUM (desktop + mobile): sombras em camadas, popups limpos ── */
+.tcard,.kpi,.fk-card,.fk-sm,.dk-card{box-shadow:0 1px 2px rgba(15,23,42,.05),0 4px 14px rgba(15,23,42,.05)}
+.mbox{box-shadow:0 24px 64px rgba(15,23,42,.22)}
+/* Detalhe de pedido/NF-e: grade de fatos e lista de itens padronizadas */
+.pd-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px}
+.pd-fact{background:var(--bg);border-radius:12px;padding:11px 12px;min-width:0}
+.pd-fact-l{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--mu)}
+.pd-fact-v{font-size:13.5px;font-weight:700;color:var(--tx);margin-top:3px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pd-items{max-height:240px;overflow:auto;border:1px solid var(--bord-l);border-radius:12px}
+.pd-items table{width:100%;font-size:12.5px;border-collapse:collapse}
+.pd-items th{position:sticky;top:0;background:var(--bg);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);padding:9px 12px;text-align:left}
+.pd-items th.r,.pd-items td.r{text-align:right}
+.pd-items td{padding:10px 12px;border-top:1px solid var(--bord-l)}
+
 /* ════ LISTAS NATIVAS (cards no lugar de tabela no celular) ════ */
 .mlist{display:flex;flex-direction:column}
 .mcard{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--bord-l);cursor:pointer;background:var(--surf);transition:background .12s,transform .1s}
@@ -1157,6 +1178,14 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       <span class="ni-label">Pedidos</span>
     </button>
+    <button class="ni" id="ni-clientes" onclick="setView('clientes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="ni-label">Clientes</span>
+    </button>
+    <button class="ni" id="ni-mercado-livre" onclick="setView('mercado-livre')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span class="ni-label">Mercado Livre</span>
+    </button>
     <button class="ni" id="ni-historico" onclick="setView('historico')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span class="ni-label">Histórico</span>
@@ -1173,9 +1202,17 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       <span class="ni-label">Financeiro</span>
     </button>
+    <button class="ni" id="ni-calendario" onclick="setView('calendario')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="ni-label">Calendário</span>
+    </button>
     <button class="ni" id="ni-integracoes" onclick="setView('integracoes')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><path d="M13 17a3 3 0 0 0 3 3h2a3 3 0 0 0 3-3v-2a3 3 0 0 0-3-3h-2a3 3 0 0 0-3 3z"/></svg>
       <span class="ni-label">Integrações</span>
+    </button>
+    <button class="ni" id="ni-config" onclick="setView('config')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="ni-label">Configurações</span>
     </button>
     <button class="ni" onclick="window.location.href='/'">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.84"/></svg>
@@ -4235,15 +4272,15 @@ async function openPedidoDetalhe(id){
         </div>
         <span class="sb2 ${sb}" style="flex-shrink:0;gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:14px">
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Data</div><div style="font-size:13px;font-weight:700">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Total</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(totalPed)}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px">${esc(p.transportadora)}</div>`:''}</div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--bord)"><div style="font-size:10px;color:var(--mu)">Itens</div><div style="font-size:13px;font-weight:700">${fmtN(qtdItens)} un.</div></div>
+      <div class="pd-facts">
+        <div class="pd-fact"><div class="pd-fact-l">Data</div><div class="pd-fact-v">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Total</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(totalPed)}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Frete</div><div class="pd-fact-v">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.transportadora)}</div>`:''}</div>
+        <div class="pd-fact"><div class="pd-fact-l">Itens</div><div class="pd-fact-v">${fmtN(qtdItens)} un.</div></div>
       </div>
-      ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:6px 10px;background:var(--bg);border-radius:8px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
+      ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:10px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
-      <div style="max-height:220px;overflow:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      <div class="pd-items"><table><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
       ${p.observacoes?`<div style="margin-top:12px;font-size:12px;color:var(--mu);background:var(--bg);border-radius:8px;padding:10px"><strong>Obs:</strong> ${esc(p.observacoes)}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
@@ -4300,8 +4337,8 @@ async function loadNotas(force=false){
 }
 function notaSitClass(situacao){
   const s=(situacao||'').toLowerCase();
-  if(s.includes('autoriza'))return'ok';
-  if(s.includes('cancel')||s.includes('denegad')||s.includes('inutiliz'))return'can';
+  if(s.includes('autoriza')||s.includes('emitida')||s.includes('registrada'))return'ok';
+  if(s.includes('cancel')||s.includes('denegad')||s.includes('inutiliz')||s.includes('bloquead'))return'can';
   if(s.includes('rejeit'))return'rej';
   return'pen';
 }
@@ -4358,15 +4395,15 @@ async function openNotaDetalhe(id){
         <div><div style="font-size:16px;font-weight:700">NF-e nº ${esc(String(n.numero||n.id))}-${esc(n.serie||'1')}</div><div style="font-size:12px;color:var(--mu)">${esc(n.contato)}${n.contatoDoc?' · '+esc(n.contatoDoc):''}</div>${n.natureza?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${esc(n.natureza)}</div>`:''}</div>
         ${notaSitBadge(n.situacao)}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:14px">
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Emissão</div><div style="font-size:13px;font-weight:700">${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Produtos</div><div style="font-size:13px;font-weight:700;color:var(--ok-t)">${fmt(n.total)}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px"><div style="font-size:10px;color:var(--mu)">Frete</div><div style="font-size:13px;font-weight:700">${fmt(n.totalFrete||0)}</div></div>
-        <div style="background:var(--bg);border-radius:10px;padding:10px;border:1px solid var(--bord)"><div style="font-size:10px;color:var(--mu)">Total NF-e</div><div style="font-size:13px;font-weight:800;color:var(--acc)">${fmt(totalNota)}</div></div>
+      <div class="pd-facts">
+        <div class="pd-fact"><div class="pd-fact-l">Emissão</div><div class="pd-fact-v">${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Produtos</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(n.total)}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Frete</div><div class="pd-fact-v">${fmt(n.totalFrete||0)}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Total NF-e</div><div class="pd-fact-v" style="color:var(--acc)">${fmt(totalNota)}</div></div>
       </div>
-      ${n.chave?`<div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10px;color:var(--mu);flex-shrink:0">Chave de acesso:</span><span class="nfe-key" style="flex:1">${esc(n.chave)}</span><button class="bts" style="height:24px;padding:0 8px;font-size:11px" onclick="copySku('${esc(n.chave)}');event.stopPropagation()">Copiar</button></div>`:''}
+      ${n.chave?`<div style="background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10px;color:var(--mu);flex-shrink:0">Chave de acesso:</span><span class="nfe-key" style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(n.chave)}</span><button class="bts" style="height:26px;padding:0 10px;font-size:11px" onclick="copySku('${esc(n.chave)}');event.stopPropagation()">Copiar</button></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${n.itens?.length||0})</div>
-      <div style="max-height:220px;overflow:auto"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      <div class="pd-items"><table><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
     `;
     if(sc==='ok')$('nfe-det-danfe-btn').style.display='';
   }catch(e){$('nfe-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
@@ -4571,7 +4608,7 @@ document.addEventListener('keydown',e=>{
 // ── EDITOR DRAWER ─────────────────────────────────
 let editorId=null,editorProduct=null;
 async function openEditor(id){
-  editorId=id;editorProduct=null;
+  editorId=id;editorProduct=null;_edImgDataUrl=null;
   $('edraw-ov').classList.add('open');$('edraw').classList.add('open');
   $('edraw-title').textContent='Carregando…';
   $('edraw-save').disabled=true;
@@ -4580,6 +4617,10 @@ async function openEditor(id){
     const r=await fetch(`/api/produtos/${id}`);
     if(!r.ok)throw new Error('Falha ao carregar produto');
     const p=await r.json();editorProduct=p;
+    // O detalhe do Bling traz a imagem em midia.imagens; a lista (cache) já
+    // tem a URL resolvida (inclusive upload local) — usa o melhor dos dois
+    p.imagemUrl=S.products.find(x=>x.id===id)?.imagemUrl
+      ||p.imagemURL||p.midia?.imagens?.internas?.[0]?.link||p.midia?.imagens?.externas?.[0]?.link||'';
     const sit=String(p.situacao?.valor||p.situacao||'A');
     const tipo=p.tipo||'P';
     const preco=p.preco||0;
@@ -4608,9 +4649,15 @@ async function openEditor(id){
         <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
       </div>
       <div class="edraw-sec">Imagem</div>
-      <div style="display:flex;gap:14px;align-items:flex-start">
-        <div id="ed-img-prev" style="width:80px;height:80px;border-radius:12px;background:var(--bord-l);border:1px solid var(--bord);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">${p.imagemUrl?`<img src="${esc(p.imagemUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}</div>
-        <div class="df" style="flex:1"><label>URL da imagem</label><input type="url" id="ed-img-url" value="${esc(p.imagemUrl||'')}" placeholder="https://…" oninput="updateImgPrev('ed-img-prev','ed-img-url')"></div>
+      <div style="display:flex;gap:14px;align-items:stretch">
+        <div id="ed-img-prev" style="width:96px;height:96px;border-radius:14px;background:var(--bord-l);border:1px solid var(--bord);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">${p.imagemUrl?`<img src="${esc(p.imagemUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}</div>
+        <div id="ed-img-drop" class="img-drop" onclick="$('ed-img-file').click()"
+          ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
+          ondrop="event.preventDefault();this.classList.remove('over');handleImgFile(event.dataTransfer.files[0])">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div><strong>Enviar imagem</strong><span id="ed-img-drop-sub">arraste aqui ou toque para escolher · JPG, PNG ou WEBP</span></div>
+          <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
+        </div>
       </div>
       <div class="edraw-sec">Preços</div>
       <div class="df-2">
@@ -4648,6 +4695,49 @@ function updateImgPrev(prevId,inputId){
     if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
   }else{prev.style.display='none';}
 }
+// ── Upload de imagem do produto (arquivo/arrastar, com compressão) ──
+// Comprime no navegador via canvas (máx. 1000px, JPEG q0.85 — PNG só se
+// tiver transparência) e guarda o dataURL até o Salvar enviar ao servidor.
+let _edImgDataUrl=null;
+async function handleImgFile(file){
+  if(!file)return;
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type)){toast('Só JPG, PNG ou WEBP','err');return;}
+  const sub=$('ed-img-drop-sub');if(sub)sub.textContent='Processando…';
+  try{
+    const dataUrl=await compressImage(file,1000,.85);
+    _edImgDataUrl=dataUrl;
+    const prev=$('ed-img-prev');
+    if(prev)prev.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover">`;
+    if(sub)sub.textContent=`pronta para salvar · ${Math.round(dataUrl.length*0.75/1024)} KB`;
+  }catch(e){
+    _edImgDataUrl=null;
+    if(sub)sub.textContent='falhou — tente outra imagem';
+    toast('Erro ao processar imagem: '+e.message,'err');
+  }
+}
+function compressImage(file,maxDim,quality){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        let{width:w,height:h}=img;
+        if(w>maxDim||h>maxDim){const k=maxDim/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k);}
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        const cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(img,0,0,w,h);
+        // PNG mantém transparência; o resto vira JPEG comprimido
+        const hasAlpha=file.type==='image/png';
+        let out=hasAlpha?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',quality);
+        // PNG grande sem necessidade? Converte pra JPEG mesmo assim
+        if(out.length*0.75>700*1024)out=cv.toDataURL('image/jpeg',.8);
+        if(out.length*0.75>700*1024)out=cv.toDataURL('image/jpeg',.65);
+        if(out.length*0.75>900*1024)return reject(new Error('imagem grande demais'));
+        URL.revokeObjectURL(img.src);resolve(out);
+      }catch(e){reject(e);}
+    };
+    img.onerror=()=>reject(new Error('arquivo de imagem inválido'));
+    img.src=URL.createObjectURL(file);
+  });
+}
 function updateMargem(){
   const preco=parseFloat($('ed-preco')?.value)||0;
   const custo=parseFloat($('ed-custo')?.value)||0;
@@ -4661,7 +4751,7 @@ function updateMargem(){
 }
 function closeEditor(){
   $('edraw-ov').classList.remove('open');$('edraw').classList.remove('open');
-  editorId=null;editorProduct=null;
+  editorId=null;editorProduct=null;_edImgDataUrl=null;
 }
 async function saveEditorFull(){
   if(!editorId||!editorProduct)return;
@@ -4669,6 +4759,22 @@ async function saveEditorFull(){
   const nome=$('ed-nome').value.trim();
   if(!nome){toast('Nome é obrigatório','err');btn.disabled=false;btn.textContent='Salvar alterações';return;}
   const newEstoque=parseFloat($('ed-estoque').value);
+  // Se o usuário escolheu uma imagem nova, sobe primeiro: o servidor guarda,
+  // devolve a URL pública e essa URL vai junto na atualização (Bling incluso)
+  let uploadedUrl=null;
+  if(_edImgDataUrl){
+    btn.textContent='Enviando imagem…';
+    try{
+      const ir=await fetch(`/api/produtos/${editorId}/imagem`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataUrl:_edImgDataUrl})});
+      const idata=await ir.json();
+      if(!ir.ok)throw new Error(idata.error||'Erro no upload');
+      uploadedUrl=idata.url;
+    }catch(e){
+      toast('Imagem não enviada: '+e.message,'err');
+      btn.disabled=false;btn.textContent='Salvar alterações';return;
+    }
+    btn.textContent='Salvando…';
+  }
   const updated={...editorProduct,nome,
     codigo:$('ed-codigo').value.trim(),
     gtin:$('ed-ean').value.trim(),
@@ -4679,7 +4785,7 @@ async function saveEditorFull(){
     situacao:$('ed-sit').value,
     tipo:$('ed-tipo').value,
     descricaoComplementar:$('ed-desc').value,
-    imagemUrl:$('ed-img-url').value.trim()||undefined,
+    imagemUrl:uploadedUrl||undefined,
   };
   try{
     const body={_fullUpdate:updated};
