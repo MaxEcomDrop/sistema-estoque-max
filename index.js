@@ -1124,6 +1124,70 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
   }
 });
 
+// ── Taxas reais por canal (comissão + custo de frete dos marketplaces) ──
+// A LISTAGEM de pedidos do Bling não traz o bloco `taxas` — ele só vem no
+// DETALHE (GET /pedidos/vendas/{id}): { taxaComissao, custoFrete, valorBase }.
+// Buscar o detalhe de todos os pedidos estouraria o rate-limit, então
+// amostramos os mais recentes, agregamos por loja/canal e guardamos em
+// cache por 10 minutos.
+const TAXAS_AMOSTRA_MAX = 12; // 12 × ~350ms de espaçamento ≈ 4s (cabe no timeout da Vercel)
+const _taxasCache = new Map();
+app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
+  const key = `${inicio}|${fim}`;
+  const hit = _taxasCache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60000 && !req.query.force) return res.json(hit.payload);
+  try {
+    const lista = await fetchPedidos(token, inicio, fim, 2);
+    const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
+    const amostra = validos.slice(0, TAXAS_AMOSTRA_MAX);
+    const porLoja = {};
+    let comissao = 0, custoFrete = 0, freteCobrado = 0, valorAmostrado = 0, detalhados = 0;
+    for (const p of amostra) {
+      try {
+        const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${p.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = data?.data || data || {};
+        const tx = d.taxas || {};
+        const lojaId = String(d.loja?.id || p.loja?.id || '0');
+        const com = Number(tx.taxaComissao) || 0;
+        const cf = Number(tx.custoFrete) || 0;
+        const fc = Number(d.transporte?.frete) || Number(d.transporte?.valorFrete) || 0;
+        const val = valorPedido(d) || valorPedido(p) || 0;
+        comissao += com; custoFrete += cf; freteCobrado += fc; valorAmostrado += val; detalhados++;
+        if (!porLoja[lojaId]) porLoja[lojaId] = { lojaId, pedidos: 0, comissao: 0, custoFrete: 0, freteCobrado: 0, valor: 0 };
+        const l = porLoja[lojaId];
+        l.pedidos++; l.comissao += com; l.custoFrete += cf; l.freteCobrado += fc; l.valor += val;
+      } catch { /* um pedido falhou; os demais seguem */ }
+    }
+    // Projeção: se só uma amostra foi detalhada, extrapola para o período
+    // inteiro proporcionalmente ao VALOR vendido (taxas escalam com valor).
+    const valorTotalPeriodo = validos.reduce((a, p) => a + (valorPedido(p) || 0), 0);
+    const fator = (valorAmostrado > 0 && valorTotalPeriodo > valorAmostrado) ? valorTotalPeriodo / valorAmostrado : 1;
+    const payload = {
+      periodo: { inicio, fim, period },
+      totais: { comissao, custoFrete, freteCobrado },
+      estimativaPeriodo: {
+        comissao: comissao * fator, custoFrete: custoFrete * fator,
+        fator, exata: fator === 1,
+      },
+      porLoja: Object.values(porLoja).sort((a, b) => b.valor - a.valor),
+      amostra: detalhados, dePedidos: validos.length,
+    };
+    _taxasCache.set(key, { at: Date.now(), payload });
+    res.json(payload);
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao buscar taxas por canal', err.message);
+  }
+});
+
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });

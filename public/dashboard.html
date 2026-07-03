@@ -757,6 +757,51 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 html{-webkit-text-size-adjust:100%}
 body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
 button,a,select,label{touch-action:manipulation}
+
+/* ════ LISTAS NATIVAS (cards no lugar de tabela no celular) ════ */
+.mlist{display:flex;flex-direction:column}
+.mcard{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--bord-l);cursor:pointer;background:var(--surf);transition:background .12s,transform .1s}
+.mcard:active{background:var(--bg);transform:scale(.995)}
+.mcard:last-of-type{border-bottom:none}
+.mcard-rank{width:26px;flex-shrink:0;text-align:center;font-size:13px;font-weight:700;color:var(--fa)}
+.mcard-main{flex:1;min-width:0}
+.mcard-t{font-size:14px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard-s{font-size:11.5px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard-side{flex-shrink:0;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0}
+.mcard-side .sb2{font-size:10px;padding:3px 7px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcard-v{font-size:14px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.mcard-chev{width:15px;height:15px;color:var(--fa);flex-shrink:0}
+.mlist-foot{padding:12px 16px;font-size:12px;color:var(--mu);font-weight:600;text-align:center;background:var(--bg);border-top:1px solid var(--bord-l)}
+
+/* ════ MODO APP NATIVO (Ferrari) — só no celular ════ */
+@media(max-width:900px){
+  /* Barra superior e navegação inferior translúcidas com blur, estilo iOS */
+  @supports(backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+    .topbar{background:color-mix(in srgb,var(--surf) 80%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px)}
+    .bnav{background:color-mix(in srgb,var(--surf) 86%,transparent);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px)}
+  }
+  .bnav-item{transition:transform .12s}
+  .bnav-item:active{transform:scale(.9)}
+  /* Transição suave ao trocar de aba, como navegação nativa */
+  .view.on{animation:viewIn .22s cubic-bezier(.3,.8,.4,1) both}
+  /* Superfícies mais arredondadas e título com peso de app */
+  .tcard,.kpi,.fin-chart-wrap,.dre-card{border-radius:16px}
+  .tb-title{font-weight:800;letter-spacing:-.3px}
+  .kpi-val{letter-spacing:-.8px}
+  /* Chips de período: trilho único com swipe lateral (nada de quebrar em 2 linhas) */
+  .fin-period-bar,.dash-period{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-direction:row;align-items:center;gap:6px;max-width:100%}
+  .fin-period-bar::-webkit-scrollbar,.dash-period::-webkit-scrollbar{display:none}
+  .dash-period{border:none;background:none;padding:0}
+  .fp-btn,.dp-btn{flex-shrink:0;min-height:36px;border-radius:999px;padding:6px 14px;border:1px solid var(--bord-l);background:var(--surf)}
+  .fp-btn.on,.dp-btn.on{border-color:var(--acc);background:var(--acc);color:#fff;box-shadow:0 2px 10px rgba(79,70,229,.3)}
+  /* Botões com resposta tátil */
+  .btp:active,.bts:active,.st-btn:active{transform:scale(.96)}
+  /* Modais deslizam de baixo, como sheet nativo */
+  .modal{align-items:flex-end}
+  .mbox{animation:sheetIn .26s cubic-bezier(.3,.8,.4,1) both;border-radius:18px 18px 0 0;width:100%;max-width:100%;max-height:92vh;margin:0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+}
+@keyframes viewIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes sheetIn{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
 @media(max-width:600px){
   .kpi-row{grid-template-columns:1fr 1fr}
   .kpi-val{font-size:24px;letter-spacing:-1px}
@@ -1633,8 +1678,11 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
           <div style="background:var(--bg);border-radius:11px;padding:14px;border-left:3px solid var(--acc)">
             <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:6px;background:#eef2ff;color:#4338ca;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">B</span>Bling (todos os canais)</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Comissões do canal</span><strong id="fin-canal-bling-comissao">…</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Custo de frete (canal)</span><strong id="fin-canal-bling-custofrete">…</strong></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Frete cobrado</span><strong id="fin-canal-bling-frete">—</strong></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Descontos dados</span><strong id="fin-canal-bling-desc">—</strong></div>
+            <div id="fin-canal-bling-nota" style="font-size:10px;color:var(--fa);margin-top:6px"></div>
           </div>
           <div style="background:var(--bg);border-radius:11px;padding:14px;border-left:3px solid #ffc400">
             <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:6px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">ML</span>Mercado Livre (direto)</div>
@@ -1644,6 +1692,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             </div>
           </div>
         </div>
+        <div id="fin-canal-lojas" style="margin-top:10px"></div>
       </div>
       <!-- Gráfico de vendas -->
       <div class="fin-chart-wrap">
@@ -2525,6 +2574,16 @@ function toast(msg,type='',ms=4500){
   setTimeout(()=>dismissNoti(id),ms);
 }
 function dismissNoti(id){const el=$(id);if(!el)return;el.classList.add('out');setTimeout(()=>el?.remove(),200);}
+// Listas trocam de tabela (desktop) para cards nativos (celular) neste corte
+const isMobile=()=>window.innerWidth<=700;
+// Ao cruzar o corte (girar o celular, redimensionar), re-renderiza as listas
+let _lastMobile=isMobile();
+window.addEventListener('resize',()=>{
+  const m=isMobile();if(m===_lastMobile)return;_lastMobile=m;
+  try{if(_pedidosLoaded)renderPedidosTable(_pedStatus);}catch{}
+  try{if(_clientesLoaded)renderClientes();}catch{}
+  try{if(_notasCache.length)renderNotas();}catch{}
+});
 function vibrate(ms=10){try{if(navigator.vibrate)navigator.vibrate(ms);}catch{}}
 function lbStart(){$('lbar').className='go';}
 function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.className='',300);}
@@ -4016,6 +4075,25 @@ function renderPedidosTable(status){
   const _statusLbl={all:'encontrado',pendente:'pendente',concluido:'concluído',cancelado:'cancelado'};
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${q?'encontrado para "'+esc(q)+'"':_statusLbl[status]||status}.</p></div>`;return;}
   const totalVal=list.reduce((a,p)=>a+(p.valor||0),0);
+  if(isMobile()){
+    body.innerHTML='<div class="mlist">'+list.map(p=>{
+      const cat=categorizePed(p.situacao);
+      const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
+      const ico=pedSitIcon(p.situacao);
+      return`<div class="mcard" onclick="openPedidoDetalhe('${esc(String(p.id))}')">
+        <div class="mcard-main">
+          <div class="mcard-t">${esc(p.contato)}</div>
+          <div class="mcard-s">#${esc(String(p.numero||p.id||'—'))} · ${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div>
+        </div>
+        <div class="mcard-side">
+          <div class="mcard-v">${fmt(p.valor)}</div>
+          <span class="sb2 ${sb}" style="gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
+        </div>
+        <svg class="mcard-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`;
+    }).join('')+`<div class="mlist-foot">${fmtN(list.length)} pedido${list.length!==1?'s':''} · total ${fmt(totalVal)}</div></div>`;
+    return;
+  }
   const rows=list.map(p=>{
     const cat=categorizePed(p.situacao);
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
@@ -4143,6 +4221,21 @@ function renderNotas(){
     return true;
   });
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhuma nota encontrada${q?' para "'+esc(q)+'"':''}.</p></div>`;return;}
+  if(isMobile()){
+    body.innerHTML='<div class="mlist">'+list.map(n=>`
+      <div class="mcard" onclick="openNotaDetalhe('${esc(String(n.id))}')">
+        <div class="mcard-main">
+          <div class="mcard-t">${esc(n.contato)}</div>
+          <div class="mcard-s">NF ${esc(String(n.numero||n.id))} · ${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</div>
+        </div>
+        <div class="mcard-side">
+          <div class="mcard-v">${fmt(n.total)}</div>
+          ${notaSitBadge(n.situacao)}
+        </div>
+        <svg class="mcard-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`).join('')+`<div class="mlist-foot">${fmtN(list.length)} nota${list.length!==1?'s':''}</div></div>`;
+    return;
+  }
   body.innerHTML=`<table><thead><tr><th>Nº</th><th>Série</th><th>Emissão</th><th>Cliente</th><th>Total</th><th>Situação</th><th>Chave</th></tr></thead><tbody>${list.map(n=>{
     return`<tr style="cursor:pointer" onclick="openNotaDetalhe('${esc(String(n.id))}')"><td><span class="sku">${esc(String(n.numero||n.id))}</span></td><td>${esc(n.serie||'1')}</td><td>${n.dataEmissao?String(n.dataEmissao).substring(0,10).split('-').reverse().join('/'):'—'}</td><td>${esc(n.contato)}</td><td class="o-val">${fmt(n.total)}</td><td>${notaSitBadge(n.situacao)}</td><td><span class="nfe-key">${n.chave?n.chave.substring(0,18)+'…':'—'}</span></td></tr>`;
   }).join('')}</tbody></table>`;
@@ -4785,6 +4878,7 @@ function renderFinFromData(d){
     if($('fin-canal-bling-frete'))$('fin-canal-bling-frete').textContent=fmt(d.totalFrete);
     if($('fin-canal-bling-desc'))$('fin-canal-bling-desc').textContent=fmt(d.totalDesconto);
     try{loadFinCanalML();}catch(e){console.error('[loadFinCanalML]',e);}
+    try{loadFinTaxas();}catch(e){console.error('[loadFinTaxas]',e);}
     // Blocos abaixo isolados em try/catch próprio para que uma falha em um
     // deles não impeça a exibição dos KPIs principais já atualizados acima.
     try{renderFinTrend(d);}catch(e){console.error('[renderFinTrend]',e);}
@@ -4803,6 +4897,35 @@ function renderFinFromData(d){
       prods.map(p=>{const lucro=p.preco-p.precoCusto;const m=((lucro/p.preco)*100).toFixed(1);const c=parseFloat(m)<20?'er':parseFloat(m)<40?'wa':'ok';
       return`<tr style="cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto"><td><div class="pinfo"><span class="pname" style="max-width:240px">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(p.precoCusto)}</td><td class="r">${fmt(p.preco)}</td><td class="r pcell">${fmt(lucro)}</td><td class="r"><span class="sb2 s-${c==='ok'?'ok':c==='wa'?'lo':'out'}">${m}%</span></td></tr>`;}).join('')
     }</tbody></table>`;
+}
+// Taxas REAIS por canal vindas do Bling (comissão + custo de frete que o
+// marketplace desconta) — o backend amostra os pedidos mais recentes do
+// período e projeta o total proporcional ao valor vendido.
+let _finTaxasBusy=false;
+async function loadFinTaxas(){
+  if(_finTaxasBusy)return;_finTaxasBusy=true;
+  const comEl=$('fin-canal-bling-comissao'),cfEl=$('fin-canal-bling-custofrete'),notaEl=$('fin-canal-bling-nota'),lojasEl=$('fin-canal-lojas');
+  try{
+    let url=`/api/financeiro/taxas?period=${finPeriod}`;
+    if(finPeriod==='custom'){const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;if(s&&e)url+=`&startDate=${s}&endDate=${e}`;}
+    const r=await fetch(url),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    const est=d.estimativaPeriodo||{};
+    if(comEl)comEl.textContent=fmt(est.comissao??d.totais?.comissao??0);
+    if(cfEl)cfEl.textContent=fmt(est.custoFrete??d.totais?.custoFrete??0);
+    if(notaEl)notaEl.textContent=est.exata?`com base em todos os ${d.amostra} pedidos do período`:`projeção: amostra dos ${d.amostra} pedidos mais recentes de ${d.dePedidos}`;
+    if(lojasEl){
+      const lojas=(d.porLoja||[]).filter(l=>l.pedidos>0);
+      lojasEl.innerHTML=lojas.length<2?'':`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.4px;margin-bottom:6px">POR LOJA/CANAL (amostra)</div>`+lojas.map(l=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:7px 10px;background:var(--bg);border-radius:9px;margin-bottom:5px">
+          <span style="color:var(--tx);font-weight:600">${l.lojaId==='0'?'Sem loja vinculada':'Loja #'+esc(String(l.lojaId))} <span style="color:var(--fa);font-weight:400">· ${l.pedidos} ped.</span></span>
+          <span style="text-align:right"><strong>${fmt(l.comissao)}</strong> <span style="color:var(--mu)">comissão</span> · <strong>${fmt(l.custoFrete)}</strong> <span style="color:var(--mu)">frete</span></span>
+        </div>`).join('');
+    }
+  }catch(e){
+    if(comEl)comEl.textContent='—';if(cfEl)cfEl.textContent='—';
+    if(notaEl)notaEl.textContent='não foi possível carregar as taxas: '+e.message;
+  }finally{_finTaxasBusy=false;}
 }
 async function loadFinCanalML(){
   const taxaEl=$('fin-canal-ml-taxa'),freteEl=$('fin-canal-ml-frete');
@@ -5104,6 +5227,22 @@ function renderClientes(){
   if(!list.length){body.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum cliente encontrado.</p></div>';return;}
   const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
   const isRank=sort==='gasto'&&!q&&!uf&&!tipo;
+  if(isMobile()){
+    body.innerHTML='<div class="mlist">'+list.map((c,i)=>`
+      <div class="mcard" onclick="openClienteFicha('${esc(String(c.id))}')">
+        <div class="mcard-rank">${isRank&&medal(i)?medal(i):i+1}</div>
+        <div class="mcard-main">
+          <div class="mcard-t">${esc(c.nome)}</div>
+          <div class="mcard-s">${esc(c.documento||c.tipo||'—')}${c.municipio?' · '+esc(c.municipio)+(c.uf?'/'+esc(c.uf):''):''}</div>
+        </div>
+        <div class="mcard-side">
+          <div class="mcard-v">${c.totalGasto>0?fmt(c.totalGasto):'—'}</div>
+          <div class="mcard-s">${c.numPedidos||0} pedido${(c.numPedidos||0)!==1?'s':''}</div>
+        </div>
+        <svg class="mcard-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>`).join('')+`<div class="mlist-foot">${fmtN(list.length)} cliente${list.length!==1?'s':''}</div></div>`;
+    return;
+  }
   body.innerHTML=`<table><thead><tr><th style="width:40px">#</th><th>Cliente</th><th>Cidade/UF</th><th class="r">Pedidos</th><th class="r">Total gasto</th><th>Último</th></tr></thead><tbody>${
     list.map((c,i)=>`<tr style="cursor:pointer" onclick="openClienteFicha('${esc(String(c.id))}')">
       <td>${isRank&&medal(i)?`<span style="font-size:16px">${medal(i)}</span>`:`<span style="color:var(--fa)">${i+1}</span>`}</td>
