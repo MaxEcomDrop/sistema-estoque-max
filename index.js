@@ -804,7 +804,16 @@ function mlHeaders(token) {
 
 app.get('/api/ml/auth/url', requireAuthJson, (req, res) => {
   if (!ML_CLIENT_ID) return res.status(400).json({ error: 'ML_CLIENT_ID não configurado' });
-  const params = new URLSearchParams({ response_type: 'code', client_id: ML_CLIENT_ID, redirect_uri: ML_REDIRECT_URI, state: 'estoque_max_ml' });
+  // PKCE (obrigatório nos apps novos do ML): sem code_verifier a troca do
+  // código falha com "code_verifier is a required parameter". O verifier
+  // fica num cookie httpOnly de 10min e volta na troca do token.
+  const verifier = crypto.randomBytes(48).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  res.cookie('ml_pkce', verifier, { httpOnly: true, secure: NODE_ENV === 'production', sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  const params = new URLSearchParams({
+    response_type: 'code', client_id: ML_CLIENT_ID, redirect_uri: ML_REDIRECT_URI,
+    state: 'estoque_max_ml', code_challenge: challenge, code_challenge_method: 'S256',
+  });
   res.json({ authUrl: `https://auth.mercadolivre.com.br/authorization?${params}` });
 });
 
@@ -818,6 +827,10 @@ app.get('/api/ml/callback', async (req, res) => {
       grant_type: 'authorization_code', client_id: ML_CLIENT_ID,
       client_secret: ML_CLIENT_SECRET, code, redirect_uri: ML_REDIRECT_URI,
     });
+    // PKCE: devolve o code_verifier gerado no início do fluxo
+    const verifier = req.cookies?.ml_pkce;
+    if (verifier) { params.set('code_verifier', verifier); res.clearCookie('ml_pkce'); }
+    else console.warn('[ML OAuth] cookie ml_pkce ausente — fluxo iniciado em outro navegador?');
     const { data } = await axios.post('https://api.mercadolibre.com/oauth/token', params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     });
@@ -1569,6 +1582,11 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
       transportadora:   p.transporte?.transportadora?.nome || _TRANSP_TIPO[p.transporte?.tipo] || '',
       desconto:         Number(p.desconto) || 0,
+      // Valores EXATOS que o Bling recebe do marketplace neste pedido —
+      // sem estimativa: é o bloco `taxas` do próprio pedido.
+      taxaComissao:     Number(p.taxas?.taxaComissao) || 0,
+      custoFreteCanal:  Number(p.taxas?.custoFrete) || 0,
+      loja:             p.loja?.id || null,
       itens,
     });
   } catch (err) {
