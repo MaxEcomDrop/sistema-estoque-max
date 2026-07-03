@@ -38,6 +38,23 @@ function getAdmin() {
       admin.initializeApp({ credential: admin.credential.cert(cred) });
     }
     _fbAdminProjectId = cred.project_id || null;
+    // Erro "5 NOT_FOUND" no ping = o banco "(default)" não existe no projeto.
+    // Acontece quando o banco foi criado com ID personalizado no console.
+    // FIRESTORE_DB_ID permite apontar para esse banco nomeado sem recriar:
+    // redirecionamos admin.firestore() para o banco certo, preservando
+    // FieldValue/Timestamp usados no resto do código.
+    const dbId = process.env.FIRESTORE_DB_ID;
+    if (dbId && dbId !== '(default)') {
+      const { getFirestore } = require('firebase-admin/firestore');
+      const namedDb = getFirestore(admin.app(), dbId);
+      const orig = admin.firestore;
+      const patched = () => namedDb;
+      patched.FieldValue = orig.FieldValue;
+      patched.Timestamp = orig.Timestamp;
+      patched.GeoPoint = orig.GeoPoint;
+      admin.firestore = patched;
+      console.log(`[Firestore] usando banco nomeado "${dbId}" (FIRESTORE_DB_ID)`);
+    }
     _fbAdmin = admin;
   } catch (e) {
     _fbAdminInitError = e.message;
@@ -549,6 +566,7 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
     firebase: {
       configurado: !!admin,
       firestoreRespondendo: firestoreOk,
+      bancoDeDados: process.env.FIRESTORE_DB_ID || '(default)',
       // Sem Firestore NADA persiste entre requisições na Vercel: tokens do
       // Bling/ML somem, notificações e estado do app não salvam. O erro cru
       // aqui aponta a causa (API desabilitada, permissão, projeto errado).
