@@ -229,6 +229,40 @@ function blingHeaders(token) {
 const AXIOS_TIMEOUT = 15000; // 15 segundos
 axios.defaults.timeout = AXIOS_TIMEOUT;
 
+// ── Proteção contra rate-limit do Bling (≈3 req/s) ───────────────────
+// O painel dispara várias chamadas em paralelo; sem espaçamento, o Bling
+// devolve 429 e a UI mostra "Erro ao buscar produtos/montar dashboard".
+// 1) Espaça as requisições ao Bling em ~350ms dentro da instância.
+let _blingNextSlot = 0;
+axios.interceptors.request.use(async (cfg) => {
+  if (String(cfg.url || '').includes('bling.com.br/Api')) {
+    const now = Date.now();
+    const wait = Math.max(0, _blingNextSlot - now);
+    _blingNextSlot = Math.max(now, _blingNextSlot) + 350;
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  }
+  return cfg;
+});
+// 2) Reenvia automaticamente (backoff exponencial) quando ainda assim vier
+// 429/503 ou timeout — o usuário não deve ver erro por limite momentâneo.
+axios.interceptors.response.use(undefined, async (error) => {
+  const cfg = error.config;
+  const url = String(cfg?.url || '');
+  const st = error.response?.status;
+  // Token do Bling rejeitado: invalida o access em cache/Firestore na hora,
+  // senão o token morto continuaria sendo servido até a validade "teórica".
+  if (st === 401 && url.includes('bling.com.br/Api') && !url.includes('/oauth/')) {
+    invalidateBlingAccess();
+  }
+  const retriable = st === 429 || st === 503 || error.code === 'ECONNABORTED';
+  const isApiExterna = url.includes('bling.com.br') || url.includes('mercadolibre.com');
+  if (!cfg || !retriable || !isApiExterna) throw error;
+  cfg._retry = (cfg._retry || 0) + 1;
+  if (cfg._retry > 3) throw error;
+  await new Promise(r => setTimeout(r, 500 * Math.pow(2, cfg._retry - 1) + Math.random() * 300));
+  return axios(cfg);
+});
+
 // Handle common API errors
 function getApiErrorMessage(err) {
   if (err.code === 'ECONNABORTED') return 'Requisição expirou - tente novamente';
@@ -248,34 +282,26 @@ function setBlingCookies(res, data) {
   res.cookie('bling_token', data.access_token, { ...BLING_COOKIE_OPTS, maxAge: (data.expires_in || 3600) * 1000 });
   if (data.refresh_token) {
     res.cookie('bling_refresh', data.refresh_token, { ...BLING_COOKIE_OPTS, maxAge: 30 * 24 * 3600 * 1000 });
-    // Persiste o refresh para os crons usarem (fire-and-forget)
-    saveBlingRefresh(data.refresh_token);
   }
+  // Persiste o par completo no Firestore (fire-and-forget) — na Vercel cada
+  // requisição pode cair numa instância nova, então cookie sozinho não basta.
+  saveBlingTokens(data);
 }
 
-// Guarda o refresh_token do Bling no Firestore para os crons (server-side)
-async function saveBlingRefresh(refreshToken) {
+// Guarda access + refresh do Bling no Firestore. O refresh_token do Bling é
+// DE USO ÚNICO: guardar também o access com a validade evita renovar à toa
+// (cada renovação desnecessária é uma chance de corrida que derruba a conexão).
+async function saveBlingTokens(data) {
   const admin = getAdmin();
-  if (!admin || !refreshToken) return;
+  if (!admin || !data?.refresh_token) return;
   try {
     await admin.firestore().collection('bling_auth').doc('tokens').set({
-      refreshToken, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      refreshToken: data.refresh_token,
+      accessToken: data.access_token || null,
+      accessExpiresAt: Date.now() + ((data.expires_in || 21600) - 120) * 1000,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-  } catch (e) { console.error('[saveBlingRefresh]', e.message); }
-}
-
-// Gera um access_token válido a partir do refresh salvo (usado pelos crons)
-async function getCronBlingToken() {
-  const admin = getAdmin();
-  if (!admin) return null;
-  try {
-    const doc = await admin.firestore().collection('bling_auth').doc('tokens').get();
-    const refresh = doc.exists ? doc.data().refreshToken : null;
-    if (!refresh) return null;
-    const data = await refreshBlingToken(refresh);
-    if (data.refresh_token) await saveBlingRefresh(data.refresh_token);
-    return data.access_token;
-  } catch (e) { console.error('[getCronBlingToken]', e.message); return null; }
+  } catch (e) { console.error('[saveBlingTokens]', e.message); }
 }
 
 async function refreshBlingToken(refreshToken) {
@@ -287,22 +313,86 @@ async function refreshBlingToken(refreshToken) {
   return data;
 }
 
-// Retorna um access_token válido. Se o atual expirou (cookie some junto),
-// renova automaticamente usando o refresh_token (válido por 30 dias).
-async function ensureBlingToken(req, res) {
-  const token = req.cookies?.bling_token;
-  if (token) return token;
-  const refresh = req.cookies?.bling_refresh;
-  if (!refresh) return null;
-  try {
-    const data = await refreshBlingToken(refresh);
-    setBlingCookies(res, data);
-    return data.access_token;
-  } catch (e) {
-    console.error('[Bling refresh]', e.response?.data || e.message);
-    res.clearCookie('bling_refresh');
-    return null;
+// Cache em memória + trava de renovação única: várias chamadas simultâneas
+// (o painel dispara produtos+pedidos+financeiro juntos) compartilham UMA
+// renovação em vez de queimar o mesmo refresh_token em corrida.
+let _blingCache = { token: null, expiresAt: 0 };
+let _blingRefreshing = null;
+
+// Descarta o access token atual (memória + Firestore) sem tocar no refresh —
+// a próxima chamada renova. Usado quando o Bling responde 401 ao access.
+function invalidateBlingAccess() {
+  _blingCache = { token: null, expiresAt: 0 };
+  const admin = getAdmin();
+  if (!admin) return;
+  admin.firestore().collection('bling_auth').doc('tokens')
+    .set({ accessExpiresAt: 0 }, { merge: true })
+    .catch(e => console.error('[invalidateBlingAccess]', e.message));
+}
+
+async function _blingRefreshShared(refreshToken) {
+  if (!_blingRefreshing) {
+    _blingRefreshing = (async () => {
+      try {
+        const data = await refreshBlingToken(refreshToken);
+        _blingCache = { token: data.access_token, expiresAt: Date.now() + ((data.expires_in || 21600) - 120) * 1000 };
+        await saveBlingTokens(data);
+        return data;
+      } finally { _blingRefreshing = null; }
+    })();
   }
+  return _blingRefreshing;
+}
+
+// Retorna um access_token válido, tentando nesta ordem:
+// cookie → cache da instância → access salvo no Firestore → renovação via
+// refresh_token (única por vez). Só desconecta de verdade se o Bling
+// REJEITAR o refresh (400/401) — erro de rede/limite não derruba a sessão.
+async function ensureBlingToken(req, res) {
+  const cookieTok = req?.cookies?.bling_token;
+  if (cookieTok) return cookieTok;
+  if (_blingCache.token && Date.now() < _blingCache.expiresAt) return _blingCache.token;
+
+  const admin = getAdmin();
+  let stored = null;
+  if (admin) {
+    try {
+      const doc = await admin.firestore().collection('bling_auth').doc('tokens').get();
+      stored = doc.exists ? doc.data() : null;
+    } catch (e) { console.error('[ensureBlingToken] Firestore:', e.message); }
+  }
+
+  if (stored?.accessToken && stored.accessExpiresAt && Date.now() < stored.accessExpiresAt) {
+    _blingCache = { token: stored.accessToken, expiresAt: stored.accessExpiresAt };
+    if (res) res.cookie('bling_token', stored.accessToken, { ...BLING_COOKIE_OPTS, maxAge: Math.max(60000, stored.accessExpiresAt - Date.now()) });
+    return stored.accessToken;
+  }
+
+  const cookieRefresh = req?.cookies?.bling_refresh;
+  const candidates = [...new Set([stored?.refreshToken, cookieRefresh].filter(Boolean))];
+  if (!candidates.length) return null;
+
+  for (const refresh of candidates) {
+    try {
+      const data = await _blingRefreshShared(refresh);
+      if (res) setBlingCookies(res, data);
+      return data.access_token;
+    } catch (e) {
+      const st = e.response?.status;
+      console.error('[Bling refresh]', st || '', e.response?.data || e.message);
+      // 400/401 = refresh inválido → tenta o próximo candidato; outros erros
+      // (rede, 429, 5xx) são transitórios: não desconecta, só falha a chamada.
+      if (st !== 400 && st !== 401) return null;
+    }
+  }
+  // Todos os refresh tokens foram rejeitados: sessão realmente acabou.
+  if (res) res.clearCookie('bling_refresh');
+  return null;
+}
+
+// Gera um access_token válido a partir do estado salvo (usado pelos crons)
+async function getCronBlingToken() {
+  return ensureBlingToken(null, null);
 }
 
 // ── Error Response Helper ────────────────────────────────────────────
@@ -336,34 +426,52 @@ const _TRANSP_TIPO = {
   'D':'Sem frete','S':'Sem frete','own_account':'Conta própria','third_party':'Terceiros',
   'recipient':'Destinatário','sender':'Remetente','free':'Frete grátis',
 };
+// IDs padrão de situação de pedido de venda no Bling (o endpoint de listagem
+// costuma mandar só { id, valor } — sem esse mapa a UI mostrava "1"/"2" ou
+// até "[object Object]" na coluna de status).
+const _BLING_SIT_ID = {
+  6: 'Em aberto', 9: 'Atendido', 12: 'Cancelado', 15: 'Em andamento',
+  18: 'Venda agenciada', 21: 'Em digitação', 24: 'Verificado',
+};
 function situacaoPT(s) {
+  if (s && typeof s === 'object') {
+    s = s.nome
+      || _BLING_SIT_ID[s.id]
+      || (typeof s.valor === 'string' ? s.valor : _BLING_SIT_ID[s.valor])
+      || s.descricao || null;
+  }
+  if (typeof s === 'number') s = _BLING_SIT_ID[s] || s;
   const raw = String(s || '—');
   return _SIT_PT_MAP[raw.toLowerCase().replace(/\s+/g,'_')] || raw;
 }
 
+// Datas SEMPRE no fuso do negócio (Brasil), nunca em UTC do servidor.
+// Servidores da Vercel rodam em UTC: às 21h de Brasília, toISOString() já
+// devolve o dia SEGUINTE — o filtro "Hoje" passava a buscar pedidos de
+// amanhã e o faturamento do dia "zerava" à noite.
+const APP_TZ = process.env.APP_TZ || 'America/Sao_Paulo';
+const _isoTZ = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+function isoLocal(d = new Date()) { return _isoTZ.format(d); } // YYYY-MM-DD no fuso local
+function isoLocalDiasAtras(dias) { return isoLocal(new Date(Date.now() - dias * 86400000)); }
+
 // Resolve intervalo de datas a partir do período (today | 7d | 30d | custom)
 function resolvePeriodo(period, startDate, endDate) {
-  const hoje = new Date();
-  const iso = d => d.toISOString().split('T')[0];
+  const hoje = isoLocal();
   let inicio, fim;
   if (period === 'today') {
-    inicio = fim = iso(hoje);
+    inicio = fim = hoje;
   } else if (period === 'yesterday') {
-    const d = new Date(hoje); d.setDate(d.getDate() - 1);
-    inicio = fim = iso(d);
+    inicio = fim = isoLocalDiasAtras(1);
   } else if (period === '7d') {
-    const d = new Date(hoje); d.setDate(d.getDate() - 6);
-    inicio = iso(d); fim = iso(hoje);
+    inicio = isoLocalDiasAtras(6); fim = hoje;
   } else if (period === '90d') {
-    const d = new Date(hoje); d.setDate(d.getDate() - 89);
-    inicio = iso(d); fim = iso(hoje);
+    inicio = isoLocalDiasAtras(89); fim = hoje;
   } else if (period === 'year') {
-    inicio = `${hoje.getFullYear()}-01-01`; fim = iso(hoje);
+    inicio = `${hoje.slice(0, 4)}-01-01`; fim = hoje;
   } else if (period === 'custom' && startDate && endDate) {
     inicio = startDate; fim = endDate;
   } else {
-    const d = new Date(hoje); d.setDate(d.getDate() - 29);
-    inicio = iso(d); fim = iso(hoje);
+    inicio = isoLocalDiasAtras(29); fim = hoje;
     period = '30d';
   }
   return { inicio, fim, period: period || '30d' };
@@ -401,8 +509,10 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
   try { blingConectado = !!(await ensureBlingToken(req, res)); } catch {}
   try { mlConectado = !!(await ensureMLToken())?.token; } catch {}
   const admin = getAdmin();
+  let firestoreErro = null;
   if (admin) {
-    try { await admin.firestore().collection('_diag').doc('ping').set({ t: Date.now() }); firestoreOk = true; } catch (e) { firestoreOk = false; }
+    try { await admin.firestore().collection('_diag').doc('ping').set({ t: Date.now() }); firestoreOk = true; }
+    catch (e) { firestoreOk = false; firestoreErro = e.message; }
   }
   res.json({
     build: BUILD_SHA,
@@ -424,6 +534,10 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
     firebase: {
       configurado: !!admin,
       firestoreRespondendo: firestoreOk,
+      // Sem Firestore NADA persiste entre requisições na Vercel: tokens do
+      // Bling/ML somem, notificações e estado do app não salvam. O erro cru
+      // aqui aponta a causa (API desabilitada, permissão, projeto errado).
+      firestoreErro,
       // Precisa ser exatamente "erp-max-sistema" (mesmo projeto do
       // firebase.initializeApp em login.html) — se o FIREBASE_SERVICE_ACCOUNT
       // configurado no servidor for de outro projeto Firebase, o login com
@@ -608,12 +722,14 @@ app.get('/api/auth/me', requireAuthJson, (req, res) => {
 let _mlTokenCache = { token: null, expiresAt: 0, sellerId: null };
 
 async function saveMLTokens(accessToken, refreshToken, sellerId, expiresIn) {
-  _mlTokenCache = { token: accessToken, expiresAt: Date.now() + (expiresIn - 60) * 1000, sellerId };
+  const expiresAt = Date.now() + ((expiresIn || 21600) - 120) * 1000;
+  _mlTokenCache = { token: accessToken, expiresAt, sellerId };
   const admin = getAdmin();
   if (!admin) return;
   try {
     await admin.firestore().collection('ml_auth').doc('tokens').set({
       accessToken, refreshToken, sellerId: String(sellerId || ''),
+      accessExpiresAt: expiresAt,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   } catch (e) { console.error('[saveMLTokens]', e.message); }
@@ -630,6 +746,12 @@ async function refreshMLToken(refreshToken) {
   return data;
 }
 
+// O refresh_token do ML também é DE USO ÚNICO. A versão antiga renovava a
+// CADA instância nova do servidor — em chamadas simultâneas o mesmo refresh
+// era usado duas vezes, o ML invalidava tudo e a conexão "caía sozinha"
+// logo depois de conectar. Agora: usa o access salvo enquanto for válido e,
+// quando precisar renovar, renova UMA vez só (single-flight).
+let _mlRefreshing = null;
 async function ensureMLToken() {
   if (!ML_CLIENT_ID || !ML_CLIENT_SECRET) return null;
   if (_mlTokenCache.token && Date.now() < _mlTokenCache.expiresAt) return _mlTokenCache;
@@ -638,12 +760,23 @@ async function ensureMLToken() {
   try {
     const doc = await admin.firestore().collection('ml_auth').doc('tokens').get();
     if (!doc.exists) return null;
-    const { accessToken, refreshToken, sellerId } = doc.data();
+    const { accessToken, refreshToken, sellerId, accessExpiresAt } = doc.data();
+    if (accessToken && accessExpiresAt && Date.now() < accessExpiresAt) {
+      _mlTokenCache = { token: accessToken, expiresAt: accessExpiresAt, sellerId };
+      return _mlTokenCache;
+    }
     if (!refreshToken) return null;
-    const data = await refreshMLToken(refreshToken);
-    await saveMLTokens(data.access_token, data.refresh_token || refreshToken, data.user_id || sellerId, data.expires_in || 21600);
-    return _mlTokenCache;
-  } catch (e) { console.error('[ensureMLToken]', e.message); return null; }
+    if (!_mlRefreshing) {
+      _mlRefreshing = (async () => {
+        try {
+          const data = await refreshMLToken(refreshToken);
+          await saveMLTokens(data.access_token, data.refresh_token || refreshToken, data.user_id || sellerId, data.expires_in || 21600);
+          return _mlTokenCache;
+        } finally { _mlRefreshing = null; }
+      })();
+    }
+    return await _mlRefreshing;
+  } catch (e) { console.error('[ensureMLToken]', e.response?.data || e.message); return null; }
 }
 
 function mlHeaders(token) {
@@ -673,7 +806,10 @@ app.get('/api/ml/callback', async (req, res) => {
     res.redirect('/dashboard.html?ml_connected=1');
   } catch (err) {
     console.error('[ML OAuth]', err.response?.data || err.message);
-    res.redirect('/dashboard.html?ml_error=token_exchange_failed');
+    // Devolve o motivo REAL do ML (invalid_client, invalid_grant etc.) para a
+    // UI — "token_exchange_failed" seco não diz o que corrigir.
+    const motivo = err.response?.data?.message || err.response?.data?.error || err.message || '';
+    res.redirect(`/dashboard.html?ml_error=token_exchange_failed&ml_detail=${encodeURIComponent(String(motivo).slice(0, 140))}`);
   }
 });
 
@@ -837,7 +973,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       peso:       p.pesoBruto || 0,
       descricao:  p.descricaoComplementar || p.descricao || '',
       categoria:  p.categoria?.descricao || '',
-      situacao:   String(p.situacao?.valor || p.situacao || 'A'),
+      situacao:   String((typeof p.situacao === 'object' ? (p.situacao?.valor || p.situacao?.nome) : p.situacao) || 'A'),
       imagemUrl:  p.imagem?.link || p.imageThumbnailURL || '',
     }));
 
@@ -1617,9 +1753,7 @@ app.get('/api/cron/resumo', async (req, res) => {
   if (!token) return res.json({ ok: true, skipped: 'Bling não conectado (sem refresh salvo)' });
   const slot = req.query.slot || slotAtual();
   try {
-    const ref = new Date();
-    if (slot === 'manha') ref.setDate(ref.getDate() - 1);
-    const dia = ref.toISOString().split('T')[0];
+    const dia = slot === 'manha' ? isoLocalDiasAtras(1) : isoLocal();
     const [pedidos, prod] = await Promise.all([
       fetchPedidos(token, dia, dia, 2),
       fetchResumoProdutos(token, 3).catch(() => ({ margem: 0, zerados: 0, criticos: 0 })),
@@ -1714,7 +1848,7 @@ async function fetchContas(token, tipo) {
   } catch (e) {
     return { ok: false, total: 0, count: 0, vencidas: 0, vencidasValor: 0, itens: [], erro: e.response?.status || e.message };
   }
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = isoLocal();
   let total = 0, count = 0, vencidas = 0, vencidasValor = 0;
   const itens = [];
   for (const c of all) {
@@ -1832,9 +1966,7 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
   try {
     // Busca contatos (até 3 páginas) e pedidos dos últimos 90 dias para cruzar
-    const hoje = new Date();
-    const ini = new Date(hoje); ini.setDate(ini.getDate() - 90);
-    const iso = d => d.toISOString().split('T')[0];
+    const isoHoje = isoLocal(), isoIni = isoLocalDiasAtras(90);
 
     const contatosPromise = (async () => {
       let all = [];
@@ -1851,7 +1983,7 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
 
     const [contatos, pedidos] = await Promise.all([
       contatosPromise,
-      fetchPedidos(token, iso(ini), iso(hoje), 3).catch(() => []),
+      fetchPedidos(token, isoIni, isoHoje, 3).catch(() => []),
     ]);
 
     // Agrega gasto/pedidos por contato
@@ -1929,7 +2061,7 @@ app.post('/api/contas/custom', requireAuthJson, (req, res) => {
     tipo,
     descricao,
     valor: Number(valor),
-    dataVencimento: dataVencimento || new Date().toISOString().split('T')[0],
+    dataVencimento: dataVencimento || isoLocal(),
     categoria: categoria || 'Outras',
     observacao: observacao || '',
     status: 'pendente',
