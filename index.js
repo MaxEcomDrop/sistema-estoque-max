@@ -802,18 +802,28 @@ function mlHeaders(token) {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
-app.get('/api/ml/auth/url', requireAuthJson, (req, res) => {
+app.get('/api/ml/auth/url', requireAuthJson, async (req, res) => {
   if (!ML_CLIENT_ID) return res.status(400).json({ error: 'ML_CLIENT_ID não configurado' });
   // PKCE (obrigatório nos apps novos do ML): sem code_verifier a troca do
-  // código falha com "code_verifier is a required parameter". O verifier
-  // fica num cookie httpOnly de 10min e volta na troca do token.
+  // código falha com "code_verifier is a required parameter".
+  // O verifier fica em DOIS lugares: cookie httpOnly (caminho normal) e
+  // Firestore indexado pelo state aleatório (sobrevive a cookie bloqueado,
+  // troca de navegador no meio do fluxo ou instância nova do serverless).
   const verifier = crypto.randomBytes(48).toString('base64url');
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  const state = 'emx_' + crypto.randomBytes(16).toString('base64url');
   res.cookie('ml_pkce', verifier, { httpOnly: true, secure: NODE_ENV === 'production', sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  const admin = getAdmin();
+  if (admin) {
+    try {
+      await admin.firestore().collection('ml_pkce').doc(state).set({ verifier, createdAt: Date.now() });
+    } catch (e) { console.error('[ML PKCE] Firestore indisponível, seguindo só com cookie:', e.message); }
+  }
   const params = new URLSearchParams({
     response_type: 'code', client_id: ML_CLIENT_ID, redirect_uri: ML_REDIRECT_URI,
-    state: 'estoque_max_ml', code_challenge: challenge, code_challenge_method: 'S256',
+    state, code_challenge: challenge, code_challenge_method: 'S256',
   });
+  console.log('[ML PKCE] fluxo iniciado, state', state.slice(0, 12) + '…');
   res.json({ authUrl: `https://auth.mercadolivre.com.br/authorization?${params}` });
 });
 
@@ -821,16 +831,34 @@ app.get('/api/ml/callback', async (req, res) => {
   const { code, error, state } = req.query;
   if (error) return res.redirect(`/dashboard.html?ml_error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/dashboard.html?ml_error=no_code');
-  if (state !== 'estoque_max_ml') return res.redirect('/dashboard.html?ml_error=invalid_state');
+  // Aceita o state aleatório novo (emx_…) e o antigo fixo (fluxos já abertos)
+  const stateOk = typeof state === 'string' && (state.startsWith('emx_') || state === 'estoque_max_ml');
+  if (!stateOk) return res.redirect('/dashboard.html?ml_error=invalid_state');
   try {
     const params = new URLSearchParams({
       grant_type: 'authorization_code', client_id: ML_CLIENT_ID,
       client_secret: ML_CLIENT_SECRET, code, redirect_uri: ML_REDIRECT_URI,
     });
-    // PKCE: devolve o code_verifier gerado no início do fluxo
-    const verifier = req.cookies?.ml_pkce;
-    if (verifier) { params.set('code_verifier', verifier); res.clearCookie('ml_pkce'); }
-    else console.warn('[ML OAuth] cookie ml_pkce ausente — fluxo iniciado em outro navegador?');
+    // PKCE: recupera o code_verifier — cookie primeiro, Firestore (por state)
+    // como reserva quando o cookie não sobreviveu ao redirecionamento.
+    let verifier = req.cookies?.ml_pkce || null;
+    let origem = verifier ? 'cookie' : null;
+    const admin = getAdmin();
+    if (!verifier && admin && state.startsWith('emx_')) {
+      try {
+        const doc = await admin.firestore().collection('ml_pkce').doc(state).get();
+        if (doc.exists) { verifier = doc.data().verifier; origem = 'firestore'; }
+      } catch (e) { console.error('[ML PKCE] lookup falhou:', e.message); }
+    }
+    if (verifier) {
+      params.set('code_verifier', verifier);
+      res.clearCookie('ml_pkce');
+      if (admin && state.startsWith('emx_')) admin.firestore().collection('ml_pkce').doc(state).delete().catch(() => {});
+      console.log(`[ML PKCE] verifier recuperado via ${origem}`);
+    } else {
+      console.error('[ML PKCE] verifier NÃO encontrado (cookie e Firestore vazios) — a troca vai falhar');
+      return res.redirect('/dashboard.html?ml_error=pkce_lost&ml_detail=' + encodeURIComponent('O código de segurança do fluxo se perdeu. Toque em Conectar de novo e conclua no MESMO navegador, sem modo anônimo.'));
+    }
     const { data } = await axios.post('https://api.mercadolibre.com/oauth/token', params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     });

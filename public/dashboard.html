@@ -5538,7 +5538,13 @@ function installApp(){
   _pwaPrompt.userChoice.then(()=>{_pwaPrompt=null;const bar=$('pwa-install-bar');if(bar)bar.style.display='none';});
 }
 async function askNotifPerm(){
-  if(!('Notification' in window)){toast('Notificações não suportadas neste navegador','wa');return;}
+  if(!('Notification' in window)){
+    // iPhone/iPad só liberam notificação web quando o site está instalado
+    // como app (Adicionar à Tela de Início) — iOS 16.4+.
+    const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+    toast(ios?'No iPhone: instale o app primeiro (Compartilhar → Adicionar à Tela de Início) e ative por lá.':'Notificações não suportadas neste navegador','wa',8000);
+    return;
+  }
   const perm=await Notification.requestPermission();
   if(perm!=='granted'){toast('Permissão de notificação negada','wa');return;}
   try{
