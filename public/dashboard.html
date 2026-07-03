@@ -82,7 +82,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .sb.col~.main{margin-left:var(--scw)}
 
 /* TOPBAR */
-.topbar{height:var(--th);background:linear-gradient(90deg,var(--surf) 60%,#eef2ff 100%);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.topbar{height:var(--th);background:var(--surf);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .tb-title{font-size:15px;font-weight:700;color:var(--tx);letter-spacing:-.3px}
 .sync-ts{font-size:11px;color:var(--fa);white-space:nowrap}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -783,6 +783,36 @@ button,a,select,label{touch-action:manipulation}
 @keyframes skel{from{background-position:200% 0}to{background-position:-200% 0}}
 /* Foco visível e elegante em qualquer controle */
 .btp:focus-visible,.bts:focus-visible,.bti:focus-visible,.sinp:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* ════ CAMADA 2050 (v3) — vidro, elevação e tipografia lapidada ════ */
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* Topbar de vidro também no desktop (não só no celular) */
+@media(min-width:901px){
+  .topbar{background:color-mix(in srgb,var(--surf) 72%,transparent);backdrop-filter:saturate(160%) blur(16px);-webkit-backdrop-filter:saturate(160%) blur(16px);border-bottom:1px solid var(--bord-l);box-shadow:none}
+  .tb-title{font-size:16px;font-weight:800;letter-spacing:-.4px}
+  /* Transição de view no desktop também — nada de troca "seca" */
+  .view.on{animation:viewIn .2s cubic-bezier(.3,.8,.4,1) both}
+}
+/* Fundo dos modais com blur real — profundidade de sistema operacional */
+.modal{background:rgba(10,12,28,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+/* Badges de status: pílula única em todo o sistema */
+.sb2{border-radius:999px;font-weight:600;letter-spacing:.1px}
+/* Tabelas: cabeçalho lapidado + linha com hover suave */
+.twrap th,.vtable th,.pd-items th{font-weight:700;color:var(--fa)}
+.twrap tbody tr,.vtable tbody tr{transition:background .12s}
+.twrap tbody tr:hover,.vtable tbody tr:hover{background:color-mix(in srgb,var(--acc) 4%,transparent)}
+/* Cards-herói com anel de vidro sutil */
+.hero-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 12px 32px rgba(23,23,60,.18)}
+/* Elevação viva ao passar o mouse em qualquer card clicável */
+.dk-card:hover,.fk-card:hover,.da-card:hover{transform:translateY(-2px)}
+/* Selects e inputs do sistema inteiro no mesmo idioma visual */
+select,input[type=date],input[type=number],input[type=text],input[type=url],input[type=email],textarea{accent-color:var(--acc)}
+/* Scrollbar fina e discreta que combina com o tema */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--fa) 45%,transparent);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--fa)}
+/* Toasts com vidro e sombra flutuante */
+.noti{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;box-shadow:var(--sh-md)}
 /* Detalhe de pedido/NF-e: grade de fatos e lista de itens padronizadas */
 .pd-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px}
 .pd-fact{background:var(--bg);border-radius:12px;padding:11px 12px;min-width:0}
