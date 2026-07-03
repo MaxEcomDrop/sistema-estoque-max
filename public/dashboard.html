@@ -3542,6 +3542,9 @@ async function loadProducts(showToast=false){
     S.products.forEach(p=>{S.prevPrices[p.id]=p.preco;S.prevStocks[p.id]=p.estoque;});
     S.products=d.products||[];
     S.lastSync=new Date();
+    // Fotos HD já descobertas em sessões anteriores substituem a miniatura na hora
+    try{const hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');S.products.forEach(p=>{if(hd[p.id]&&!String(p.imagemUrl).includes('/img/produto/'))p.imagemUrl=hd[p.id];});}catch{}
+    setTimeout(hydrateHDImages,2500);
     const skuCount={};
     S.products.forEach(p=>{if(p.codigo)skuCount[p.codigo]=(skuCount[p.codigo]||0)+1;});
     S.dupSkus=new Set(Object.keys(skuCount).filter(k=>skuCount[k]>1&&k));
@@ -4747,6 +4750,35 @@ function updateImgPrev(prevId,inputId){
     if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
   }else{prev.style.display='none';}
 }
+// ── Hidratação HD das fotos ─────────────────────────────────────────
+// A LISTAGEM do Bling só entrega miniatura; a foto em alta só existe no
+// DETALHE de cada produto. Esta fila busca os detalhes aos poucos (1 a
+// cada ~450ms, respeitando o limite da API), troca a miniatura pela HD
+// e guarda no dispositivo — nas próximas visitas já abre em alta.
+let _hdRunning=false;
+async function hydrateHDImages(){
+  if(_hdRunning)return;_hdRunning=true;
+  try{
+    let hd={};try{hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');}catch{}
+    const pend=S.products.filter(p=>p.imagemUrl&&hd[p.id]===undefined&&!String(p.imagemUrl).includes('/img/produto/')).slice(0,60);
+    let trocadas=0;
+    for(const p of pend){
+      try{
+        const r=await fetch(`/api/produtos/${p.id}`);
+        if(r.status===401)break;
+        if(!r.ok){await new Promise(s=>setTimeout(s,1500));continue;}
+        const d=await r.json();
+        const url=d.midia?.imagens?.internas?.[0]?.link||d.midia?.imagens?.externas?.[0]?.link||'';
+        if(url&&url!==p.imagemUrl){p.imagemUrl=url;hd[p.id]=url;trocadas++;}
+        else hd[p.id]='';// verificado: não há versão maior
+      }catch{break;}
+      await new Promise(s=>setTimeout(s,450));
+    }
+    try{localStorage.setItem('hd_imgs',JSON.stringify(hd));}catch{}
+    if(trocadas&&S.view==='produtos'){try{applyFilters();}catch{}}
+  }finally{_hdRunning=false;}
+}
+
 // ── Upload de imagem do produto (arquivo/arrastar, com compressão) ──
 // Comprime no navegador via canvas (máx. 1000px, JPEG q0.85 — PNG só se
 // tiver transparência) e guarda o dataURL até o Salvar enviar ao servidor.
