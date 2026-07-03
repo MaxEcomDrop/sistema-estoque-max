@@ -259,12 +259,23 @@
     const err = params.get('error');
     if (err) {
       const box = document.getElementById('errorBox');
+      // token_exchange_failed é, de longe, o mais comum: a BLING_REDIRECT_URI
+      // configurada no servidor não bate byte a byte com a cadastrada no
+      // app do Bling (domínio errado, http vs https, barra no final etc.).
+      // O diagnóstico ao vivo mostra as duas lado a lado.
+      const diagLink = '<a href="/dashboard.html" style="color:#b91c1c;text-decoration:underline;font-weight:600">Configurações → Diagnóstico ao vivo</a>';
       const msgs = {
         invalid_request:       'Requisição inválida. Verifique a configuração do aplicativo no Bling.',
         access_denied:         'Acesso negado. Autorize o aplicativo no Bling para continuar.',
-        token_exchange_failed: 'Falha ao obter o token. Tente novamente.',
+        no_code:                'O Bling não enviou o código de autorização. Tente conectar novamente.',
+        invalid_state:          'Sessão de autorização inválida ou expirada. Tente conectar novamente.',
+        token_exchange_failed: `Falha ao obter o token do Bling — geralmente é a URL de redirecionamento cadastrada no Bling não bater com a do servidor. Confira em ${diagLink}.`,
       };
-      box.textContent = msgs[err] || `Erro: ${err}`;
+      // err vem da query string (controlável por quem monta o link) — só os
+      // valores conhecidos acima usam innerHTML (texto fixo nosso); qualquer
+      // valor fora da lista é escapado antes de entrar no DOM.
+      const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      box.innerHTML = msgs[err] || `Erro: ${esc(err)}`;
       box.style.display = 'block';
     }
 

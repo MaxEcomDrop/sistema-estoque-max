@@ -3444,8 +3444,12 @@ async function loadDiagnostico(){
       ${row('URL que este domínio precisa',d.mercadoLivre.urlEsperadaPeloRequest,null)}
       ${row('As duas batem?',mlMatch?'✓ Sim':'✗ NÃO — é isso que quebra o redirecionamento',mlMatch)}
       ${row('Conectado agora',d.mercadoLivre.conectado?'✓ Sim':'✗ Não',d.mercadoLivre.conectado)}
-      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">FIREBASE / PERSISTÊNCIA</div>
-      ${row('FIREBASE_SERVICE_ACCOUNT configurado',d.firebase.configurado?'✓ Sim':'✗ NÃO — dados de contas/calendário não persistem entre reinícios',d.firebase.configurado)}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">FIREBASE / LOGIN COM GOOGLE</div>
+      ${row('FIREBASE_SERVICE_ACCOUNT configurado',d.firebase.configurado?'✓ Sim':'✗ NÃO — login com Google fica indisponível (use email e senha)',d.firebase.configurado)}
+      ${d.firebase.erroInicializacao?row('Erro ao inicializar',d.firebase.erroInicializacao,false):''}
+      ${d.firebase.configurado?row('Projeto configurado no servidor',d.firebase.projetoConfigurado||'—',d.firebase.projetoBate):''}
+      ${d.firebase.configurado?row('Projeto que o login com Google espera','erp-max-sistema',null):''}
+      ${d.firebase.configurado?row('Os dois batem?',d.firebase.projetoBate?'✓ Sim':'✗ NÃO — é isso que faz o login com Google sempre falhar',d.firebase.projetoBate):''}
       ${row('Firestore respondendo',d.firebase.firestoreRespondendo?'✓ Sim':'✗ Não',d.firebase.firestoreRespondendo)}
     `;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:16px"><p class="st-d">Erro ao verificar: ${esc(e.message)}</p></div>`;}
