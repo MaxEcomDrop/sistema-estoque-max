@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pós-Venda Capture — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
+    header { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: #1e293b; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; color: white; display: flex; align-items: center; justify-content: center; }
+    .btn-logout { background: transparent; border: 1px solid #e2e8f0; color: #475569; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s; }
+    .btn-logout:hover { background: #f1f5f9; }
+    main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+    .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 24px; }
+    h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1e293b; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    th { color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+    .badge-bling { background: #e0f2fe; color: #0284c7; }
+    .badge-ml { background: #fef08a; color: #854d0e; }
+    .loading { text-align: center; color: #64748b; font-size: 14px; padding: 32px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">PV</div>
+      Pós-Venda Capture
+    </div>
+    <button class="btn-logout" id="btnLogout">Sair</button>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Contatos Capturados</h2>
+      <div id="tableContainer">
+        <div class="loading">Carregando contatos...</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('btnLogout').addEventListener('click', async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      });
+
+      try {
+        const res = await fetch('/api/customers');
+        if (res.status === 401) {
+          window.location.href = '/login.html';
+          return;
+        }
+
+        const data = await res.json();
+        const container = document.getElementById('tableContainer');
+
+        if (!data.success || !data.customers || data.customers.length === 0) {
+          container.innerHTML = '<div class="loading">Nenhum contato capturado ainda.</div>';
+          return;
+        }
+
+        let tableHtml = `
+          <table>
+            <thead>
+              <tr>
+                <th>Documento</th>
+                <th>Telefone</th>
+                <th>Celular</th>
+                <th>Email</th>
+                <th>Origem</th>
+                <th>Última Atualização</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        data.customers.forEach(c => {
+          const dateStr = new Date(c.updatedAt).toLocaleString('pt-BR');
+          const badgeClass = c.source === 'bling' ? 'badge-bling' : 'badge-ml';
+          const sourceName = c.source === 'bling' ? 'Bling' : 'Mercado Livre';
+
+          tableHtml += `
+            <tr>
+              <td style="font-weight: 500;">${c.cpf || '—'}</td>
+              <td>${c.telefone || '—'}</td>
+              <td>${c.celular || '—'}</td>
+              <td>${c.email || '—'}</td>
+              <td><span class="badge ${badgeClass}">${sourceName}</span></td>
+              <td style="color: #64748b;">${dateStr}</td>
+            </tr>
+          `;
+        });
+
+        tableHtml += `</tbody></table>`;
+        container.innerHTML = tableHtml;
+
+      } catch (error) {
+        document.getElementById('tableContainer').innerHTML = '<div class="loading" style="color: #ef4444;">Erro ao carregar dados.</div>';
+      }
+    });
+  </script>
+</body>
+</html>

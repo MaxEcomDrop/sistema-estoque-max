@@ -14,6 +14,9 @@ const envSchema = z.object({
   ML_APP_ID: z.string().optional(),
   CACHE_TTL_HOURS: z.coerce.number().positive().default(DEFAULT_CACHE_TTL_HOURS),
   NODE_ENV: z.string().default('production'),
+  ADMIN_EMAIL: z.string().min(1, 'ADMIN_EMAIL é obrigatória'),
+  ADMIN_PASSWORD: z.string().min(1, 'ADMIN_PASSWORD é obrigatória'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter no mínimo 32 caracteres'),
 });
 
 export interface ServiceAccount {
