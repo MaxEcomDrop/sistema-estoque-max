@@ -1,8 +1,11 @@
 # Pós-Venda Capture
 
 Microsserviço serverless que recebe webhooks do **Bling** e do **Mercado Livre**,
-resolve o contato do comprador (telefone/celular/email) e mantém um cache no
-**Firestore** (`customers/{cpf}`), reduzindo latência e consumo da API v3 do Bling.
+resolve o contato do comprador (nome completo, endereço, telefone/celular/email)
+e mantém um cache no **Firestore** (`customers/{cpf}`), reduzindo latência e
+consumo da API v3 do Bling. O mesmo cache alimenta a aba Clientes do sistema
+principal (preenche e-mail/telefone/endereço quando o Bling não tinha) e a
+tela **Clientes (CRM)** deste próprio projeto.
 
 ## Fluxo
 
@@ -14,9 +17,13 @@ resolve o contato do comprador (telefone/celular/email) e mantém um cache no
    documento no payload: o pedido é buscado na API do ML com o token compartilhado.
 4. Consulta `customers/{cpf}`; se `updatedAt` dentro de `CACHE_TTL_HOURS`,
    responde na hora sem tocar o Bling (`action: cache_hit`).
-5. Cache frio → `GET /contatos?numeroDocumento=...` no Bling; extrai SOMENTE
-   `telefone`, `celular`, `email` (máscaras preservadas).
-6. Upsert `set(..., { merge: true })` com `cpf`, contatos, `source`, `updatedAt`.
+5. Cache frio → `GET /contatos?numeroDocumento=...` no Bling; extrai `nome`,
+   `telefone`, `celular`, `email` e `endereco` (logradouro/número/bairro/
+   cidade/UF/CEP — mesmos campos que o sistema principal já lê do Bling).
+   O Mercado Livre só expõe nome e telefone de forma confiável no pedido
+   (endereço completo exigiria o recurso de envio, fora do escopo atual).
+6. Upsert `set(..., { merge: true })` com `cpf`, contato completo, `source`,
+   `updatedAt` — nunca apaga um campo já preenchido por uma fonte anterior.
 7. Responde `200 { success: true, action, cpf }`.
 
 ## Decisões de arquitetura
@@ -74,7 +81,7 @@ dessas categorias, buscando o recurso completo quando necessário).
 ## Tela de diagnóstico
 
 A URL raiz do projeto (`https://<projeto>.vercel.app/`) abre um painel visual
-que mostra, ao vivo:
+(idêntico ao estilo do sistema principal) que mostra, ao vivo:
 
 - se o Firebase configurado é o **mesmo projeto** do sistema principal
   (`erp-max-sistema`) e se o Firestore está respondendo;
@@ -84,22 +91,57 @@ que mostra, ao vivo:
 - um formulário para **testar o webhook manualmente** colando um payload de
   exemplo, sem precisar esperar um evento real do Bling/ML.
 
-Defina `ADMIN_KEY` para proteger essa tela e os endpoints `/api/status` e
-`/api/recent` — sem ela, ficam abertos (aceitável só durante a validação
-inicial). Com `ADMIN_KEY` definida, a própria página pede a chave.
+### Clientes (CRM)
+
+Uma segunda aba na mesma tela (`https://<projeto>.vercel.app/`) lista o cache
+completo — `GET /api/customers` — com nome, CPF/CNPJ **sem máscara**, e-mail,
+telefone, endereço completo, origem (`bling`/`mercado_livre`) e data de
+atualização, com busca por qualquer um desses campos. Diferente do
+`/api/recent` (resumo de diagnóstico, CPF mascarado), este endpoint é o dado
+completo para uso operacional — por isso exige login/`ADMIN_KEY` como os
+demais endpoints protegidos.
+
+### Login
+
+`https://<projeto>.vercel.app/login.html` pede e-mail/senha (mesmo par do
+sistema principal — defina `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `JWT_SECRET`
+no `.env.example`; `JWT_SECRET` pode ser gerado com `openssl rand -hex 32`).
+No sucesso, `POST /api/auth/login` emite um cookie de sessão
+(`pv_session`, HttpOnly + Secure + SameSite=Lax, válido por 7 dias) que
+protege a tela e os endpoints `/api/status`/`/api/recent`. `GET /api/auth/me`
+confirma a sessão (usado pelo `index.html` para redirecionar ao login quando
+não autenticado) e `POST /api/auth/logout` encerra a sessão.
+
+Como alternativa ao login (útil para automação/scripts), `ADMIN_KEY` continua
+funcionando via `?key=...` ou header `x-admin-key` — sem nenhum dos dois
+configurados, os endpoints ficam abertos (aceitável só durante a validação
+inicial).
+
+### Erros de configuração
+
+Se alguma variável de ambiente estiver ausente ou inválida (ex.: `JWT_SECRET`
+não definido, `FIREBASE_SERVICE_ACCOUNT` malformado), os endpoints respondem
+`503 { success:false, error:'config_error', detail:'<variável exata>' }` em
+vez de um `500 internal_error` genérico — o `detail` sempre aponta qual
+variável precisa ser corrigida.
 
 ## Estrutura
 
 ```
 index.html                    tela de diagnóstico (status + teste manual)
+login.html                    tela de login (e-mail/senha, visual do sistema principal)
 api/webhook-capture.ts        handler HTTP principal (Vercel Function)
 api/status.ts                 diagnóstico ao vivo (Firebase/Bling/ML/cache)
-api/recent.ts                 últimos clientes e eventos resolvidos
+api/recent.ts                 últimos clientes e eventos resolvidos (CPF mascarado)
+api/customers.ts              listagem completa do CRM (CPF sem máscara, autenticado)
+api/auth/login.ts             valida credenciais, emite cookie de sessão (JWT)
+api/auth/logout.ts            encerra a sessão
+api/auth/me.ts                confirma se a sessão é válida
 src/config/{env,firebase}.ts  zod env + Firebase Admin (banco nomeado ok)
 src/services/                 bling (OAuth compartilhado + contatos), ml, firestore
 src/repositories/             customers (get/upsert merge)
 src/controllers/              orquestração do fluxo do webhook
-src/middlewares/              método/Content-Type/JSON/assinatura HMAC/ADMIN_KEY
-src/utils/                    cleanDocument, retry/backoff, dedup, logger
+src/middlewares/              método/Content-Type/JSON/assinatura HMAC/sessão/ADMIN_KEY
+src/utils/                    cleanDocument, retry/backoff, dedup, logger, auth (JWT/cookie), errors (ConfigError), handleApiError
 src/types, src/constants      contratos e constantes
 ```

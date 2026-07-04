@@ -2204,9 +2204,26 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
       return all;
     })();
 
-    const [contatos, pedidos] = await Promise.all([
+    // Cache de contatos do microsserviço pos-venda (mesmo Firestore) — enriquece
+    // com e-mail/telefone/endereço quando o /contatos do Bling vier incompleto
+    // (motivo original do pos-venda existir: nem todo contato tem e-mail cadastrado).
+    const cachePromise = (async () => {
+      const admin = getAdmin();
+      if (!admin) return {};
+      try {
+        const snap = await admin.firestore().collection('customers').get();
+        const map = {};
+        snap.forEach(doc => { map[doc.id] = doc.data(); });
+        return map;
+      } catch {
+        return {};
+      }
+    })();
+
+    const [contatos, pedidos, cache] = await Promise.all([
       contatosPromise,
       fetchPedidos(token, isoIni, isoHoje, 3).catch(() => []),
+      cachePromise,
     ]);
 
     // Agrega gasto/pedidos por contato
@@ -2224,14 +2241,20 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
     const clientes = contatos.map(c => {
       const a = agg[c.id] || agg[c.nome] || { gasto: 0, pedidos: 0, ultimo: '' };
       const end = c.endereco?.geral || c.endereco || {};
+      const docLimpo = String(c.numeroDocumento || '').replace(/\D+/g, '');
+      const cached = cache[docLimpo];
       return {
         id: c.id,
-        nome: c.nome || 'Sem nome',
+        nome: c.nome || cached?.nome || 'Sem nome',
         documento: c.numeroDocumento || '',
-        email: c.email || '',
-        telefone: c.celular || c.telefone || c.fone || '',
-        municipio: end.municipio || end.cidade || '',
-        uf: end.uf || end.estado || '',
+        email: c.email || cached?.email || '',
+        telefone: c.celular || c.telefone || c.fone || cached?.celular || cached?.telefone || '',
+        endereco: end.endereco || cached?.endereco?.logradouro || '',
+        numero: end.numero || cached?.endereco?.numero || '',
+        bairro: end.bairro || cached?.endereco?.bairro || '',
+        municipio: end.municipio || end.cidade || cached?.endereco?.municipio || '',
+        uf: end.uf || end.estado || cached?.endereco?.uf || '',
+        cep: end.cep || cached?.endereco?.cep || '',
         tipo: c.tipo === 'J' ? 'PJ' : c.tipo === 'F' ? 'PF' : (c.tipo || ''),
         totalGasto: a.gasto,
         numPedidos: a.pedidos,

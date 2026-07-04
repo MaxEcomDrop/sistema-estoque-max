@@ -2,8 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getEnv } from '../src/config/env';
 import { RESOURCE_CACHE_COLLECTION, CUSTOMERS_COLLECTION, BLING_AUTH_DOC, ML_AUTH_DOC } from '../src/constants';
 import { countCollection, pingFirestore, readDoc } from '../src/services/firestore.service';
-import { logger } from '../src/utils/logger';
 import { requireAdminKey } from '../src/middlewares/requireAdminKey';
+import { handleApiError } from '../src/utils/handleApiError';
+
+const MODULE = 'status';
 
 interface StoredBlingTokens {
   readonly accessToken?: string;
@@ -25,9 +27,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ success: false, error: 'method_not_allowed' });
     return;
   }
-  if (!requireAdminKey(req, res)) return;
-
   try {
+    if (!requireAdminKey(req, res)) return;
     const env = getEnv();
     const firestore = await pingFirestore();
 
@@ -76,9 +77,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       },
     });
   } catch (err) {
-    logger.error('status', 'falha ao montar diagnóstico', {
-      message: err instanceof Error ? err.message : 'unknown',
-    });
-    res.status(500).json({ success: false, error: 'internal_error' });
+    handleApiError(MODULE, err, res);
   }
 }

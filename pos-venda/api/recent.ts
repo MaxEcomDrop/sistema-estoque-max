@@ -2,7 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { CUSTOMERS_COLLECTION, RESOURCE_CACHE_COLLECTION } from '../src/constants';
 import { listRecent } from '../src/services/firestore.service';
 import { requireAdminKey } from '../src/middlewares/requireAdminKey';
-import { logger } from '../src/utils/logger';
+import { handleApiError } from '../src/utils/handleApiError';
+
+const MODULE = 'recent';
 
 /** Mascara um CPF/CNPJ para exibição: mantém só os 3 primeiros dígitos. */
 function maskDocument(doc: string): string {
@@ -28,9 +30,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ success: false, error: 'method_not_allowed' });
     return;
   }
-  if (!requireAdminKey(req, res)) return;
-
   try {
+    if (!requireAdminKey(req, res)) return;
     const [customers, resources] = await Promise.all([
       listRecent<CustomerDoc>(CUSTOMERS_COLLECTION, 'updatedAt', 20),
       listRecent<ResourceCacheDoc>(RESOURCE_CACHE_COLLECTION, 'resolvedAt', 20),
@@ -52,9 +53,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       })),
     });
   } catch (err) {
-    logger.error('recent', 'falha ao listar recentes', {
-      message: err instanceof Error ? err.message : 'unknown',
-    });
-    res.status(500).json({ success: false, error: 'internal_error' });
+    handleApiError(MODULE, err, res);
   }
 }

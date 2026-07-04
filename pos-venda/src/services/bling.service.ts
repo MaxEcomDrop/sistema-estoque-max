@@ -6,7 +6,7 @@ import {
   BLING_TOKEN_URL,
   REFRESH_LEASE_MS,
 } from '../constants';
-import { BlingContact } from '../types/customer';
+import { BlingContact, EnderecoInfo } from '../types/customer';
 import { logger } from '../utils/logger';
 import { createHttpClient, withRetry } from '../utils/retry';
 import { acquireLease, readDoc, upsertDoc } from './firestore.service';
@@ -84,17 +84,45 @@ export async function getBlingAccessToken(): Promise<string | null> {
   }
 }
 
+interface BlingEnderecoRaw {
+  readonly endereco?: string;
+  readonly numero?: string;
+  readonly bairro?: string;
+  readonly municipio?: string;
+  readonly cidade?: string;
+  readonly uf?: string;
+  readonly estado?: string;
+  readonly cep?: string;
+}
 interface BlingContactRaw {
+  readonly nome?: string;
   readonly telefone?: string;
   readonly celular?: string;
   readonly email?: string;
   readonly numeroDocumento?: string;
+  readonly endereco?: { readonly geral?: BlingEnderecoRaw } & BlingEnderecoRaw;
+}
+
+/** Mesmo formato usado pelo sistema principal (`/api/clientes`): o endereço
+ *  do Bling vem em `endereco.geral` ou direto em `endereco`, com nomes de
+ *  campo que variam (`municipio`/`cidade`, `uf`/`estado`). */
+function extractEndereco(raw: BlingContactRaw['endereco']): EnderecoInfo | null {
+  const end = raw?.geral ?? raw;
+  if (!end) return null;
+  const municipio = end.municipio || end.cidade || null;
+  const uf = end.uf || end.estado || null;
+  const logradouro = end.endereco || null;
+  const numero = end.numero || null;
+  const bairro = end.bairro || null;
+  const cep = end.cep || null;
+  if (!municipio && !uf && !logradouro && !numero && !bairro && !cep) return null;
+  return { logradouro, numero, bairro, municipio, uf, cep };
 }
 
 /**
  * Busca o contato no Bling pelo documento (CPF/CNPJ já limpo) e extrai
- * SOMENTE telefone/celular/email — exatamente como retornados (máscaras
- * incluídas), sem qualquer transformação.
+ * nome/telefone/celular/email/endereço — exatamente como retornados
+ * (máscaras incluídas), sem qualquer transformação.
  */
 export async function findContactByDocument(cleanDoc: string): Promise<BlingContact | null> {
   const token = await getBlingAccessToken();
@@ -115,9 +143,11 @@ export async function findContactByDocument(cleanDoc: string): Promise<BlingCont
     return null;
   }
   return {
+    nome: contact.nome?.trim() || null,
     telefone: contact.telefone?.trim() || null,
     celular: contact.celular?.trim() || null,
     email: contact.email?.trim() || null,
+    endereco: extractEndereco(contact.endereco),
   };
 }
 
