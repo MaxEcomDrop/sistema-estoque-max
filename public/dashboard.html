@@ -5560,7 +5560,7 @@ function openClienteFicha(id){
       <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Total gasto (90d)</div><div style="font-size:18px;font-weight:800;color:var(--ok-t)">${fmt(c.totalGasto)}</div></div>
       <div style="background:var(--bg);border-radius:10px;padding:12px"><div style="font-size:11px;color:var(--mu)">Pedidos</div><div style="font-size:18px;font-weight:800;color:var(--tx)">${fmtN(c.numPedidos||0)}</div></div>
     </div>
-    ${linhaLink('E-mail',c.email,'mailto:'+encodeURIComponent(c.email))}${linhaLink('Telefone',c.telefone,'https://wa.me/'+waDigits)}${linha('Cidade',c.municipio?c.municipio+(c.uf?'/'+c.uf:''):'')}${linha('Último pedido',c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'')}
+    ${linhaLink('E-mail',c.email,'mailto:'+encodeURIComponent(c.email))}${linhaLink('Telefone',c.telefone,'https://wa.me/'+waDigits)}${linha('Endereço',[c.endereco,c.numero].filter(Boolean).join(', '))}${linha('Bairro',c.bairro)}${linha('Cidade',c.municipio?c.municipio+(c.uf?'/'+c.uf:''):'')}${linha('CEP',c.cep)}${linha('Último pedido',c.ultimoPedido?c.ultimoPedido.split('-').reverse().join('/'):'')}
     ${c.telefone?`<div style="margin-top:14px"><a href="https://wa.me/${waDigits}" target="_blank" rel="noopener" class="bts" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:#22c55e;color:#fff;border-color:#22c55e">💬 Chamar no WhatsApp</a></div>`:''}
   `;
   openModal('cli-modal');
@@ -5580,8 +5580,8 @@ function exportClientesCSV(){
   else if(sort==='recente')list.sort((a,b)=>(b.ultimoPedido||'').localeCompare(a.ultimoPedido||''));
   else list.sort((a,b)=>b.totalGasto-a.totalGasto);
   if(!list.length){toast('Nenhum cliente para exportar','err');return;}
-  const cols=['nome','documento','email','telefone','municipio','uf','totalGasto','numPedidos','ultimoPedido'];
-  const hdrs=['Nome','Documento','E-mail','Telefone','Cidade','UF','Total Gasto','Pedidos','Último Pedido'];
+  const cols=['nome','documento','email','telefone','endereco','numero','bairro','municipio','uf','cep','totalGasto','numPedidos','ultimoPedido'];
+  const hdrs=['Nome','Documento','E-mail','Telefone','Endereço','Número','Bairro','Cidade','UF','CEP','Total Gasto','Pedidos','Último Pedido'];
   const csv=[hdrs.join(','),...list.map(c=>cols.map(k=>{const v=c[k];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';}).join(','))].join('\r\n');
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`clientes_${new Date().toISOString().slice(0,10)}.csv`;a.click();
   toast(`${list.length} cliente${list.length!==1?'s':''} exportado${list.length!==1?'s':''}`,'ok');

@@ -46,6 +46,13 @@
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
   .badge.ok{background:#ecfdf5;color:#059669}
   .badge.bad{background:#fef2f2;color:#dc2626}
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid #e4e7f2}
+  .tab-btn{background:none;border:none;color:#63698a;font-family:inherit;font-size:13.5px;font-weight:700;padding:9px 4px;margin:0 10px 0 0;cursor:pointer;border-bottom:2.5px solid transparent;border-radius:0}
+  .tab-btn.active{color:#6366f1;border-bottom-color:#6366f1}
+  .tab-btn:hover{opacity:.85}
+  .search-box{margin-bottom:14px}
+  .search-box input{width:100%;border:1.5px solid #e4e7f2;border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit}
+  .empty{color:#9aa1c0;font-size:13px;padding:6px 0}
 </style>
 </head>
 <body>
@@ -58,32 +65,50 @@
 </header>
 
 <div class="wrap">
-  <h1>Diagnóstico ao vivo</h1>
-  <p class="sub">Mostra exatamente o que o serviço tem configurado agora — Firebase, Bling, Mercado Livre e cache — em vez de adivinhar.</p>
-
-  <div class="keybox">
-    <input type="password" id="adminKey" placeholder="Admin key (opcional — a sessão de login já é suficiente)">
-    <button class="refresh" onclick="loadAll()">Verificar agora</button>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnDiag" onclick="switchTab('diag')">Diagnóstico</button>
+    <button class="tab-btn" id="tabBtnCrm" onclick="switchTab('crm')">Clientes (CRM)</button>
   </div>
 
-  <div id="statusArea"><div class="card"><p class="mut">Carregando…</p></div></div>
+  <div id="tab-diag">
+    <h1>Diagnóstico ao vivo</h1>
+    <p class="sub">Mostra exatamente o que o serviço tem configurado agora — Firebase, Bling, Mercado Livre e cache — em vez de adivinhar.</p>
 
-  <div class="card">
-    <h2>Testar webhook manualmente</h2>
-    <p class="sub" style="margin-bottom:8px">Cole um payload de exemplo (Bling ou Mercado Livre) e envie direto para <code>/api/webhook-capture</code>, sem precisar esperar um evento real.</p>
-    <textarea id="payload">{"modulo":"nfe","data":{"id":123456}}</textarea>
-    <button id="testBtn" onclick="testWebhook()">Enviar teste</button>
-    <pre id="testResult" style="display:none"></pre>
+    <div class="keybox">
+      <input type="password" id="adminKey" placeholder="Admin key (opcional — a sessão de login já é suficiente)">
+      <button class="refresh" onclick="loadAll()">Verificar agora</button>
+    </div>
+
+    <div id="statusArea"><div class="card"><p class="mut">Carregando…</p></div></div>
+
+    <div class="card">
+      <h2>Testar webhook manualmente</h2>
+      <p class="sub" style="margin-bottom:8px">Cole um payload de exemplo (Bling ou Mercado Livre) e envie direto para <code>/api/webhook-capture</code>, sem precisar esperar um evento real.</p>
+      <textarea id="payload">{"modulo":"nfe","data":{"id":123456}}</textarea>
+      <button id="testBtn" onclick="testWebhook()">Enviar teste</button>
+      <pre id="testResult" style="display:none"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Últimos clientes em cache</h2>
+      <div id="clientesArea"><p class="mut">—</p></div>
+    </div>
+
+    <div class="card">
+      <h2>Últimos eventos resolvidos (pedido/NF-e)</h2>
+      <div id="eventosArea"><p class="mut">—</p></div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Últimos clientes em cache</h2>
-    <div id="clientesArea"><p class="mut">—</p></div>
-  </div>
-
-  <div class="card">
-    <h2>Últimos eventos resolvidos (pedido/NF-e)</h2>
-    <div id="eventosArea"><p class="mut">—</p></div>
+  <div id="tab-crm" style="display:none">
+    <h1>Clientes</h1>
+    <p class="sub">Nome, documento, endereço, e-mail e telefone capturados do Bling/Mercado Livre — mesmo cache que alimenta a aba Clientes do sistema principal.</p>
+    <div class="search-box">
+      <input type="text" id="crmSearch" placeholder="Buscar por nome, CPF/CNPJ, e-mail, telefone ou cidade…" oninput="renderCrm()">
+    </div>
+    <div class="card">
+      <div id="crmArea"><p class="mut">Carregando…</p></div>
+    </div>
   </div>
 </div>
 
@@ -189,6 +214,57 @@ async function testWebhook(){
 }
 
 async function loadAll(){await loadStatus();await loadRecent();}
+
+let _crmCache=[];
+let _crmLoaded=false;
+function fmtEndereco(e){
+  if(!e)return '';
+  const rua=[e.logradouro,e.numero].filter(Boolean).join(', ');
+  const cidade=[e.municipio,e.uf].filter(Boolean).join('/');
+  return [rua,e.bairro,cidade].filter(Boolean).join(' — ');
+}
+async function loadCrm(force){
+  const area=document.getElementById('crmArea');
+  if(_crmLoaded&&!force){renderCrm();return;}
+  area.innerHTML='<p class="mut">Carregando…</p>';
+  const {ok,status,data,raw}=await fetchJson('/api/customers'+qs());
+  if(!ok||!data){
+    area.innerHTML=`<p class="bad">Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}</p>${!data?`<pre>${esc(raw.slice(0,600))}</pre>`:''}`;
+    return;
+  }
+  _crmCache=data.clientes||[];_crmLoaded=true;
+  renderCrm();
+}
+function renderCrm(){
+  const area=document.getElementById('crmArea');
+  const q=(document.getElementById('crmSearch').value||'').toLowerCase().trim();
+  const list=_crmCache.filter(c=>{
+    if(!q)return true;
+    return `${c.nome||''} ${c.cpf} ${c.email||''} ${c.telefone||''} ${fmtEndereco(c.endereco)}`.toLowerCase().includes(q);
+  });
+  if(!list.length){area.innerHTML='<p class="empty">Nenhum cliente encontrado.</p>';return;}
+  area.innerHTML=`<table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Endereço</th><th>Origem</th><th>Atualizado</th></tr></thead><tbody>${
+    list.map(c=>`<tr>
+      <td>${esc(c.nome||'—')}</td>
+      <td>${esc(c.cpf)}</td>
+      <td>${esc(c.email||'—')}</td>
+      <td>${esc(c.telefone||'—')}</td>
+      <td>${esc(fmtEndereco(c.endereco)||'—')}</td>
+      <td>${esc(c.origem)}</td>
+      <td>${esc(c.atualizadoEm)}</td>
+    </tr>`).join('')
+  }</tbody></table>`;
+}
+
+function switchTab(name){
+  const isDiag=name==='diag';
+  document.getElementById('tab-diag').style.display=isDiag?'':'none';
+  document.getElementById('tab-crm').style.display=isDiag?'none':'';
+  document.getElementById('tabBtnDiag').classList.toggle('active',isDiag);
+  document.getElementById('tabBtnCrm').classList.toggle('active',!isDiag);
+  if(!isDiag)loadCrm();
+}
+
 (async()=>{ if(await checkAuth()) loadAll(); })();
 </script>
 </body>

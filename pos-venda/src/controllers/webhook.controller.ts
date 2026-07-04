@@ -86,6 +86,7 @@ export async function handleWebhook(payload: Record<string, unknown>): Promise<C
   let document = findDocumentDeep(payload);
   let phoneFallback: string | null = null;
   let celularFallback: string | null = null;
+  let nomeFallback: string | null = null;
 
   if (!document && isMlNotification(payload)) {
     source = 'mercado_livre';
@@ -93,6 +94,7 @@ export async function handleWebhook(payload: Record<string, unknown>): Promise<C
     if (buyer) {
       document = cleanDocument(buyer.document);
       phoneFallback = buyer.phone;
+      nomeFallback = buyer.nome;
     }
   } else if (!document) {
     // Webhook de Pedido/Nota Fiscal do Bling: o payload só traz o ID do
@@ -138,18 +140,22 @@ export async function handleWebhook(payload: Record<string, unknown>): Promise<C
       return { success: true, action: 'cache_hit', cpf: document };
     }
 
-    // Sempre tenta /contatos por último: é a única fonte de e-mail.
+    // Sempre tenta /contatos por último: é a única fonte de e-mail, nome
+    // completo e endereço (o fallback via pedido/nfe/ML só traz documento,
+    // telefone e, no caso do ML, nome).
     const contact = await findContactByDocument(document);
-    if (!contact && !phoneFallback && !celularFallback) {
+    if (!contact && !phoneFallback && !celularFallback && !nomeFallback) {
       logger.warn(MODULE, 'contato indisponível no Bling e sem fallback');
       return { success: true, action: 'skipped', cpf: document, reason: 'contact_not_found' };
     }
 
     await upsertCustomer({
       cpf: document,
+      nome: contact?.nome ?? nomeFallback,
       telefone: contact?.telefone ?? phoneFallback,
       celular: contact?.celular ?? celularFallback,
       email: contact?.email ?? null,
+      endereco: contact?.endereco ?? null,
       source,
       updatedAt: Date.now(),
     });

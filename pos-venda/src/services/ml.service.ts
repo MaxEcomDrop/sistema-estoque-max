@@ -28,6 +28,8 @@ async function getMlAccessToken(): Promise<string | null> {
 
 interface MlOrder {
   readonly buyer?: {
+    readonly first_name?: string;
+    readonly last_name?: string;
     readonly billing_info?: { readonly doc_number?: string };
     readonly phone?: { readonly area_code?: string; readonly number?: string };
   };
@@ -36,11 +38,15 @@ interface MlOrder {
 export interface MlBuyerInfo {
   readonly document: string | null;
   readonly phone: string | null;
+  readonly nome: string | null;
 }
 
 /**
  * Resolve o pedido apontado pelo webhook (`resource: "/orders/123"`) e
- * extrai documento e telefone do comprador quando o ML os expõe.
+ * extrai documento, telefone e nome do comprador quando o ML os expõe.
+ * Endereço completo não vem no pedido — só no recurso de envio
+ * (`/shipments/{id}`), fora do escopo atual (o ML entrega só telefone e
+ * documento de forma confiável aqui).
  */
 export async function getBuyerFromResource(resource: string): Promise<MlBuyerInfo | null> {
   if (!/^\/orders\/\d+$/.test(resource)) return null;
@@ -58,7 +64,9 @@ export async function getBuyerFromResource(resource: string): Promise<MlBuyerInf
     const doc = order.buyer?.billing_info?.doc_number ?? null;
     const p = order.buyer?.phone;
     const phone = p?.number ? `${p.area_code ?? ''}${p.number}`.trim() : null;
-    return { document: doc, phone };
+    const nomeParts = [order.buyer?.first_name, order.buyer?.last_name].filter(Boolean);
+    const nome = nomeParts.length ? nomeParts.join(' ') : null;
+    return { document: doc, phone, nome };
   } catch {
     logger.error(MODULE, 'falha ao buscar pedido do webhook', { resource });
     return null;

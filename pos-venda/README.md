@@ -1,8 +1,11 @@
 # Pós-Venda Capture
 
 Microsserviço serverless que recebe webhooks do **Bling** e do **Mercado Livre**,
-resolve o contato do comprador (telefone/celular/email) e mantém um cache no
-**Firestore** (`customers/{cpf}`), reduzindo latência e consumo da API v3 do Bling.
+resolve o contato do comprador (nome completo, endereço, telefone/celular/email)
+e mantém um cache no **Firestore** (`customers/{cpf}`), reduzindo latência e
+consumo da API v3 do Bling. O mesmo cache alimenta a aba Clientes do sistema
+principal (preenche e-mail/telefone/endereço quando o Bling não tinha) e a
+tela **Clientes (CRM)** deste próprio projeto.
 
 ## Fluxo
 
@@ -14,9 +17,13 @@ resolve o contato do comprador (telefone/celular/email) e mantém um cache no
    documento no payload: o pedido é buscado na API do ML com o token compartilhado.
 4. Consulta `customers/{cpf}`; se `updatedAt` dentro de `CACHE_TTL_HOURS`,
    responde na hora sem tocar o Bling (`action: cache_hit`).
-5. Cache frio → `GET /contatos?numeroDocumento=...` no Bling; extrai SOMENTE
-   `telefone`, `celular`, `email` (máscaras preservadas).
-6. Upsert `set(..., { merge: true })` com `cpf`, contatos, `source`, `updatedAt`.
+5. Cache frio → `GET /contatos?numeroDocumento=...` no Bling; extrai `nome`,
+   `telefone`, `celular`, `email` e `endereco` (logradouro/número/bairro/
+   cidade/UF/CEP — mesmos campos que o sistema principal já lê do Bling).
+   O Mercado Livre só expõe nome e telefone de forma confiável no pedido
+   (endereço completo exigiria o recurso de envio, fora do escopo atual).
+6. Upsert `set(..., { merge: true })` com `cpf`, contato completo, `source`,
+   `updatedAt` — nunca apaga um campo já preenchido por uma fonte anterior.
 7. Responde `200 { success: true, action, cpf }`.
 
 ## Decisões de arquitetura
@@ -84,6 +91,16 @@ A URL raiz do projeto (`https://<projeto>.vercel.app/`) abre um painel visual
 - um formulário para **testar o webhook manualmente** colando um payload de
   exemplo, sem precisar esperar um evento real do Bling/ML.
 
+### Clientes (CRM)
+
+Uma segunda aba na mesma tela (`https://<projeto>.vercel.app/`) lista o cache
+completo — `GET /api/customers` — com nome, CPF/CNPJ **sem máscara**, e-mail,
+telefone, endereço completo, origem (`bling`/`mercado_livre`) e data de
+atualização, com busca por qualquer um desses campos. Diferente do
+`/api/recent` (resumo de diagnóstico, CPF mascarado), este endpoint é o dado
+completo para uso operacional — por isso exige login/`ADMIN_KEY` como os
+demais endpoints protegidos.
+
 ### Login
 
 `https://<projeto>.vercel.app/login.html` pede e-mail/senha (mesmo par do
@@ -115,7 +132,8 @@ index.html                    tela de diagnóstico (status + teste manual)
 login.html                    tela de login (e-mail/senha, visual do sistema principal)
 api/webhook-capture.ts        handler HTTP principal (Vercel Function)
 api/status.ts                 diagnóstico ao vivo (Firebase/Bling/ML/cache)
-api/recent.ts                 últimos clientes e eventos resolvidos
+api/recent.ts                 últimos clientes e eventos resolvidos (CPF mascarado)
+api/customers.ts              listagem completa do CRM (CPF sem máscara, autenticado)
 api/auth/login.ts             valida credenciais, emite cookie de sessão (JWT)
 api/auth/logout.ts            encerra a sessão
 api/auth/me.ts                confirma se a sessão é válida
