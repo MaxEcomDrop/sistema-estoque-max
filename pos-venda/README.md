@@ -96,10 +96,22 @@ A URL raiz do projeto (`https://<projeto>.vercel.app/`) abre um painel visual
 Uma segunda aba na mesma tela (`https://<projeto>.vercel.app/`) lista o cache
 completo — `GET /api/customers` — com nome, CPF/CNPJ **sem máscara**, e-mail,
 telefone, endereço completo, origem (`bling`/`mercado_livre`) e data de
-atualização, com busca por qualquer um desses campos. Diferente do
+atualização, com busca por qualquer um desses campos, mais cards com total
+em cache e % com e-mail/telefone/endereço preenchidos. Diferente do
 `/api/recent` (resumo de diagnóstico, CPF mascarado), este endpoint é o dado
 completo para uso operacional — por isso exige login/`ADMIN_KEY` como os
 demais endpoints protegidos.
+
+**Importante:** o cache só é alimentado por **webhooks reais** (pedido/NF-e/ML
+chegando) — o serviço nunca varre o Bling sozinho. Um cadastro recém-criado
+fica vazio até o primeiro evento real acontecer. Pra ver os clientes que já
+existem no Bling desde já, use o botão **"Importar do Bling"** na aba
+Clientes — chama `POST /api/import-bling` repetidamente (a função serverless
+não tem tempo de varrer um cadastro grande de uma vez só, então cada chamada
+processa até 3 páginas de 100 contatos e devolve `proximaPagina` pra
+continuar; o botão já faz esse loop sozinho até `concluido: true`). É seguro
+rodar mais de uma vez — é um upsert com merge, nunca duplica nem apaga dado
+já resolvido por um webhook.
 
 ### Login
 
@@ -134,13 +146,14 @@ api/webhook-capture.ts        handler HTTP principal (Vercel Function)
 api/status.ts                 diagnóstico ao vivo (Firebase/Bling/ML/cache)
 api/recent.ts                 últimos clientes e eventos resolvidos (CPF mascarado)
 api/customers.ts              listagem completa do CRM (CPF sem máscara, autenticado)
+api/import-bling.ts           importação única do cadastro de contatos do Bling (em lotes)
 api/auth/login.ts             valida credenciais, emite cookie de sessão (JWT)
 api/auth/logout.ts            encerra a sessão
 api/auth/me.ts                confirma se a sessão é válida
 src/config/{env,firebase}.ts  zod env + Firebase Admin (banco nomeado ok)
 src/services/                 bling (OAuth compartilhado + contatos), ml, firestore
 src/repositories/             customers (get/upsert merge)
-src/controllers/              orquestração do fluxo do webhook
+src/controllers/              orquestração do fluxo do webhook + importação em lote do Bling
 src/middlewares/              método/Content-Type/JSON/assinatura HMAC/sessão/ADMIN_KEY
 src/utils/                    cleanDocument, retry/backoff, dedup, logger, auth (JWT/cookie), errors (ConfigError), handleApiError
 src/types, src/constants      contratos e constantes

@@ -103,6 +103,20 @@
   <div id="tab-crm" style="display:none">
     <h1>Clientes</h1>
     <p class="sub">Nome, documento, endereço, e-mail e telefone capturados do Bling/Mercado Livre — mesmo cache que alimenta a aba Clientes do sistema principal.</p>
+
+    <div class="card">
+      <h2>Importar cadastro do Bling</h2>
+      <p class="sub" style="margin-bottom:8px">O cache só cresce sozinho quando um pedido/NF-e novo chega. Pra ver os clientes que já existem no Bling agora, importe uma vez (processa em lotes — pode demorar alguns segundos se o cadastro for grande).</p>
+      <button id="importBtn" onclick="importarBling()">Importar do Bling</button>
+      <pre id="importResult" style="display:none"></pre>
+    </div>
+
+    <div class="card">
+      <div class="grid" id="crmStats">
+        <div class="stat"><div class="n">0</div><div class="l">clientes em cache</div></div>
+      </div>
+    </div>
+
     <div class="search-box">
       <input type="text" id="crmSearch" placeholder="Buscar por nome, CPF/CNPJ, e-mail, telefone ou cidade…" oninput="renderCrm()">
     </div>
@@ -233,7 +247,44 @@ async function loadCrm(force){
     return;
   }
   _crmCache=data.clientes||[];_crmLoaded=true;
+  renderCrmStats();
   renderCrm();
+}
+function renderCrmStats(){
+  const total=_crmCache.length;
+  const comEmail=_crmCache.filter(c=>c.email).length;
+  const comTelefone=_crmCache.filter(c=>c.telefone).length;
+  const comEndereco=_crmCache.filter(c=>c.endereco&&(c.endereco.municipio||c.endereco.logradouro)).length;
+  const pct=n=>total?Math.round(n/total*100)+'%':'—';
+  document.getElementById('crmStats').innerHTML=`
+    <div class="stat"><div class="n">${total}</div><div class="l">clientes em cache</div></div>
+    <div class="stat"><div class="n">${comEmail}</div><div class="l">com e-mail (${pct(comEmail)})</div></div>
+    <div class="stat"><div class="n">${comTelefone}</div><div class="l">com telefone (${pct(comTelefone)})</div></div>
+    <div class="stat"><div class="n">${comEndereco}</div><div class="l">com endereço (${pct(comEndereco)})</div></div>`;
+}
+async function importarBling(){
+  const btn=document.getElementById('importBtn'), out=document.getElementById('importResult');
+  btn.disabled=true;out.style.display='block';
+  let pagina=1, totalImportados=0, paginasTotais=0;
+  try{
+    for(;;){
+      out.textContent=`Importando… (página ${pagina})`;
+      const {ok,status,data,raw}=await fetchJson('/api/import-bling'+qs()+(qs()?'&':'?')+'pagina='+pagina,{method:'POST'});
+      if(!ok||!data){
+        out.textContent=`Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}`+(!data?`\n${raw.slice(0,600)}`:'');
+        return;
+      }
+      totalImportados+=data.importados;
+      paginasTotais+=data.paginasProcessadas;
+      if(data.concluido){
+        out.textContent=`Concluído: ${totalImportados} contato(s) importado(s) em ${paginasTotais} página(s).`;
+        break;
+      }
+      pagina=data.proximaPagina;
+    }
+    await loadCrm(true);
+  }catch(e){out.textContent='Falha de rede: '+e.message;}
+  finally{btn.disabled=false;}
 }
 function renderCrm(){
   const area=document.getElementById('crmArea');

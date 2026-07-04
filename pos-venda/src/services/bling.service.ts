@@ -9,6 +9,7 @@ import {
 import { BlingContact, EnderecoInfo } from '../types/customer';
 import { logger } from '../utils/logger';
 import { createHttpClient, withRetry } from '../utils/retry';
+import { cleanDocument } from '../utils/cleanDocument';
 import { acquireLease, readDoc, upsertDoc } from './firestore.service';
 
 const MODULE = 'bling';
@@ -149,6 +150,50 @@ export async function findContactByDocument(cleanDoc: string): Promise<BlingCont
     email: contact.email?.trim() || null,
     endereco: extractEndereco(contact.endereco),
   };
+}
+
+export interface ImportedContact extends BlingContact {
+  readonly cpf: string;
+}
+
+/**
+ * Uma página de `/contatos` (todos os contatos já cadastrados no Bling, não
+ * só os que já dispararam webhook) — usada pela importação inicial única,
+ * já que o serviço normalmente só grava contato quando um webhook chega.
+ */
+export async function listContactsPage(
+  pagina: number,
+  limite: number,
+): Promise<{ readonly contatos: ReadonlyArray<ImportedContact>; readonly hasMore: boolean }> {
+  const token = await getBlingAccessToken();
+  if (!token) return { contatos: [], hasMore: false };
+
+  const data = await withRetry<{ data?: BlingContactRaw[] }>(MODULE, async (signal) => {
+    const res = await http.get<{ data?: BlingContactRaw[] }>(`${BLING_API_BASE}/contatos`, {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+      params: { limite, pagina },
+    });
+    return res.data;
+  });
+
+  const raw = Array.isArray(data?.data) ? data.data : [];
+  const contatos = raw
+    .map((c) => {
+      const cpf = cleanDocument(c.numeroDocumento);
+      if (!cpf) return null;
+      return {
+        cpf,
+        nome: c.nome?.trim() || null,
+        telefone: c.telefone?.trim() || null,
+        celular: c.celular?.trim() || null,
+        email: c.email?.trim() || null,
+        endereco: extractEndereco(c.endereco),
+      };
+    })
+    .filter((c): c is ImportedContact => c !== null);
+
+  return { contatos, hasMore: raw.length === limite };
 }
 
 interface ContatoAninhado {
