@@ -9,6 +9,8 @@ export interface EnderecoInfo {
   readonly cep: string | null;
 }
 
+export type TipoPessoa = 'PF' | 'PJ' | null;
+
 export interface CustomerRecord {
   readonly cpf: string;
   readonly nome: string | null;
@@ -22,6 +24,8 @@ export interface CustomerRecord {
   /** Anotação livre e etiquetas — só existem aqui, o Bling/ML não fornecem isso. */
   readonly notas?: string | null;
   readonly tags?: ReadonlyArray<string> | null;
+  /** PF ou PJ (campo `tipo` do Bling: 'F'/'J') — null quando a fonte não informa (ex.: ML). */
+  readonly tipoPessoa?: TipoPessoa;
 }
 
 export interface BlingContact {
@@ -30,6 +34,7 @@ export interface BlingContact {
   readonly celular: string | null;
   readonly email: string | null;
   readonly endereco: EnderecoInfo | null;
+  readonly tipoPessoa: TipoPessoa;
 }
 
 export interface CaptureResult {

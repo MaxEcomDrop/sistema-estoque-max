@@ -156,6 +156,7 @@ export async function handleWebhook(payload: Record<string, unknown>): Promise<C
       celular: contact?.celular ?? celularFallback,
       email: contact?.email ?? null,
       endereco: contact?.endereco ?? null,
+      tipoPessoa: contact?.tipoPessoa ?? null,
       source,
       updatedAt: Date.now(),
     });

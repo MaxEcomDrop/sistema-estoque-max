@@ -35,6 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         telefone: c.celular || c.telefone,
         endereco: c.endereco,
         origem: c.source,
+        tipoPessoa: c.tipoPessoa ?? null,
         notas: c.notas ?? null,
         tags: c.tags ?? [],
         atualizadoEm: new Date(c.updatedAt).toISOString(),

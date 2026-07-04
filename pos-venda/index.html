@@ -408,10 +408,11 @@ function renderCrm(){
     return `${c.nome||''} ${c.cpf} ${c.email||''} ${c.telefone||''} ${fmtEndereco(c.endereco)}`.toLowerCase().includes(q);
   });
   if(!list.length){area.innerHTML='<div class="empty"><div class="icon">🗂️</div>Nenhum cliente encontrado.</div>';return;}
-  area.innerHTML=`<table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Endereço</th><th>Tags</th><th>Origem</th></tr></thead><tbody>${
+  area.innerHTML=`<table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Tipo</th><th>E-mail</th><th>Telefone</th><th>Endereço</th><th>Tags</th><th>Origem</th></tr></thead><tbody>${
     list.map(c=>`<tr class="clickable" onclick="openCustomer('${esc(c.cpf)}')">
       <td>${esc(c.nome||'—')}</td>
       <td>${esc(c.cpf)}</td>
+      <td>${esc(c.tipoPessoa||'—')}</td>
       <td>${esc(c.email||'—')}</td>
       <td>${esc(c.telefone||'—')}</td>
       <td>${esc(fmtEndereco(c.endereco)||'—')}</td>
@@ -432,6 +433,7 @@ function openCustomer(cpf){
   document.getElementById('cmNome').textContent=c.nome||'Sem nome';
   document.getElementById('cmCpf').textContent=c.cpf;
   document.getElementById('cmContato').innerHTML=`
+    ${row('Tipo',esc(c.tipoPessoa||'—'))}
     ${row('E-mail',esc(c.email||'—'))}
     ${row('Telefone',esc(c.telefone||'—'))}
     ${row('Endereço',esc(fmtEndereco(c.endereco)||'—'))}

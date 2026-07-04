@@ -18,10 +18,16 @@ tela **Clientes (CRM)** deste próprio projeto.
 4. Consulta `customers/{cpf}`; se `updatedAt` dentro de `CACHE_TTL_HOURS`,
    responde na hora sem tocar o Bling (`action: cache_hit`).
 5. Cache frio → `GET /contatos?numeroDocumento=...` no Bling; extrai `nome`,
-   `telefone`, `celular`, `email` e `endereco` (logradouro/número/bairro/
-   cidade/UF/CEP — mesmos campos que o sistema principal já lê do Bling).
-   O Mercado Livre só expõe nome e telefone de forma confiável no pedido
-   (endereço completo exigiria o recurso de envio, fora do escopo atual).
+   `telefone`, `celular`, `email`, `endereco` (logradouro/número/bairro/
+   cidade/UF/CEP — mesmos campos que o sistema principal já lê do Bling) e
+   `tipoPessoa` (PF/PJ, do campo `tipo` do Bling). O Mercado Livre só expõe
+   nome e telefone de forma confiável no pedido (endereço completo exigiria
+   o recurso de envio, fora do escopo atual).
+   **Razão social e inscrição estadual (PJ):** ainda não capturados — a
+   documentação oficial do Bling não pôde ser confirmada automaticamente
+   (bloqueou acesso automatizado); implementa assim que tivermos uma
+   amostra real do JSON de um contato PJ confirmando os nomes exatos dos
+   campos, pra não arriscar ler um campo errado silenciosamente.
 6. Upsert `set(..., { merge: true })` com `cpf`, contato completo, `source`,
    `updatedAt` — nunca apaga um campo já preenchido por uma fonte anterior.
 7. Responde `200 { success: true, action, cpf }`.

@@ -38,6 +38,7 @@ export async function importBlingContacts(startPagina: number): Promise<ImportRe
         celular: contato.celular,
         email: contato.email,
         endereco: contato.endereco,
+        tipoPessoa: contato.tipoPessoa,
         source: 'bling',
         updatedAt: Date.now(),
       });

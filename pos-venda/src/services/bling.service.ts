@@ -6,7 +6,7 @@ import {
   BLING_TOKEN_URL,
   REFRESH_LEASE_MS,
 } from '../constants';
-import { BlingContact, EnderecoInfo } from '../types/customer';
+import { BlingContact, EnderecoInfo, TipoPessoa } from '../types/customer';
 import { logger } from '../utils/logger';
 import { createHttpClient, withRetry } from '../utils/retry';
 import { cleanDocument } from '../utils/cleanDocument';
@@ -102,7 +102,16 @@ interface BlingContactRaw {
   readonly celular?: string;
   readonly email?: string;
   readonly numeroDocumento?: string;
+  readonly tipo?: string;
   readonly endereco?: { readonly geral?: BlingEnderecoRaw } & BlingEnderecoRaw;
+}
+
+/** Mesmo mapeamento já usado pelo sistema principal (`/api/clientes`):
+ *  `tipo` do Bling vem como 'F' (pessoa física) ou 'J' (pessoa jurídica). */
+function extractTipoPessoa(tipo: string | undefined): TipoPessoa {
+  if (tipo === 'J') return 'PJ';
+  if (tipo === 'F') return 'PF';
+  return null;
 }
 
 /** Mesmo formato usado pelo sistema principal (`/api/clientes`): o endereço
@@ -150,6 +159,7 @@ export async function findContactByDocument(cleanDoc: string): Promise<BlingCont
     celular: contact.celular?.trim() || null,
     email: contact.email?.trim() || null,
     endereco: extractEndereco(contact.endereco),
+    tipoPessoa: extractTipoPessoa(contact.tipo),
   };
 }
 
@@ -264,6 +274,7 @@ export async function listContactsPage(
         celular: c.celular?.trim() || null,
         email: c.email?.trim() || null,
         endereco: extractEndereco(c.endereco),
+        tipoPessoa: extractTipoPessoa(c.tipo),
       };
     })
     .filter((c): c is ImportedContact => c !== null);
