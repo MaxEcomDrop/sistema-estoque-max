@@ -4,55 +4,100 @@
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pós-Venda — Diagnóstico</title>
+<title>Pós-Venda — CRM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#f4f5fb;color:#101323;min-height:100vh}
-  .topbar{height:56px;background:#fff;border-bottom:1px solid #e4e7f2;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:10}
-  .brand{display:flex;align-items:center;gap:10px}
-  .brand-mark{width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;box-shadow:0 3px 10px rgba(99,102,241,.35)}
-  .brand-name{font-size:15px;font-weight:700;letter-spacing:-.3px}
-  .btn-logout{background:none;border:1px solid #e4e7f2;border-radius:9px;padding:7px 14px;font-size:12.5px;font-family:inherit;color:#63698a;cursor:pointer;transition:all .15s}
-  .btn-logout:hover{background:#f4f5fb;color:#101323}
-  .wrap{max-width:880px;margin:0 auto;padding:24px 16px 60px}
-  h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
-  .sub{font-size:13px;color:#63698a;margin-bottom:24px}
-  .card{background:#fff;border:1px solid #e4e7f2;border-radius:16px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(23,23,60,.05),0 4px 16px rgba(23,23,60,.05)}
-  .card h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#63698a;margin-bottom:12px}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid #eceef8;font-size:13.5px;gap:12px}
+  :root{
+    --bg:#0a0d14; --bg2:#0f1420;
+    --glass:rgba(255,255,255,.045); --glass-hover:rgba(255,255,255,.075); --glass-border:rgba(255,255,255,.09);
+    --accent:#339EFF; --accent-2:#5fb4ff; --accent-glow:rgba(51,158,255,.35);
+    --text:#f2f5fa; --text-mut:#8a94a8; --text-dim:#5c6478;
+    --ok:#34d399; --ok-bg:rgba(52,211,153,.12);
+    --bad:#f87171; --bad-bg:rgba(248,113,113,.12);
+    --radius:18px; --radius-sm:12px;
+  }
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 15% -5%, rgba(51,158,255,.16), transparent 60%),
+      radial-gradient(700px 500px at 100% 10%, rgba(139,92,246,.10), transparent 55%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--text); min-height:100vh;
+  }
+  .topbar{height:60px;background:rgba(15,20,32,.7);backdrop-filter:blur(14px);border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:20}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;box-shadow:0 4px 18px var(--accent-glow)}
+  .brand-name{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+  .btn-logout{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:8px 15px;font-size:12.5px;font-family:inherit;color:var(--text-mut);cursor:pointer;transition:all .2s}
+  .btn-logout:hover{background:var(--glass-hover);color:var(--text);border-color:rgba(255,255,255,.16)}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 70px}
+  h1{font-size:23px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;color:var(--text)}
+  .sub{font-size:13px;color:var(--text-mut);margin-bottom:22px;line-height:1.5}
+  .card{
+    background:var(--glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--glass-border); border-radius:var(--radius); padding:20px 22px; margin-bottom:16px;
+    box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+    transition:border-color .25s, transform .25s;
+  }
+  .card h2{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-mut);margin-bottom:14px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13.5px;gap:12px}
   .row:first-child{border-top:none}
-  .lbl{color:#63698a}
-  .val{font-weight:700;font-family:ui-monospace,monospace;font-size:12.5px;text-align:right}
-  .ok{color:#059669}
-  .bad{color:#dc2626}
-  .mut{color:#9aa1c0;font-weight:500}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-  .stat{background:#f4f5fb;border-radius:12px;padding:12px 14px}
-  .stat .n{font-size:22px;font-weight:800;letter-spacing:-.5px}
-  .stat .l{font-size:11px;color:#63698a;margin-top:2px}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#9aa1c0;padding:6px 8px;border-bottom:1px solid #eceef8}
-  td{padding:8px;border-bottom:1px solid #eceef8;font-family:ui-monospace,monospace}
-  textarea{width:100%;min-height:140px;border:1.5px solid #e4e7f2;border-radius:12px;padding:12px;font-family:ui-monospace,monospace;font-size:12.5px;resize:vertical}
-  button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:10px;transition:opacity .15s}
-  button:hover{opacity:.92}
-  button:disabled{opacity:.5;cursor:default}
-  pre{background:#0d1226;color:#c7d2fe;border-radius:12px;padding:14px;font-size:12px;overflow:auto;margin-top:10px;white-space:pre-wrap;word-break:break-word}
-  .keybox{display:flex;gap:8px;margin-bottom:18px}
-  .keybox input{flex:1;border:1.5px solid #e4e7f2;border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit}
-  .refresh{background:none;color:#6366f1;border:1px solid #e4e7f2;padding:6px 12px;font-size:12px;margin:0}
-  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
-  .badge.ok{background:#ecfdf5;color:#059669}
-  .badge.bad{background:#fef2f2;color:#dc2626}
-  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid #e4e7f2}
-  .tab-btn{background:none;border:none;color:#63698a;font-family:inherit;font-size:13.5px;font-weight:700;padding:9px 4px;margin:0 10px 0 0;cursor:pointer;border-bottom:2.5px solid transparent;border-radius:0}
-  .tab-btn.active{color:#6366f1;border-bottom-color:#6366f1}
-  .tab-btn:hover{opacity:.85}
-  .search-box{margin-bottom:14px}
-  .search-box input{width:100%;border:1.5px solid #e4e7f2;border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit}
-  .empty{color:#9aa1c0;font-size:13px;padding:6px 0}
+  .lbl{color:var(--text-mut)}
+  .val{font-weight:600;font-family:ui-monospace,monospace;font-size:12.5px;text-align:right;color:var(--text)}
+  .ok{color:var(--ok)}
+  .bad{color:var(--bad)}
+  .mut{color:var(--text-mut);font-weight:500}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{background:rgba(255,255,255,.03);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px 16px;transition:transform .2s,border-color .2s}
+  .stat:hover{transform:translateY(-2px);border-color:rgba(51,158,255,.3)}
+  .stat .n{font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--text);background:linear-gradient(135deg,var(--text),var(--accent-2));-webkit-background-clip:text;background-clip:text}
+  .stat .l{font-size:11px;color:var(--text-mut);margin-top:3px}
+  table{width:100%;border-collapse:collapse;font-size:12.8px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);padding:8px 10px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:rgba(15,20,32,.85);backdrop-filter:blur(8px)}
+  td{padding:10px;border-bottom:1px solid rgba(255,255,255,.05);font-family:ui-monospace,monospace;color:var(--text)}
+  tbody tr{transition:background .15s}
+  tbody tr.clickable{cursor:pointer}
+  tbody tr.clickable:hover{background:rgba(51,158,255,.06)}
+  textarea{width:100%;min-height:110px;background:rgba(255,255,255,.03);border:1.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:12px;font-family:inherit;font-size:13px;color:var(--text);resize:vertical}
+  textarea:focus,input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+  button{background:linear-gradient(135deg,var(--accent),#7c8fff);color:#fff;border:none;border-radius:11px;padding:10px 18px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:10px;transition:transform .15s,box-shadow .2s;box-shadow:0 4px 16px rgba(51,158,255,.25)}
+  button:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(51,158,255,.4)}
+  button:active{transform:translateY(0)}
+  button:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}
+  pre{background:rgba(0,0,0,.35);color:#bcd4f5;border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px;font-size:12px;overflow:auto;margin-top:10px;white-space:pre-wrap;word-break:break-word}
+  .keybox{display:flex;gap:9px;margin-bottom:20px}
+  .keybox input{flex:1;background:rgba(255,255,255,.03);border:1.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:10px 13px;font-size:13px;font-family:inherit;color:var(--text)}
+  .refresh{background:var(--glass);color:var(--accent-2);border:1px solid var(--glass-border);padding:7px 14px;font-size:12px;margin:0;box-shadow:none}
+  .refresh:hover{background:var(--glass-hover);box-shadow:none}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+  .badge.ok{background:var(--ok-bg);color:var(--ok)}
+  .badge.bad{background:var(--bad-bg);color:var(--bad)}
+  .tags{display:flex;gap:5px;flex-wrap:wrap}
+  .tag{display:inline-flex;align-items:center;gap:5px;background:rgba(51,158,255,.14);color:var(--accent-2);border:1px solid rgba(51,158,255,.25);padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700}
+  .tag button.tag-x{all:unset;cursor:pointer;font-size:11px;line-height:1;color:var(--accent-2);opacity:.7}
+  .tag button.tag-x:hover{opacity:1}
+  .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--glass-border)}
+  .tab-btn{background:none;border:none;color:var(--text-mut);font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 6px;margin:0 12px 0 0;cursor:pointer;border-bottom:2.5px solid transparent;border-radius:0;transition:color .2s}
+  .tab-btn.active{color:var(--accent-2);border-bottom-color:var(--accent)}
+  .tab-btn:hover{color:var(--text)}
+  .search-box{margin-bottom:16px}
+  .search-box input{width:100%;background:rgba(255,255,255,.03);border:1.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;font-family:inherit;color:var(--text)}
+  .empty{color:var(--text-mut);font-size:13px;padding:24px 6px;text-align:center}
+  .empty .icon{font-size:30px;margin-bottom:8px;opacity:.6}
+  .table-scroll{max-height:560px;overflow-y:auto;border-radius:var(--radius-sm)}
+  .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 37%,rgba(255,255,255,.04) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:8px;height:14px;margin:6px 0}
+  @keyframes shimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(4,6,10,.6);backdrop-filter:blur(4px);z-index:50;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+  .modal-backdrop.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--glass-border);border-radius:20px;max-width:640px;width:100%;padding:26px 26px 22px;box-shadow:0 30px 80px rgba(0,0,0,.55);animation:pop .22s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+  .modal-close{all:unset;cursor:pointer;color:var(--text-mut);font-size:20px;line-height:1;padding:4px}
+  .modal-close:hover{color:var(--text)}
+  .footer-loading{display:flex;justify-content:center;padding:16px;color:var(--text-mut);font-size:12.5px}
 </style>
 </head>
 <body>
@@ -79,7 +124,7 @@
       <button class="refresh" onclick="loadAll()">Verificar agora</button>
     </div>
 
-    <div id="statusArea"><div class="card"><p class="mut">Carregando…</p></div></div>
+    <div id="statusArea"><div class="card"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:40%"></div><div class="skeleton" style="width:50%"></div></div></div>
 
     <div class="card">
       <h2>Testar webhook manualmente</h2>
@@ -102,7 +147,7 @@
 
   <div id="tab-crm" style="display:none">
     <h1>Clientes</h1>
-    <p class="sub">Nome, documento, endereço, e-mail e telefone capturados do Bling/Mercado Livre — mesmo cache que alimenta a aba Clientes do sistema principal.</p>
+    <p class="sub">Nome, documento, endereço, e-mail e telefone capturados do Bling/Mercado Livre — mesmo cache que alimenta a aba Clientes do sistema principal. Clique num cliente pra ver pedidos, LTV, notas e tags.</p>
 
     <div class="card">
       <h2>Importar cadastro do Bling</h2>
@@ -113,15 +158,58 @@
 
     <div class="card">
       <div class="grid" id="crmStats">
-        <div class="stat"><div class="n">0</div><div class="l">clientes em cache</div></div>
+        <div class="stat"><div class="skeleton" style="width:50%"></div></div>
       </div>
     </div>
 
     <div class="search-box">
       <input type="text" id="crmSearch" placeholder="Buscar por nome, CPF/CNPJ, e-mail, telefone ou cidade…" oninput="renderCrm()">
     </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-scroll" id="crmScroll">
+        <div id="crmArea" style="padding:20px"><div class="skeleton"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:90%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="customerModal" onclick="if(event.target===this)closeCustomerModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div style="font-size:17px;font-weight:800" id="cmNome">—</div>
+        <div class="mut" style="font-size:12px;margin-top:2px" id="cmCpf">—</div>
+      </div>
+      <button class="modal-close" onclick="closeCustomerModal()">✕</button>
+    </div>
+
+    <div class="grid" style="margin-bottom:16px">
+      <div class="stat"><div class="n" id="cmLtv">—</div><div class="l">total gasto (12 meses)</div></div>
+      <div class="stat"><div class="n" id="cmPedidos">—</div><div class="l">pedidos (12 meses)</div></div>
+      <div class="stat"><div class="n" id="cmUltimo">—</div><div class="l">último pedido</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <h2>Contato</h2>
+      <div id="cmContato"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <h2>Pedidos recentes</h2>
+      <div id="cmPedidosArea"><p class="mut">Carregando…</p></div>
+    </div>
+
     <div class="card">
-      <div id="crmArea"><p class="mut">Carregando…</p></div>
+      <h2>Notas internas</h2>
+      <textarea id="cmNotas" placeholder="Anotações sobre esse cliente — visível só aqui, nunca é enviado ao Bling/ML."></textarea>
+      <div style="margin-top:10px">
+        <div class="tags" id="cmTags" style="margin-bottom:10px"></div>
+        <div class="keybox" style="margin-bottom:0">
+          <input type="text" id="cmTagInput" placeholder="Nova tag (ex: vip, atacado) — Enter pra adicionar" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag();}">
+        </div>
+      </div>
+      <button id="cmSaveBtn" onclick="saveNotesAndTags()">Salvar notas e tags</button>
+      <span class="mut" id="cmSaveMsg" style="margin-left:10px;font-size:12px"></span>
     </div>
   </div>
 </div>
@@ -129,9 +217,11 @@
 <script>
 function key(){return document.getElementById('adminKey').value.trim();}
 function qs(){const k=key();return k?('?key='+encodeURIComponent(k)):'';}
+function qsAppend(extra){const base=qs();return base?(base+'&'+extra):('?'+extra);}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function row(l,v,cls){return `<div class="row"><span class="lbl">${esc(l)}</span><span class="val ${cls||''}">${v}</span></div>`;}
 function badge(ok,yes,no){return `<span class="badge ${ok?'ok':'bad'}">${ok?yes:no}</span>`;}
+function fmtMoney(n){return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 // Sempre lê o corpo como TEXTO primeiro — se não for JSON válido (página de
 // erro do Vercel, redirect de proteção de deployment, etc.), mostra o texto
@@ -229,8 +319,11 @@ async function testWebhook(){
 
 async function loadAll(){await loadStatus();await loadRecent();}
 
+// ── CRM: lista com scroll infinito ──
 let _crmCache=[];
 let _crmLoaded=false;
+let _crmCursor=null;
+let _crmLoadingMore=false;
 function fmtEndereco(e){
   if(!e)return '';
   const rua=[e.logradouro,e.numero].filter(Boolean).join(', ');
@@ -240,15 +333,36 @@ function fmtEndereco(e){
 async function loadCrm(force){
   const area=document.getElementById('crmArea');
   if(_crmLoaded&&!force){renderCrm();return;}
-  area.innerHTML='<p class="mut">Carregando…</p>';
-  const {ok,status,data,raw}=await fetchJson('/api/customers'+qs());
-  if(!ok||!data){
-    area.innerHTML=`<p class="bad">Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}</p>${!data?`<pre>${esc(raw.slice(0,600))}</pre>`:''}`;
-    return;
-  }
-  _crmCache=data.clientes||[];_crmLoaded=true;
+  area.innerHTML='<div class="skeleton"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:90%"></div>';
+  _crmCache=[];_crmCursor=null;
+  await loadCrmPage();
+  _crmLoaded=true;
   renderCrmStats();
   renderCrm();
+  const scroller=document.getElementById('crmScroll');
+  scroller.onscroll=()=>{
+    if(scroller.scrollTop+scroller.clientHeight>scroller.scrollHeight-120)loadMoreIfNeeded();
+  };
+}
+async function loadCrmPage(){
+  const url='/api/customers'+(_crmCursor!=null?qsAppend('cursor='+_crmCursor):qs());
+  const {ok,status,data,raw}=await fetchJson(url);
+  if(!ok||!data){
+    document.getElementById('crmArea').innerHTML=`<p class="bad">Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}</p>${!data?`<pre>${esc(raw.slice(0,600))}</pre>`:''}`;
+    return;
+  }
+  _crmCache=_crmCache.concat(data.clientes||[]);
+  _crmCursor=data.nextCursor;
+}
+async function loadMoreIfNeeded(){
+  if(_crmLoadingMore||_crmCursor==null)return;
+  _crmLoadingMore=true;
+  const area=document.getElementById('crmArea');
+  area.insertAdjacentHTML('beforeend','<div class="footer-loading" id="crmMoreLoading">Carregando mais…</div>');
+  await loadCrmPage();
+  document.getElementById('crmMoreLoading')?.remove();
+  renderCrm();
+  _crmLoadingMore=false;
 }
 function renderCrmStats(){
   const total=_crmCache.length;
@@ -257,7 +371,7 @@ function renderCrmStats(){
   const comEndereco=_crmCache.filter(c=>c.endereco&&(c.endereco.municipio||c.endereco.logradouro)).length;
   const pct=n=>total?Math.round(n/total*100)+'%':'—';
   document.getElementById('crmStats').innerHTML=`
-    <div class="stat"><div class="n">${total}</div><div class="l">clientes em cache</div></div>
+    <div class="stat"><div class="n">${total}${_crmCursor?'+':''}</div><div class="l">clientes em cache</div></div>
     <div class="stat"><div class="n">${comEmail}</div><div class="l">com e-mail (${pct(comEmail)})</div></div>
     <div class="stat"><div class="n">${comTelefone}</div><div class="l">com telefone (${pct(comTelefone)})</div></div>
     <div class="stat"><div class="n">${comEndereco}</div><div class="l">com endereço (${pct(comEndereco)})</div></div>`;
@@ -269,7 +383,7 @@ async function importarBling(){
   try{
     for(;;){
       out.textContent=`Importando… (página ${pagina})`;
-      const {ok,status,data,raw}=await fetchJson('/api/import-bling'+qs()+(qs()?'&':'?')+'pagina='+pagina,{method:'POST'});
+      const {ok,status,data,raw}=await fetchJson('/api/import-bling'+qsAppend('pagina='+pagina),{method:'POST'});
       if(!ok||!data){
         out.textContent=`Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}`+(!data?`\n${raw.slice(0,600)}`:'');
         return;
@@ -293,18 +407,95 @@ function renderCrm(){
     if(!q)return true;
     return `${c.nome||''} ${c.cpf} ${c.email||''} ${c.telefone||''} ${fmtEndereco(c.endereco)}`.toLowerCase().includes(q);
   });
-  if(!list.length){area.innerHTML='<p class="empty">Nenhum cliente encontrado.</p>';return;}
-  area.innerHTML=`<table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Endereço</th><th>Origem</th><th>Atualizado</th></tr></thead><tbody>${
-    list.map(c=>`<tr>
+  if(!list.length){area.innerHTML='<div class="empty"><div class="icon">🗂️</div>Nenhum cliente encontrado.</div>';return;}
+  area.innerHTML=`<table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>E-mail</th><th>Telefone</th><th>Endereço</th><th>Tags</th><th>Origem</th></tr></thead><tbody>${
+    list.map(c=>`<tr class="clickable" onclick="openCustomer('${esc(c.cpf)}')">
       <td>${esc(c.nome||'—')}</td>
       <td>${esc(c.cpf)}</td>
       <td>${esc(c.email||'—')}</td>
       <td>${esc(c.telefone||'—')}</td>
       <td>${esc(fmtEndereco(c.endereco)||'—')}</td>
+      <td>${(c.tags||[]).length?`<div class="tags">${c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>`:'—'}</td>
       <td>${esc(c.origem)}</td>
-      <td>${esc(c.atualizadoEm)}</td>
     </tr>`).join('')
   }</tbody></table>`;
+}
+
+// ── CRM: detalhe do cliente (pedidos/LTV + notas/tags) ──
+let _cmCpf=null;
+let _cmTags=[];
+function openCustomer(cpf){
+  const c=_crmCache.find(x=>x.cpf===cpf);
+  if(!c)return;
+  _cmCpf=cpf;
+  _cmTags=[...(c.tags||[])];
+  document.getElementById('cmNome').textContent=c.nome||'Sem nome';
+  document.getElementById('cmCpf').textContent=c.cpf;
+  document.getElementById('cmContato').innerHTML=`
+    ${row('E-mail',esc(c.email||'—'))}
+    ${row('Telefone',esc(c.telefone||'—'))}
+    ${row('Endereço',esc(fmtEndereco(c.endereco)||'—'))}
+    ${row('Origem',esc(c.origem))}
+    ${row('Atualizado em',esc(c.atualizadoEm))}`;
+  document.getElementById('cmNotas').value=c.notas||'';
+  document.getElementById('cmLtv').textContent='—';
+  document.getElementById('cmPedidos').textContent='—';
+  document.getElementById('cmUltimo').textContent='—';
+  document.getElementById('cmPedidosArea').innerHTML='<div class="skeleton"></div><div class="skeleton" style="width:70%"></div>';
+  document.getElementById('cmSaveMsg').textContent='';
+  renderTags();
+  document.getElementById('customerModal').classList.add('open');
+  loadCustomerOrders(cpf);
+}
+function closeCustomerModal(){
+  document.getElementById('customerModal').classList.remove('open');
+  _cmCpf=null;
+}
+async function loadCustomerOrders(cpf){
+  const area=document.getElementById('cmPedidosArea');
+  const {ok,status,data,raw}=await fetchJson(`/api/customers/${encodeURIComponent(cpf)}`+qs());
+  if(!ok||!data){
+    area.innerHTML=`<p class="bad">Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}</p>${!data?`<pre>${esc(raw.slice(0,600))}</pre>`:''}`;
+    return;
+  }
+  document.getElementById('cmLtv').textContent=fmtMoney(data.totalGasto);
+  document.getElementById('cmPedidos').textContent=data.numPedidos;
+  document.getElementById('cmUltimo').textContent=data.ultimoPedido?data.ultimoPedido.split('-').reverse().join('/'):'—';
+  if(data.aviso){area.innerHTML=`<p class="mut">${esc(data.aviso)}</p>`;return;}
+  if(!data.pedidos.length){area.innerHTML='<div class="empty"><div class="icon">📦</div>Nenhum pedido no período consultado.</div>';return;}
+  area.innerHTML=`<table><thead><tr><th>Nº</th><th>Data</th><th>Situação</th><th class="r">Valor</th></tr></thead><tbody>${
+    data.pedidos.map(p=>`<tr><td>${esc(p.numero)}</td><td>${p.data?p.data.split('-').reverse().join('/'):'—'}</td><td>${esc(typeof p.situacao==='string'?p.situacao:JSON.stringify(p.situacao))}</td><td>${fmtMoney(p.valor)}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+function renderTags(){
+  document.getElementById('cmTags').innerHTML=_cmTags.map((t,i)=>`<span class="tag">${esc(t)}<button class="tag-x" onclick="removeTag(${i})">✕</button></span>`).join('')||'<span class="mut" style="font-size:12px">Nenhuma tag ainda.</span>';
+}
+function addTag(){
+  const input=document.getElementById('cmTagInput');
+  const v=input.value.trim().toLowerCase();
+  if(!v)return;
+  if(!_cmTags.includes(v))_cmTags.push(v);
+  input.value='';
+  renderTags();
+}
+function removeTag(i){_cmTags.splice(i,1);renderTags();}
+async function saveNotesAndTags(){
+  if(!_cmCpf)return;
+  const btn=document.getElementById('cmSaveBtn'), msg=document.getElementById('cmSaveMsg');
+  btn.disabled=true;msg.textContent='Salvando…';
+  try{
+    const notas=document.getElementById('cmNotas').value;
+    const {ok,status,data}=await fetchJson(`/api/customers/${encodeURIComponent(_cmCpf)}`+qs(),{
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({notas,tags:_cmTags}),
+    });
+    if(!ok||!data?.success){msg.textContent=`Erro ${status}${data?.error?': '+esc(data.error):''}`;return;}
+    msg.textContent='Salvo ✓';
+    const cached=_crmCache.find(c=>c.cpf===_cmCpf);
+    if(cached){cached.notas=notas;cached.tags=[..._cmTags];}
+    renderCrm();
+  }catch(e){msg.textContent='Falha de rede: '+e.message;}
+  finally{btn.disabled=false;}
 }
 
 function switchTab(name){

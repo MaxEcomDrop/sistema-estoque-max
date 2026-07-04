@@ -96,6 +96,7 @@ interface BlingEnderecoRaw {
   readonly cep?: string;
 }
 interface BlingContactRaw {
+  readonly id?: number | string;
   readonly nome?: string;
   readonly telefone?: string;
   readonly celular?: string;
@@ -154,6 +155,80 @@ export async function findContactByDocument(cleanDoc: string): Promise<BlingCont
 
 export interface ImportedContact extends BlingContact {
   readonly cpf: string;
+}
+
+/** Busca só o ID interno do contato no Bling — usado pra filtrar pedidos
+ *  por comprador, já que /pedidos/vendas não filtra por documento. */
+export async function findContactId(cleanDoc: string): Promise<number | string | null> {
+  const token = await getBlingAccessToken();
+  if (!token) return null;
+
+  const data = await withRetry<{ data?: BlingContactRaw[] }>(MODULE, async (signal) => {
+    const res = await http.get<{ data?: BlingContactRaw[] }>(`${BLING_API_BASE}/contatos`, {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+      params: { numeroDocumento: cleanDoc, limite: 1, pagina: 1 },
+    });
+    return res.data;
+  });
+  const contact = Array.isArray(data?.data) ? data.data[0] : undefined;
+  return contact?.id ?? null;
+}
+
+interface PedidoRaw {
+  readonly numero?: number | string;
+  readonly data?: string;
+  readonly situacao?: unknown;
+  readonly totalVenda?: number;
+  readonly totalProdutos?: number;
+  readonly contato?: { readonly id?: number | string };
+}
+export interface PedidoResumo {
+  readonly numero: string;
+  readonly data: string | null;
+  readonly situacao: unknown;
+  readonly valor: number;
+}
+
+/**
+ * Pedidos de um contato específico, dentro do período informado — o Bling
+ * não expõe filtro por documento/contato em `/pedidos/vendas` (só por
+ * data), então busca por data e filtra pelo ID do contato no cliente.
+ * Por isso é um histórico "dentro do período consultado", não o total
+ * desde sempre — honesto sobre essa limitação da API.
+ */
+export async function listOrdersByContact(
+  contactId: number | string,
+  dataInicial: string,
+  dataFinal: string,
+  maxPaginas = 5,
+): Promise<ReadonlyArray<PedidoResumo>> {
+  const token = await getBlingAccessToken();
+  if (!token) return [];
+
+  const pedidos: PedidoResumo[] = [];
+  for (let pagina = 1; pagina <= maxPaginas; pagina++) {
+    const data = await withRetry<{ data?: PedidoRaw[] }>(MODULE, async (signal) => {
+      const res = await http.get<{ data?: PedidoRaw[] }>(`${BLING_API_BASE}/pedidos/vendas`, {
+        signal,
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina, dataInicial, dataFinal },
+      });
+      return res.data;
+    });
+    const items = Array.isArray(data?.data) ? data.data : [];
+    for (const p of items) {
+      if (String(p.contato?.id) !== String(contactId)) continue;
+      pedidos.push({
+        numero: String(p.numero ?? ''),
+        data: p.data ?? null,
+        situacao: p.situacao ?? null,
+        valor: p.totalVenda || p.totalProdutos || 0,
+      });
+    }
+    if (items.length < 100) break;
+  }
+  return pedidos;
 }
 
 /**

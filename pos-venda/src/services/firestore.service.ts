@@ -33,6 +33,32 @@ export async function listRecent<T>(
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as T) }));
 }
 
+export interface Page<T> {
+  readonly items: ReadonlyArray<T & { readonly id: string }>;
+  /** Valor de `orderField` do último item — passe de volta como `cursor` pra
+   *  buscar a próxima página. `null` quando não há mais páginas. Cursor por
+   *  campo único (sem desempate por id): com muitos documentos empatados no
+   *  mesmo valor, alguns podem repetir/pular entre páginas — aceitável no
+   *  volume atual (não é uma garantia forte de paginação exata). */
+  readonly nextCursor: number | null;
+}
+
+/** Página de uma coleção, ordenada por campo desc, com cursor pra continuar. */
+export async function listPage<T>(
+  collection: string,
+  orderField: string,
+  limit: number,
+  cursor?: number,
+): Promise<Page<T>> {
+  let query = getDb().collection(collection).orderBy(orderField, 'desc').limit(limit);
+  if (cursor !== undefined) query = query.startAfter(cursor);
+  const snap = await query.get();
+  const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as T) }));
+  const last = items[items.length - 1] as (T & Record<string, unknown>) | undefined;
+  const nextCursor = items.length === limit && last ? (last[orderField] as number) : null;
+  return { items, nextCursor };
+}
+
 export async function readDoc<T>(collection: string, doc: string): Promise<T | null> {
   const snap = await getDb().collection(collection).doc(doc).get();
   return snap.exists ? (snap.data() as T) : null;

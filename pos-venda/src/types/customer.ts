@@ -19,6 +19,9 @@ export interface CustomerRecord {
   readonly source: WebhookSource;
   /** Epoch ms da última atualização (usado no cálculo do TTL). */
   readonly updatedAt: number;
+  /** Anotação livre e etiquetas — só existem aqui, o Bling/ML não fornecem isso. */
+  readonly notas?: string | null;
+  readonly tags?: ReadonlyArray<string> | null;
 }
 
 export interface BlingContact {

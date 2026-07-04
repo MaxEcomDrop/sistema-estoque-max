@@ -2,16 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkCredentials, signSession } from '../../src/utils/auth';
 import { SESSION_COOKIE } from '../../src/utils/auth';
 import { handleApiError } from '../../src/utils/handleApiError';
+import { readJsonBody } from '../../src/utils/readJsonBody';
 
 const MODULE = 'auth.login';
-
-async function readJsonBody(req: VercelRequest): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
-  const raw = Buffer.concat(chunks).toString('utf8');
-  if (!raw) return {};
-  return JSON.parse(raw) as Record<string, unknown>;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {

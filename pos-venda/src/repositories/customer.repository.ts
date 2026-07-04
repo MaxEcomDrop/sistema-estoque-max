@@ -10,3 +10,11 @@ export async function getCustomer(cpf: string): Promise<CustomerRecord | null> {
 export async function upsertCustomer(record: CustomerRecord): Promise<void> {
   await upsertDoc(CUSTOMERS_COLLECTION, record.cpf, { ...record });
 }
+
+/** Atualiza só notas/tags (dado que só existe aqui, nunca vem do Bling/ML). */
+export async function updateCustomerNotes(
+  cpf: string,
+  patch: { readonly notas?: string | null; readonly tags?: ReadonlyArray<string> | null },
+): Promise<void> {
+  await upsertDoc(CUSTOMERS_COLLECTION, cpf, { ...patch });
+}

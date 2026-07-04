@@ -81,7 +81,7 @@ dessas categorias, buscando o recurso completo quando necessário).
 ## Tela de diagnóstico
 
 A URL raiz do projeto (`https://<projeto>.vercel.app/`) abre um painel visual
-(idêntico ao estilo do sistema principal) que mostra, ao vivo:
+(tema escuro/glassmorphism, próprio deste projeto) que mostra, ao vivo:
 
 - se o Firebase configurado é o **mesmo projeto** do sistema principal
   (`erp-max-sistema`) e se o Firestore está respondendo;
@@ -94,13 +94,25 @@ A URL raiz do projeto (`https://<projeto>.vercel.app/`) abre um painel visual
 ### Clientes (CRM)
 
 Uma segunda aba na mesma tela (`https://<projeto>.vercel.app/`) lista o cache
-completo — `GET /api/customers` — com nome, CPF/CNPJ **sem máscara**, e-mail,
-telefone, endereço completo, origem (`bling`/`mercado_livre`) e data de
-atualização, com busca por qualquer um desses campos, mais cards com total
-em cache e % com e-mail/telefone/endereço preenchidos. Diferente do
-`/api/recent` (resumo de diagnóstico, CPF mascarado), este endpoint é o dado
-completo para uso operacional — por isso exige login/`ADMIN_KEY` como os
-demais endpoints protegidos.
+completo — `GET /api/customers` (paginado, `?cursor=<updatedAt>` continua a
+listagem — scroll infinito no front-end) — com nome, CPF/CNPJ **sem
+máscara**, e-mail, telefone, endereço completo, tags e origem
+(`bling`/`mercado_livre`), com busca por qualquer um desses campos, mais
+cards com total em cache e % com e-mail/telefone/endereço preenchidos.
+Diferente do `/api/recent` (resumo de diagnóstico, CPF mascarado), este
+endpoint é o dado completo para uso operacional — por isso exige
+login/`ADMIN_KEY` como os demais endpoints protegidos.
+
+**Visual dark/glassmorphism:** só esta tela (pos-venda) — o sistema principal
+não foi alterado.
+
+**Clique num cliente** pra abrir o detalhe: histórico de pedidos + LTV (via
+`GET /api/customers/{cpf}`, que busca `/pedidos/vendas` no Bling filtrado
+pelo ID do contato — o Bling não filtra pedidos por documento, só por data,
+então é um histórico "dentro do período consultado" — 365 dias por padrão,
+`?dias=` pra ajustar — não o total desde sempre) e notas/tags internas
+(`PATCH /api/customers/{cpf}` com `{ notas, tags }` — dado que só existe
+aqui, nunca é enviado ao Bling/ML).
 
 **Importante:** o cache só é alimentado por **webhooks reais** (pedido/NF-e/ML
 chegando) — o serviço nunca varre o Bling sozinho. Um cadastro recém-criado
@@ -145,7 +157,8 @@ login.html                    tela de login (e-mail/senha, visual do sistema pri
 api/webhook-capture.ts        handler HTTP principal (Vercel Function)
 api/status.ts                 diagnóstico ao vivo (Firebase/Bling/ML/cache)
 api/recent.ts                 últimos clientes e eventos resolvidos (CPF mascarado)
-api/customers.ts              listagem completa do CRM (CPF sem máscara, autenticado)
+api/customers.ts              listagem paginada do CRM (CPF sem máscara, autenticado)
+api/customers/[cpf].ts        detalhe: GET pedidos+LTV (Bling), PATCH notas/tags
 api/import-bling.ts           importação única do cadastro de contatos do Bling (em lotes)
 api/auth/login.ts             valida credenciais, emite cookie de sessão (JWT)
 api/auth/logout.ts            encerra a sessão
@@ -155,6 +168,6 @@ src/services/                 bling (OAuth compartilhado + contatos), ml, firest
 src/repositories/             customers (get/upsert merge)
 src/controllers/              orquestração do fluxo do webhook + importação em lote do Bling
 src/middlewares/              método/Content-Type/JSON/assinatura HMAC/sessão/ADMIN_KEY
-src/utils/                    cleanDocument, retry/backoff, dedup, logger, auth (JWT/cookie), errors (ConfigError), handleApiError
+src/utils/                    cleanDocument, retry/backoff, dedup, logger, auth (JWT/cookie), errors (ConfigError), handleApiError, readJsonBody
 src/types, src/constants      contratos e constantes
 ```
