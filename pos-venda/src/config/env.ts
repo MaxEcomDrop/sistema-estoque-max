@@ -14,6 +14,9 @@ const envSchema = z.object({
   ML_APP_ID: z.string().optional(),
   CACHE_TTL_HOURS: z.coerce.number().positive().default(DEFAULT_CACHE_TTL_HOURS),
   NODE_ENV: z.string().default('production'),
+  /** Protege /api/status e /api/recent (tela de diagnóstico). Sem ela, as
+   *  rotas ficam abertas — defina em produção. */
+  ADMIN_KEY: z.string().optional(),
 });
 
 export interface ServiceAccount {

@@ -67,15 +67,39 @@ Este diretório é um projeto independente dentro do repositório:
 Cadastre essa URL como destino dos webhooks no Bling (com a chave de assinatura
 igual a `BLING_WEBHOOK_SECRET`) e nas notificações do app do Mercado Livre.
 
+**Categorias de webhook no Bling:** o painel não tem uma categoria "Contato" —
+use **Pedido** e **Nota Fiscal** (o serviço já lida com o payload minimalista
+dessas categorias, buscando o recurso completo quando necessário).
+
+## Tela de diagnóstico
+
+A URL raiz do projeto (`https://<projeto>.vercel.app/`) abre um painel visual
+que mostra, ao vivo:
+
+- se o Firebase configurado é o **mesmo projeto** do sistema principal
+  (`erp-max-sistema`) e se o Firestore está respondendo;
+- se há token do Bling/Mercado Livre salvo e válido;
+- quantos clientes estão em cache e quantos eventos já foram resolvidos;
+- os últimos clientes e eventos processados (CPF mascarado);
+- um formulário para **testar o webhook manualmente** colando um payload de
+  exemplo, sem precisar esperar um evento real do Bling/ML.
+
+Defina `ADMIN_KEY` para proteger essa tela e os endpoints `/api/status` e
+`/api/recent` — sem ela, ficam abertos (aceitável só durante a validação
+inicial). Com `ADMIN_KEY` definida, a própria página pede a chave.
+
 ## Estrutura
 
 ```
-api/webhook-capture.ts        handler HTTP (Vercel Function)
+index.html                    tela de diagnóstico (status + teste manual)
+api/webhook-capture.ts        handler HTTP principal (Vercel Function)
+api/status.ts                 diagnóstico ao vivo (Firebase/Bling/ML/cache)
+api/recent.ts                 últimos clientes e eventos resolvidos
 src/config/{env,firebase}.ts  zod env + Firebase Admin (banco nomeado ok)
 src/services/                 bling (OAuth compartilhado + contatos), ml, firestore
 src/repositories/             customers (get/upsert merge)
 src/controllers/              orquestração do fluxo do webhook
-src/middlewares/              método/Content-Type/JSON/assinatura HMAC
+src/middlewares/              método/Content-Type/JSON/assinatura HMAC/ADMIN_KEY
 src/utils/                    cleanDocument, retry/backoff, dedup, logger
 src/types, src/constants      contratos e constantes
 ```
