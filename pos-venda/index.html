@@ -2,20 +2,29 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pós-Venda — Diagnóstico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;background:#f4f5fb;color:#101323;padding:24px 16px 60px;min-height:100vh}
-  .wrap{max-width:880px;margin:0 auto}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#f4f5fb;color:#101323;min-height:100vh}
+  .topbar{height:56px;background:#fff;border-bottom:1px solid #e4e7f2;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:10}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-mark{width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;box-shadow:0 3px 10px rgba(99,102,241,.35)}
+  .brand-name{font-size:15px;font-weight:700;letter-spacing:-.3px}
+  .btn-logout{background:none;border:1px solid #e4e7f2;border-radius:9px;padding:7px 14px;font-size:12.5px;font-family:inherit;color:#63698a;cursor:pointer;transition:all .15s}
+  .btn-logout:hover{background:#f4f5fb;color:#101323}
+  .wrap{max-width:880px;margin:0 auto;padding:24px 16px 60px}
   h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
   .sub{font-size:13px;color:#63698a;margin-bottom:24px}
   .card{background:#fff;border:1px solid #e4e7f2;border-radius:16px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(23,23,60,.05),0 4px 16px rgba(23,23,60,.05)}
   .card h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#63698a;margin-bottom:12px}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid #eceef8;font-size:13.5px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid #eceef8;font-size:13.5px;gap:12px}
   .row:first-child{border-top:none}
   .lbl{color:#63698a}
-  .val{font-weight:700;font-family:ui-monospace,monospace;font-size:12.5px}
+  .val{font-weight:700;font-family:ui-monospace,monospace;font-size:12.5px;text-align:right}
   .ok{color:#059669}
   .bad{color:#dc2626}
   .mut{color:#9aa1c0;font-weight:500}
@@ -27,24 +36,33 @@
   th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#9aa1c0;padding:6px 8px;border-bottom:1px solid #eceef8}
   td{padding:8px;border-bottom:1px solid #eceef8;font-family:ui-monospace,monospace}
   textarea{width:100%;min-height:140px;border:1.5px solid #e4e7f2;border-radius:12px;padding:12px;font-family:ui-monospace,monospace;font-size:12.5px;resize:vertical}
-  button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:10px}
+  button{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:10px;transition:opacity .15s}
+  button:hover{opacity:.92}
   button:disabled{opacity:.5;cursor:default}
-  pre{background:#0d1226;color:#c7d2fe;border-radius:12px;padding:14px;font-size:12px;overflow:auto;margin-top:10px;white-space:pre-wrap}
+  pre{background:#0d1226;color:#c7d2fe;border-radius:12px;padding:14px;font-size:12px;overflow:auto;margin-top:10px;white-space:pre-wrap;word-break:break-word}
   .keybox{display:flex;gap:8px;margin-bottom:18px}
-  .keybox input{flex:1;border:1.5px solid #e4e7f2;border-radius:10px;padding:9px 12px;font-size:13px}
+  .keybox input{flex:1;border:1.5px solid #e4e7f2;border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit}
   .refresh{background:none;color:#6366f1;border:1px solid #e4e7f2;padding:6px 12px;font-size:12px;margin:0}
-  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
   .badge.ok{background:#ecfdf5;color:#059669}
   .badge.bad{background:#fef2f2;color:#dc2626}
 </style>
 </head>
 <body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">PV</div>
+    <span class="brand-name">Pós-Venda</span>
+  </div>
+  <button class="btn-logout" onclick="logout()">Sair</button>
+</header>
+
 <div class="wrap">
-  <h1>Pós-Venda — Diagnóstico ao vivo</h1>
+  <h1>Diagnóstico ao vivo</h1>
   <p class="sub">Mostra exatamente o que o serviço tem configurado agora — Firebase, Bling, Mercado Livre e cache — em vez de adivinhar.</p>
 
   <div class="keybox">
-    <input type="password" id="adminKey" placeholder="Admin key (deixe em branco se ADMIN_KEY não estiver configurada)">
+    <input type="password" id="adminKey" placeholder="Admin key (opcional — a sessão de login já é suficiente)">
     <button class="refresh" onclick="loadAll()">Verificar agora</button>
   </div>
 
@@ -76,62 +94,84 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function row(l,v,cls){return `<div class="row"><span class="lbl">${esc(l)}</span><span class="val ${cls||''}">${v}</span></div>`;}
 function badge(ok,yes,no){return `<span class="badge ${ok?'ok':'bad'}">${ok?yes:no}</span>`;}
 
+// Sempre lê o corpo como TEXTO primeiro — se não for JSON válido (página de
+// erro do Vercel, redirect de proteção de deployment, etc.), mostra o texto
+// bruto em vez de deixar o fetch morrer com uma exceção genérica do browser.
+async function fetchJson(url, opts){
+  const r=await fetch(url,{credentials:'same-origin',...opts});
+  const text=await r.text();
+  let data=null;
+  try{data=JSON.parse(text);}catch{/* não era JSON — data fica null */}
+  return {ok:r.ok, status:r.status, data, raw:text};
+}
+
+async function checkAuth(){
+  try{
+    const {data}=await fetchJson('/api/auth/me');
+    if(!data?.autenticado){window.location.href='/login.html';return false;}
+    return true;
+  }catch{window.location.href='/login.html';return false;}
+}
+async function logout(){
+  await fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});
+  window.location.href='/login.html';
+}
+
 async function loadStatus(){
   const area=document.getElementById('statusArea');
-  try{
-    const r=await fetch('/api/status'+qs());
-    const d=await r.json();
-    if(!r.ok){area.innerHTML=`<div class="card"><p class="bad">Erro ${r.status}: ${esc(d.error||'desconhecido')}</p></div>`;return;}
-    area.innerHTML=`
-      <div class="card">
-        <h2>Firebase</h2>
-        ${row('Projeto configurado', esc(d.firebase.projetoConfigurado))}
-        ${row('Bate com o sistema principal (erp-max-sistema)', badge(d.firebase.projetoBate,'✓ Sim','✗ Não'))}
-        ${row('Firestore respondendo', badge(d.firebase.firestoreRespondendo,'✓ Sim','✗ Não'))}
-        ${d.firebase.firestoreErro?row('Erro cru', esc(d.firebase.firestoreErro),'bad'):''}
-        ${row('Banco em uso', esc(d.firebase.bancoDeDados))}
+  const {ok,status,data,raw}=await fetchJson('/api/status'+qs());
+  if(!ok||!data){
+    area.innerHTML=`<div class="card"><p class="bad">Erro ${status}${data?.error?': '+esc(data.error):''}${data?.detail?' — '+esc(data.detail):''}</p>${!data?`<pre>${esc(raw.slice(0,600))}</pre>`:''}</div>`;
+    return;
+  }
+  const d=data;
+  area.innerHTML=`
+    <div class="card">
+      <h2>Firebase</h2>
+      ${row('Projeto configurado', esc(d.firebase.projetoConfigurado))}
+      ${row('Bate com o sistema principal (erp-max-sistema)', badge(d.firebase.projetoBate,'✓ Sim','✗ Não'))}
+      ${row('Firestore respondendo', badge(d.firebase.firestoreRespondendo,'✓ Sim','✗ Não'))}
+      ${d.firebase.firestoreErro?row('Erro cru', esc(d.firebase.firestoreErro),'bad'):''}
+      ${row('Banco em uso', esc(d.firebase.bancoDeDados))}
+    </div>
+    <div class="card">
+      <h2>Bling</h2>
+      ${row('Token presente (Firestore)', badge(d.bling.tokenPresente,'✓ Sim','✗ Não'))}
+      ${row('Access token válido agora', badge(d.bling.accessValido,'✓ Sim','✗ Não'))}
+      ${d.bling.expiraEm!=null?row('Expira em', d.bling.expiraEm+'s'):''}
+    </div>
+    <div class="card">
+      <h2>Mercado Livre</h2>
+      ${row('Token presente (Firestore)', badge(d.mercadoLivre.tokenPresente,'✓ Sim','✗ Não'))}
+      ${row('Access token válido agora', badge(d.mercadoLivre.accessValido,'✓ Sim','✗ Não'))}
+    </div>
+    <div class="card">
+      <h2>Cache</h2>
+      <div class="grid">
+        <div class="stat"><div class="n">${d.cache.clientesEmCache<0?'—':d.cache.clientesEmCache}</div><div class="l">clientes em cache</div></div>
+        <div class="stat"><div class="n">${d.cache.eventosResolvidos<0?'—':d.cache.eventosResolvidos}</div><div class="l">eventos resolvidos</div></div>
+        <div class="stat"><div class="n">${d.cache.cacheTtlHoras}h</div><div class="l">TTL do cache</div></div>
       </div>
-      <div class="card">
-        <h2>Bling</h2>
-        ${row('Token presente (Firestore)', badge(d.bling.tokenPresente,'✓ Sim','✗ Não'))}
-        ${row('Access token válido agora', badge(d.bling.accessValido,'✓ Sim','✗ Não'))}
-        ${d.bling.expiraEm!=null?row('Expira em', d.bling.expiraEm+'s'):''}
-      </div>
-      <div class="card">
-        <h2>Mercado Livre</h2>
-        ${row('Token presente (Firestore)', badge(d.mercadoLivre.tokenPresente,'✓ Sim','✗ Não'))}
-        ${row('Access token válido agora', badge(d.mercadoLivre.accessValido,'✓ Sim','✗ Não'))}
-      </div>
-      <div class="card">
-        <h2>Cache</h2>
-        <div class="grid">
-          <div class="stat"><div class="n">${d.cache.clientesEmCache<0?'—':d.cache.clientesEmCache}</div><div class="l">clientes em cache</div></div>
-          <div class="stat"><div class="n">${d.cache.eventosResolvidos<0?'—':d.cache.eventosResolvidos}</div><div class="l">eventos resolvidos</div></div>
-          <div class="stat"><div class="n">${d.cache.cacheTtlHoras}h</div><div class="l">TTL do cache</div></div>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Configuração</h2>
-        ${row('BLING_WEBHOOK_SECRET configurado', badge(d.config.webhookSecretConfigurado,'✓ Sim','✗ Não (assinatura não é validada)'))}
-        ${row('ML_APP_ID configurado', badge(d.config.mlAppIdConfigurado,'✓ Sim','✗ Não'))}
-        ${row('ADMIN_KEY configurado', badge(d.config.adminKeyConfigurado,'✓ Sim','✗ Não (esta tela está aberta)'))}
-      </div>`;
-  }catch(e){area.innerHTML=`<div class="card"><p class="bad">Falha ao verificar: ${esc(e.message)}</p></div>`;}
+    </div>
+    <div class="card">
+      <h2>Configuração</h2>
+      ${row('BLING_WEBHOOK_SECRET configurado', badge(d.config.webhookSecretConfigurado,'✓ Sim','✗ Não (assinatura não é validada)'))}
+      ${row('ML_APP_ID configurado', badge(d.config.mlAppIdConfigurado,'✓ Sim','✗ Não'))}
+      ${row('ADMIN_KEY configurado', badge(d.config.adminKeyConfigurado,'✓ Sim','✗ Não'))}
+    </div>`;
 }
 
 async function loadRecent(){
-  try{
-    const r=await fetch('/api/recent'+qs());
-    const d=await r.json();
-    const cArea=document.getElementById('clientesArea'), eArea=document.getElementById('eventosArea');
-    if(!r.ok){cArea.innerHTML=eArea.innerHTML=`<p class="bad">Erro ${r.status}</p>`;return;}
-    cArea.innerHTML=d.clientes.length?`<table><thead><tr><th>CPF/CNPJ</th><th>Telefone</th><th>E-mail</th><th>Origem</th><th>Atualizado</th></tr></thead><tbody>${
-      d.clientes.map(c=>`<tr><td>${esc(c.cpf)}</td><td>${c.temTelefone?'✓':'—'}</td><td>${c.temEmail?'✓':'—'}</td><td>${esc(c.origem)}</td><td>${esc(c.atualizadoEm)}</td></tr>`).join('')
-    }</tbody></table>`:'<p class="mut">Nenhum cliente em cache ainda.</p>';
-    eArea.innerHTML=d.eventosResolvidos.length?`<table><thead><tr><th>Recurso</th><th>CPF/CNPJ</th><th>Resolvido em</th></tr></thead><tbody>${
-      d.eventosResolvidos.map(e=>`<tr><td>${esc(e.recurso)}</td><td>${esc(e.cpf)}</td><td>${esc(e.resolvidoEm)}</td></tr>`).join('')
-    }</tbody></table>`:'<p class="mut">Nenhum evento resolvido ainda.</p>';
-  }catch(e){/* silencioso — status já mostra o erro principal */}
+  const cArea=document.getElementById('clientesArea'), eArea=document.getElementById('eventosArea');
+  const {ok,status,data}=await fetchJson('/api/recent'+qs());
+  if(!ok||!data){cArea.innerHTML=eArea.innerHTML=`<p class="bad">Erro ${status}${data?.error?': '+esc(data.error):''}</p>`;return;}
+  const d=data;
+  cArea.innerHTML=d.clientes.length?`<table><thead><tr><th>CPF/CNPJ</th><th>Telefone</th><th>E-mail</th><th>Origem</th><th>Atualizado</th></tr></thead><tbody>${
+    d.clientes.map(c=>`<tr><td>${esc(c.cpf)}</td><td>${c.temTelefone?'✓':'—'}</td><td>${c.temEmail?'✓':'—'}</td><td>${esc(c.origem)}</td><td>${esc(c.atualizadoEm)}</td></tr>`).join('')
+  }</tbody></table>`:'<p class="mut">Nenhum cliente em cache ainda.</p>';
+  eArea.innerHTML=d.eventosResolvidos.length?`<table><thead><tr><th>Recurso</th><th>CPF/CNPJ</th><th>Resolvido em</th></tr></thead><tbody>${
+    d.eventosResolvidos.map(e=>`<tr><td>${esc(e.recurso)}</td><td>${esc(e.cpf)}</td><td>${esc(e.resolvidoEm)}</td></tr>`).join('')
+  }</tbody></table>`:'<p class="mut">Nenhum evento resolvido ainda.</p>';
 }
 
 async function testWebhook(){
@@ -141,16 +181,15 @@ async function testWebhook(){
   catch{out.style.display='block';out.textContent='JSON inválido no campo acima.';return;}
   btn.disabled=true;out.style.display='block';out.textContent='Enviando…';
   try{
-    const r=await fetch('/api/webhook-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const d=await r.json();
-    out.textContent=`HTTP ${r.status}\n`+JSON.stringify(d,null,2);
+    const {status,data,raw}=await fetchJson('/api/webhook-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    out.textContent=`HTTP ${status}\n`+(data?JSON.stringify(data,null,2):raw.slice(0,1000));
     loadRecent();loadStatus();
   }catch(e){out.textContent='Falha de rede: '+e.message;}
   finally{btn.disabled=false;}
 }
 
-function loadAll(){loadStatus();loadRecent();}
-loadAll();
+async function loadAll(){await loadStatus();await loadRecent();}
+(async()=>{ if(await checkAuth()) loadAll(); })();
 </script>
 </body>
 </html>
