@@ -120,3 +120,53 @@ export async function findContactByDocument(cleanDoc: string): Promise<BlingCont
     email: contact.email?.trim() || null,
   };
 }
+
+interface ContatoAninhado {
+  readonly numeroDocumento?: string;
+  readonly celular?: string;
+  readonly telefone?: string;
+}
+interface ResourceDetailResponse {
+  readonly data?: { readonly contato?: ContatoAninhado };
+}
+
+/**
+ * Webhooks de "Pedido" e "Nota Fiscal" no Bling trazem só o ID do registro
+ * (não o contato completo) — é preciso buscar o recurso pra extrair o
+ * documento do comprador. Como não sabemos de qual módulo veio o ID sem
+ * uma pista mais forte, tentamos pedido de venda primeiro e, se não
+ * existir (404), tentamos nota fiscal.
+ */
+export async function findContactByResourceId(
+  resourceId: string,
+): Promise<{ readonly numeroDocumento: string | null; readonly celular: string | null; readonly telefone: string | null } | null> {
+  const token = await getBlingAccessToken();
+  if (!token) return null;
+
+  const tryFetch = async (path: string): Promise<ContatoAninhado | null> => {
+    try {
+      const data = await withRetry<ResourceDetailResponse>(MODULE, async (signal) => {
+        const res = await http.get<ResourceDetailResponse>(`${BLING_API_BASE}${path}/${resourceId}`, {
+          signal,
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return res.data;
+      });
+      return data.data?.contato ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const contato =
+    (await tryFetch('/pedidos/vendas')) ?? (await tryFetch('/nfe'));
+  if (!contato) {
+    logger.info(MODULE, 'recurso do webhook não encontrado (nem pedido, nem nfe)', { resourceId });
+    return null;
+  }
+  return {
+    numeroDocumento: contato.numeroDocumento?.trim() || null,
+    celular: contato.celular?.trim() || null,
+    telefone: contato.telefone?.trim() || null,
+  };
+}

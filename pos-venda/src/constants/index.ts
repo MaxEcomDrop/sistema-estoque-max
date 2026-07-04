@@ -3,6 +3,9 @@ export const BLING_TOKEN_URL = 'https://www.bling.com.br/Api/v3/oauth/token';
 export const ML_API_BASE = 'https://api.mercadolibre.com';
 
 export const CUSTOMERS_COLLECTION = 'customers';
+/** Cache resourceId(pedido/nfe) → CPF já resolvido — evita re-buscar o
+ *  detalhe no Bling quando o mesmo webhook chega duplicado (retry). */
+export const RESOURCE_CACHE_COLLECTION = 'webhook_resources';
 export const BLING_AUTH_DOC = { collection: 'bling_auth', doc: 'tokens' } as const;
 export const BLING_LEASE_DOC = { collection: 'bling_auth', doc: 'refresh_lease' } as const;
 export const ML_AUTH_DOC = { collection: 'ml_auth', doc: 'tokens' } as const;
