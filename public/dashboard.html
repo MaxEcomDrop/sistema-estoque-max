@@ -422,7 +422,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .fin-custom-range input[type=date]{height:34px;padding:0 10px;border:1.5px solid var(--bord);border-radius:10px;font-size:13px;font-family:inherit;color:var(--tx);background:var(--surf);outline:none;transition:border-color .12s,box-shadow .12s}
 .fin-custom-range input[type=date]:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
 .fk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
-.fk-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s,transform .12s}
+.fk-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s,transform .12s;position:relative}
 .fk-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
 .fk-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
 .fk-label{font-size:12px;font-weight:600;color:var(--mu);line-height:1.3}
@@ -1445,10 +1445,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <p id="dash-sub">Aqui está o resumo do seu negócio.</p>
         </div>
         <div class="dash-period">
-          <button class="dp-btn" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
+          <button class="dp-btn on" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
           <button class="dp-btn" data-dp="yesterday" onclick="setDashPeriod('yesterday',this)">Ontem</button>
           <button class="dp-btn" data-dp="7d" onclick="setDashPeriod('7d',this)">7 dias</button>
-          <button class="dp-btn on" data-dp="30d" onclick="setDashPeriod('30d',this)">30 dias</button>
+          <button class="dp-btn" data-dp="30d" onclick="setDashPeriod('30d',this)">30 dias</button>
           <button class="dp-btn" data-dp="90d" onclick="setDashPeriod('90d',this)">90 dias</button>
           <button class="dp-btn" data-dp="year" onclick="setDashPeriod('year',this)">Este ano</button>
           <button class="dp-btn" data-dp="custom" onclick="setDashPeriod('custom',this)">Personalizado</button>
@@ -1495,80 +1495,94 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- KPIs -->
       <div class="dash-kpis" style="grid-template-columns:repeat(4,1fr)">
-        <div class="mn-card" onclick="viewPedidosFiltrado('all')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Pedidos feitos</div>
-          <div class="mn-val" id="dash-vendas">—</div>
-          <div class="mn-sub" id="dash-vendas-sub">pedidos no período</div>
+        <div class="fk-card fk-blue" onclick="viewPedidosFiltrado('all')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Pedidos feitos</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-vendas">—</div>
+          <div class="fk-sub" id="dash-vendas-sub">pedidos no período</div>
         </div>
-        <div class="mn-card" onclick="viewPedidosFiltrado('cancelado')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Pedidos cancelados</div>
-          <div class="mn-val" id="dash-cancelados">—</div>
-          <div class="mn-sub">no período</div>
+        <div class="fk-card fk-red" onclick="viewPedidosFiltrado('cancelado')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Pedidos cancelados</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-cancelados">—</div>
+          <div class="fk-sub">no período</div>
         </div>
-        <div class="mn-card" onclick="setView('financeiro')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Ticket médio</div>
-          <div class="mn-val" id="dash-ticket">—</div>
-          <div class="mn-sub">por pedido feito</div>
+        <div class="fk-card fk-indigo" onclick="setView('financeiro')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Ticket médio</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-ticket">—</div>
+          <div class="fk-sub">por pedido feito</div>
         </div>
-        <div class="mn-card" onclick="setView('financeiro')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Frete cobrado</div>
-          <div class="mn-val" id="dash-frete">—</div>
-          <div class="mn-sub">pedidos feitos</div>
+        <div class="fk-card fk-sky" onclick="setView('financeiro')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Frete cobrado</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-frete">—</div>
+          <div class="fk-sub">pedidos feitos</div>
         </div>
       </div>
       <div class="dash-kpis" style="grid-template-columns:repeat(3,1fr);margin-top:12px">
-        <div class="mn-card" onclick="setView('financeiro')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Taxas de plataforma</div>
-          <div class="mn-val" id="dash-taxas">—</div>
-          <div class="mn-sub" id="dash-taxas-sub">estimado no período</div>
+        <div class="fk-card fk-orange" onclick="setView('financeiro')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Taxas de plataforma</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-taxas">—</div>
+          <div class="fk-sub" id="dash-taxas-sub">estimado no período</div>
         </div>
-        <div class="mn-card" onclick="setView('financeiro')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">A receber</div>
-          <div class="mn-val" id="dash-receber">—</div>
-          <div class="mn-sub" id="dash-receber-sub">contas em aberto</div>
+        <div class="fk-card fk-green" onclick="setView('financeiro')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">A receber</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-receber">—</div>
+          <div class="fk-sub" id="dash-receber-sub">contas em aberto</div>
         </div>
-        <div class="mn-card" onclick="setView('financeiro')">
-          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">A pagar</div>
-          <div class="mn-val" id="dash-pagar">—</div>
-          <div class="mn-sub" id="dash-pagar-sub">contas em aberto</div>
+        <div class="fk-card fk-purple" onclick="setView('financeiro')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">A pagar</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+          </div>
+          <div class="fk-val" id="dash-pagar">—</div>
+          <div class="fk-sub" id="dash-pagar-sub">contas em aberto</div>
         </div>
       </div>
 
       <!-- ALERTAS -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Precisa de atenção</div>
       <div class="dash-alerts" style="grid-template-columns:repeat(4,1fr)">
-        <div class="mn-card mn-soft" onclick="setView('produtos');setTimeout(()=>filterByStock(0,0),50)">
-          <div class="mn-val" id="dash-zerados">—</div><div class="mn-lbl">Produtos zerados</div>
+        <div class="fk-card fk-red" onclick="setView('produtos');setTimeout(()=>filterByStock(0,0),50)">
+          <div class="fk-val" id="dash-zerados">—</div><div class="fk-label">Produtos zerados</div>
         </div>
-        <div class="mn-card mn-soft" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin),50)">
-          <div class="mn-val" id="dash-criticos">—</div><div class="mn-lbl" id="dash-criticos-lbl">Estoque crítico (≤5)</div>
+        <div class="fk-card fk-orange" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin),50)">
+          <div class="fk-val" id="dash-criticos">—</div><div class="fk-label" id="dash-criticos-lbl">Estoque crítico (≤5)</div>
         </div>
-        <div class="mn-card mn-soft" onclick="viewPedidosFiltrado('pendente')">
-          <div class="mn-val" id="dash-pendentes">—</div><div class="mn-lbl">Pedidos pendentes</div>
+        <div class="fk-card fk-orange" onclick="viewPedidosFiltrado('pendente')">
+          <div class="fk-val" id="dash-pendentes">—</div><div class="fk-label">Pedidos pendentes</div>
         </div>
-        <div class="mn-card mn-soft" onclick="setView('financeiro')">
-          <div class="mn-val" id="dash-vencidas">—</div><div class="mn-lbl">Contas vencidas</div>
+        <div class="fk-card fk-red" onclick="setView('financeiro')">
+          <div class="fk-val" id="dash-vencidas">—</div><div class="fk-label">Contas vencidas</div>
         </div>
       </div>
 
       <!-- NOTAS FISCAIS (status sincronizado com a aba Notas) -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Notas fiscais</div>
       <div class="dash-alerts" style="grid-template-columns:repeat(3,1fr)">
-        <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Pendente'),50)">
-          <div class="mn-val" id="dash-nfe-pendente">—</div><div class="mn-lbl">Nota pendente</div>
+        <div class="fk-card fk-orange" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Pendente'),50)">
+          <div class="fk-val" id="dash-nfe-pendente">—</div><div class="fk-label">Nota pendente</div>
         </div>
-        <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Cancelada'),50)">
-          <div class="mn-val" id="dash-nfe-cancelada">—</div><div class="mn-lbl">Nota cancelada</div>
+        <div class="fk-card fk-red" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Cancelada'),50)">
+          <div class="fk-val" id="dash-nfe-cancelada">—</div><div class="fk-label">Nota cancelada</div>
         </div>
-        <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Autorizada'),50)">
-          <div class="mn-val" id="dash-nfe-autorizada">—</div><div class="mn-lbl">Nota autorizada</div>
+        <div class="fk-card fk-green" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Autorizada'),50)">
+          <div class="fk-val" id="dash-nfe-autorizada">—</div><div class="fk-label">Nota autorizada</div>
         </div>
       </div>
 
@@ -1675,28 +1689,40 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <!-- VIEW PRODUTOS -->
     <div class="view" id="view-produtos">
       <div class="kpi-row">
-        <div class="kpi">
-          <div class="kpi-lbl">Total de produtos</div>
-          <div class="kpi-val" id="k-total">—</div>
-          <div class="kpi-sub" id="k-total-s">Carregando…</div>
+        <div class="fk-card fk-blue">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Total de produtos</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+          </div>
+          <div class="fk-val" id="k-total">—</div>
+          <div class="fk-sub" id="k-total-s">Carregando…</div>
           <div class="kpi-tip" id="k-total-tip"></div>
         </div>
-        <div class="kpi">
-          <div class="kpi-lbl">Em estoque</div>
-          <div class="kpi-val" id="k-ok">—</div>
-          <div class="kpi-sub">quantidade &gt; 0</div>
+        <div class="fk-card fk-green">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Em estoque</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          </div>
+          <div class="fk-val" id="k-ok">—</div>
+          <div class="fk-sub">quantidade &gt; 0</div>
           <div class="kpi-tip" id="k-ok-tip"></div>
         </div>
-        <div class="kpi">
-          <div class="kpi-lbl">Sem estoque</div>
-          <div class="kpi-val" id="k-out">—</div>
-          <div class="kpi-sub" id="k-out-s">precisam de reposição</div>
+        <div class="fk-card fk-red">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Sem estoque</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+          </div>
+          <div class="fk-val" id="k-out">—</div>
+          <div class="fk-sub" id="k-out-s">precisam de reposição</div>
           <div class="kpi-tip" id="k-out-tip"></div>
         </div>
-        <div class="kpi" onclick="openModal('custo-import-modal')" style="cursor:pointer" title="Clique para importar/editar custos">
-          <div class="kpi-lbl">Valor em estoque</div>
-          <div class="kpi-val" id="k-val" style="font-size:18px;letter-spacing:-.5px">—</div>
-          <div class="kpi-sub" id="k-val-s">custo × quantidade</div>
+        <div class="fk-card fk-orange" onclick="openModal('custo-import-modal')" title="Clique para importar/editar custos">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Valor em estoque</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="fk-val" id="k-val" style="font-size:18px;letter-spacing:-.5px">—</div>
+          <div class="fk-sub" id="k-val-s">custo × quantidade</div>
         </div>
       </div>
 
@@ -1924,10 +1950,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <!-- Period filter bar -->
       <div class="fin-period-bar">
         <div class="fin-periods">
-          <button class="fp-btn" data-p="today" onclick="setFinPeriod('today',this)">Hoje</button>
+          <button class="fp-btn on" data-p="today" onclick="setFinPeriod('today',this)">Hoje</button>
           <button class="fp-btn" data-p="yesterday" onclick="setFinPeriod('yesterday',this)">Ontem</button>
           <button class="fp-btn" data-p="7d" onclick="setFinPeriod('7d',this)">7 dias</button>
-          <button class="fp-btn on" data-p="30d" onclick="setFinPeriod('30d',this)">30 dias</button>
+          <button class="fp-btn" data-p="30d" onclick="setFinPeriod('30d',this)">30 dias</button>
           <button class="fp-btn" data-p="90d" onclick="setFinPeriod('90d',this)">90 dias</button>
           <button class="fp-btn" data-p="year" onclick="setFinPeriod('year',this)">Este ano</button>
           <button class="fp-btn" data-p="custom" onclick="setFinPeriod('custom',this)">Personalizado</button>
@@ -2062,9 +2088,30 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <!-- VIEW CLIENTES (CRM) -->
     <div class="view" id="view-clientes">
       <div class="kpi-row kpi-row-3">
-        <div class="kpi"><div class="kpi-lbl">Total de clientes</div><div class="kpi-val" id="cli-total">—</div><div class="kpi-sub" id="cli-total-sub">cadastrados no Bling</div></div>
-        <div class="kpi"><div class="kpi-lbl">Ticket médio/cliente</div><div class="kpi-val" id="cli-ticket" style="font-size:22px">—</div><div class="kpi-sub">gasto médio (90 dias)</div></div>
-        <div class="kpi"><div class="kpi-lbl">Melhor cliente</div><div class="kpi-val" id="cli-top" style="font-size:15px">—</div><div class="kpi-sub" id="cli-top-sub">maior valor gasto</div></div>
+        <div class="fk-card fk-blue">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Total de clientes</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          </div>
+          <div class="fk-val" id="cli-total">—</div>
+          <div class="fk-sub" id="cli-total-sub">cadastrados no Bling</div>
+        </div>
+        <div class="fk-card fk-green">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Ticket médio/cliente</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          </div>
+          <div class="fk-val" id="cli-ticket" style="font-size:22px">—</div>
+          <div class="fk-sub">gasto médio (90 dias)</div>
+        </div>
+        <div class="fk-card fk-purple">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <div class="fk-label">Melhor cliente</div>
+            <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          </div>
+          <div class="fk-val" id="cli-top" style="font-size:15px">—</div>
+          <div class="fk-sub" id="cli-top-sub">maior valor gasto</div>
+        </div>
       </div>
       <div class="tcard">
         <div class="toolbar">
@@ -2276,29 +2323,47 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="cfg-card">
         <div class="cfg-title">Vendas no Mercado Livre (últimos 30 dias)</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:8px">
-          <div style="background:var(--bg);border-radius:10px;padding:12px">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Vendas concluídas</div>
-            <div style="font-size:18px;font-weight:700;color:var(--ok-t)" id="ml-sales-count">—</div>
+          <div class="fk-card fk-blue" style="cursor:default">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div class="fk-label">Vendas concluídas</div>
+              <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            </div>
+            <div class="fk-val" id="ml-sales-count" style="font-size:18px">—</div>
           </div>
-          <div style="background:var(--bg);border-radius:10px;padding:12px">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Faturamento</div>
-            <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-sales-total">—</div>
+          <div class="fk-card fk-green" style="cursor:default">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div class="fk-label">Faturamento</div>
+              <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+            </div>
+            <div class="fk-val" id="ml-sales-total" style="font-size:18px">—</div>
           </div>
-          <div style="background:var(--bg);border-radius:10px;padding:12px">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Ticket médio</div>
-            <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-sales-avg">—</div>
+          <div class="fk-card fk-indigo" style="cursor:default">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div class="fk-label">Ticket médio</div>
+              <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+            </div>
+            <div class="fk-val" id="ml-sales-avg" style="font-size:18px">—</div>
           </div>
-          <div style="background:var(--bg);border-radius:10px;padding:12px;border-left:3px solid var(--wa)">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Taxas ML (comissão)</div>
-            <div style="font-size:18px;font-weight:700;color:var(--wa-t)" id="ml-taxas">—</div>
+          <div class="fk-card fk-orange" style="cursor:default">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div class="fk-label">Taxas ML (comissão)</div>
+              <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+            </div>
+            <div class="fk-val" id="ml-taxas" style="font-size:18px">—</div>
           </div>
-          <div style="background:var(--bg);border-radius:10px;padding:12px">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Frete cobrado</div>
-            <div style="font-size:18px;font-weight:700;color:var(--tx)" id="ml-frete">—</div>
+          <div class="fk-card fk-sky" style="cursor:default">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div class="fk-label">Frete cobrado</div>
+              <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+            </div>
+            <div class="fk-val" id="ml-frete" style="font-size:18px">—</div>
           </div>
-          <div style="background:var(--bg);border-radius:10px;padding:12px;border-left:3px solid var(--ok)">
-            <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Lucro bruto (após taxas)</div>
-            <div style="font-size:18px;font-weight:700;color:var(--ok-t)" id="ml-lucro">—</div>
+          <div class="fk-card fk-purple" style="cursor:default">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <div class="fk-label">Lucro bruto (após taxas)</div>
+              <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+            </div>
+            <div class="fk-val" id="ml-lucro" style="font-size:18px">—</div>
           </div>
         </div>
         <div id="ml-sales-list" style="margin-top:12px"></div>
@@ -2378,9 +2443,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
               <div id="cfg-icone-preview" style="width:44px;height:44px;border-radius:12px;background:var(--bg);border:1px solid var(--bord-l);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"></div>
               <div style="display:flex;flex-direction:column;gap:6px">
                 <button class="bts" style="font-size:12px" onclick="$('cfg-icone-file').click()">Enviar imagem</button>
+                <button class="btp" id="cfg-icone-save-btn" style="font-size:12px;display:none" onclick="saveAssetImage('icone')">Salvar ícone</button>
                 <button class="bts" id="cfg-icone-del-btn" style="font-size:11px;color:var(--er-t);display:none" onclick="removeAssetImage('icone')">Remover (usar iniciais)</button>
               </div>
-              <input type="file" id="cfg-icone-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="uploadAssetImage('icone',this)">
+              <input type="file" id="cfg-icone-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="stageAssetImage('icone',this)">
             </div>
           </div>
           <div>
@@ -2389,9 +2455,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
               <div id="cfg-logo-preview" style="width:44px;height:44px;border-radius:12px;background:var(--bg);border:1px solid var(--bord-l);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"></div>
               <div style="display:flex;flex-direction:column;gap:6px">
                 <button class="bts" style="font-size:12px" onclick="$('cfg-logo-file').click()">Enviar imagem</button>
+                <button class="btp" id="cfg-logo-save-btn" style="font-size:12px;display:none" onclick="saveAssetImage('logo')">Salvar logo</button>
                 <button class="bts" id="cfg-logo-del-btn" style="font-size:11px;color:var(--er-t);display:none" onclick="removeAssetImage('logo')">Remover (usar iniciais)</button>
               </div>
-              <input type="file" id="cfg-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="uploadAssetImage('logo',this)">
+              <input type="file" id="cfg-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="stageAssetImage('logo',this)">
             </div>
           </div>
         </div>
@@ -3110,31 +3177,51 @@ function updateAppConfigPreview(){
   const cor=$('cfg-app-cor').value||'#4f46e5';
   const prev=$('cfg-app-preview');if(prev){prev.textContent=iniciais;prev.style.background=cor;}
 }
+let _stagedAssets={icone:null,logo:null};
 function renderAssetPreview(tipo){
   const el=$(`cfg-${tipo}-preview`);if(!el)return;
+  const staged=_stagedAssets[tipo];
   const has=tipo==='icone'?_appConfig.temIcone:_appConfig.temLogo;
-  el.innerHTML=has?`<img src="/img/${tipo}?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain">`:`<span style="font-size:11px;color:var(--fa)">Padrão</span>`;
-  const delBtn=$(`cfg-${tipo}-del-btn`);if(delBtn)delBtn.style.display=has?'':'none';
+  if(staged)el.innerHTML=`<img src="${staged}" alt="" style="width:100%;height:100%;object-fit:contain">`;
+  else el.innerHTML=has?`<img src="/img/${tipo}?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain">`:`<span style="font-size:11px;color:var(--fa)">Padrão</span>`;
+  const delBtn=$(`cfg-${tipo}-del-btn`);if(delBtn)delBtn.style.display=(has&&!staged)?'':'none';
+  const saveBtn=$(`cfg-${tipo}-save-btn`);if(saveBtn)saveBtn.style.display=staged?'':'none';
 }
-async function uploadAssetImage(tipo,inputEl){
+// Escolher o arquivo só PRÉ-VISUALIZA — nada é enviado até clicar em
+// "Salvar", pra dar controle explícito de quando a marca do sistema muda
+// (em vez de trocar sozinho assim que o seletor de arquivo fecha).
+async function stageAssetImage(tipo,inputEl){
   const file=inputEl.files?.[0];if(!file)return;
   try{
     const dataUrl=file.type==='image/svg+xml'?await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('arquivo inválido'));r.readAsDataURL(file);}):await compressImage(file,512,.85);
+    _stagedAssets[tipo]=dataUrl;
+    renderAssetPreview(tipo);
+    toast(`${tipo==='icone'?'Ícone':'Logo'} pronto — clique em "Salvar" para aplicar`,'ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{inputEl.value='';}
+}
+async function saveAssetImage(tipo){
+  const dataUrl=_stagedAssets[tipo];if(!dataUrl)return;
+  const btn=$(`cfg-${tipo}-save-btn`);
+  if(btn){btn.disabled=true;btn.textContent='Salvando…';}
+  try{
     const r=await fetch(`/api/config/${tipo}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataUrl})});
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro ao enviar imagem');
     if(tipo==='icone')_appConfig.temIcone=true;else _appConfig.temLogo=true;
+    _stagedAssets[tipo]=null;
     renderAssetPreview(tipo);
     applyBranding();
-    toast(`${tipo==='icone'?'Ícone':'Logo'} atualizado(a) com sucesso`,'ok');
+    toast(`${tipo==='icone'?'Ícone':'Logo'} salvo(a) — fica assim até você trocar de novo`,'ok');
   }catch(e){toast('Erro: '+e.message,'err');}
-  finally{inputEl.value='';}
+  finally{if(btn){btn.disabled=false;btn.textContent=tipo==='icone'?'Salvar ícone':'Salvar logo';}}
 }
 async function removeAssetImage(tipo){
   try{
     const r=await fetch(`/api/config/${tipo}`,{method:'DELETE'});
     if(!r.ok)throw new Error((await r.json()).error||'Erro ao remover');
     if(tipo==='icone')_appConfig.temIcone=false;else _appConfig.temLogo=false;
+    _stagedAssets[tipo]=null;
     renderAssetPreview(tipo);
     applyBranding();
     toast(`${tipo==='icone'?'Ícone':'Logo'} removido(a) — voltando às iniciais`,'ok');
@@ -3258,7 +3345,7 @@ function setView(v){
 }
 
 // ── DASHBOARD / INÍCIO ───────────────────────────
-let dashPeriod='30d';
+let dashPeriod='today';
 let _dashLoaded=false;
 let _dashReqId=0;
 let _dashFat=0,_dashTotalPedidos=0,_dashCancelados=0,_dashPendentes=null;
@@ -4300,9 +4387,10 @@ function updateKpis(){
   $('k-ok-tip').textContent=lowList.length?`Estoque baixo:\n${lowList.join('\n')}`:'Todos os produtos com estoque normal.';
   const outList=ps.filter(p=>p.estoque===0).map(p=>p.nome).slice(0,5);
   $('k-out-tip').textContent=outList.length?`Zerados:\n${outList.join('\n')}`:'Nenhum produto zerado.';
-  document.title=out>0?`⚠ ${out} críticos — ${_appConfig.nome}`:_appConfig.nome;
-  const link=faviconLink();
-  link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":(_appConfig.temIcone?`/img/icone?v=${Date.now()}`:faviconSvg(_appConfig.iniciais,_appConfig.cor));
+  // Mantém sempre o ícone e o nome do sistema na aba do navegador — o
+  // alerta de estoque crítico já aparece nos cards "Precisa de atenção",
+  // não precisa substituir a marca do sistema por um triângulo.
+  document.title=_appConfig.nome;
 }
 function updateLowBadge(){
   const cnt=S.products.filter(p=>p.estoque<=S.estoqueMin).length;
@@ -5969,7 +6057,7 @@ async function saveCreate(){
 }
 
 // ── FINANCEIRO ────────────────────────────────────
-let finPeriod='30d';
+let finPeriod='today';
 let _finCache={};
 let _finCacheKey='';
 function setFinPeriod(p,btn){

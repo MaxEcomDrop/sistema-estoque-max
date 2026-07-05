@@ -1590,6 +1590,20 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         if (payload.imagemUrl) payload.midia = { imagens: { externas: [{ link: payload.imagemUrl }] } };
         delete payload.imagemUrl;
       }
+      // O objeto _fullUpdate vem do editor, que carrega o produto INTEIRO do
+      // Bling (GET) e devolve ele quase todo de volta no PUT — inclui campos
+      // computados/somente-leitura (estoque agregado, timestamps, id) que não
+      // fazem parte do payload de escrita. Reenviá-los é o risco real de o
+      // Bling rejeitar ou ignorar a atualização inteira silenciosamente: o
+      // estoque em especial é uma foto ANTIGA de quando o editor foi aberto
+      // (o saldo real é gerenciado à parte, pelo endpoint /estoques logo
+      // abaixo) — mandar de volta podia sobrescrever estoque real por um
+      // valor desatualizado.
+      delete payload.id;
+      delete payload.estoque;
+      delete payload.dataCriacao;
+      delete payload.dataAlteracao;
+      delete payload.imagem;
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
