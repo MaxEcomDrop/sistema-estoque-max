@@ -1905,7 +1905,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="fk-sub" id="fin-sub-total">— pedidos no período</div>
         </div>
         <div class="fk-card fk-green" onclick="viewPedidosFiltrado('concluido')">
-          <div class="fk-top"><span class="fk-label">Aprovadas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
+          <div class="fk-top"><span class="fk-label">Pagas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
           <div class="fk-val" id="fin-rec">—</div>
           <div class="fk-sub" id="fin-sub-conc">— pedidos concluídos</div>
         </div>
@@ -1939,31 +1939,31 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div><div class="fk-sm-label">Total de pedidos</div><div class="fk-sm-val" id="fin-total">—</div></div>
         </div>
       </div>
-      <!-- Canais de venda: Bling x Mercado Livre lado a lado, com taxas -->
-      <div class="tcard" style="margin-top:14px">
-        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:12px">Taxas e frete por canal</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-          <div style="background:var(--bg);border-radius:11px;padding:14px;border-left:3px solid var(--acc)">
-            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:6px;background:#eef2ff;color:#4338ca;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">B</span>Bling (todos os canais)</div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Comissões do canal</span><strong id="fin-canal-bling-comissao">…</strong></div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Custo de frete (canal)</span><strong id="fin-canal-bling-custofrete">…</strong></div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Frete cobrado</span><strong id="fin-canal-bling-frete">—</strong></div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Descontos dados</span><strong id="fin-canal-bling-desc">—</strong></div>
-            <div id="fin-canal-bling-nota" style="font-size:10px;color:var(--fa);margin-top:6px"></div>
-          </div>
-          <div style="background:var(--bg);border-radius:11px;padding:14px;border-left:3px solid #ffc400">
-            <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:6px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">ML</span>Mercado Livre (direto)</div>
-            <div id="fin-canal-ml-body">
-              <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Taxas/comissão</span><strong id="fin-canal-ml-taxa">—</strong></div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--mu)">Frete cobrado</span><strong id="fin-canal-ml-frete">—</strong></div>
-            </div>
+      <!-- Row 3: taxas/lucro sincronizados (substitui o antigo painel "Taxas e frete por canal") -->
+      <div class="fk-grid-2">
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#fff7ed;color:#ea580c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div><div class="fk-sm-label">Taxas de plataforma</div><div class="fk-sm-val" id="fin-taxas-plataforma">—</div></div>
+        </div>
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#ecfdf5;color:#059669"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg></div>
+          <div><div class="fk-sm-label">Lucro bruto</div><div class="fk-sm-val" id="fin-lucro-bruto">—</div></div>
+        </div>
+        <div class="fk-sm">
+          <div class="fk-sm-ico" style="background:#f0fdfa;color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8M8 8l8 8"/></svg></div>
+          <div><div class="fk-sm-label">Lucro líquido</div><div class="fk-sm-val" id="fin-lucro-liquido">—</div></div>
+        </div>
+        <div class="fk-sm" style="cursor:default">
+          <div class="fk-sm-ico" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H1l8-8 8 8h-8v8"/></svg></div>
+          <div style="flex:1">
+            <div class="fk-sm-label">Custos fixos/variáveis</div>
+            <div style="display:flex;align-items:center;gap:4px"><input type="number" id="fin-custo-fixo-pct" min="0" max="100" step="0.5" style="width:52px;height:26px;padding:0 6px;background:var(--bg);border:1px solid var(--bord);border-radius:7px;font-size:13px;font-family:inherit;color:var(--tx)" oninput="setCustoFixoPct(this.value)"><span style="font-size:13px;color:var(--mu);font-weight:600">% da receita</span></div>
           </div>
         </div>
-        <div id="fin-canal-lojas" style="margin-top:10px"></div>
       </div>
       <!-- Gráfico de vendas -->
       <div class="fin-chart-wrap">
-        <div class="fin-chart-title">Receita diária (pedidos concluídos)</div>
+        <div class="fin-chart-title">Receita diária (pedidos pagos)</div>
         <div class="fin-chart-sub" id="fin-chart-range">Selecione um período e clique em Atualizar</div>
         <div id="fin-chart" style="min-height:140px"></div>
       </div>
@@ -1971,7 +1971,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="dre-card">
         <div class="dre-head">
           <span class="dre-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg> Resultado do período (DRE)</span>
-          <span class="dre-tag">estimativa · custo via margem do catálogo</span>
+          <span class="dre-tag">taxas reais do Bling · custo via margem do catálogo</span>
         </div>
         <div class="dre-list" id="dre-list">
           <div class="st-wrap" style="padding:20px"><p class="st-d">Clique em Atualizar para calcular o resultado.</p></div>
@@ -1980,8 +1980,19 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- Curva ABC -->
       <div class="tcard" style="margin-top:0">
-        <div class="toolbar"><span style="font-size:14px;font-weight:600;color:var(--tx)">Curva ABC</span><span style="font-size:12px;color:var(--mu);margin-left:6px">— produtos por valor total em estoque (preço × qtd)</span><div class="tr"><button class="bts" onclick="renderCurvaABC()">↻ Calcular</button></div></div>
-        <div class="vtable" id="fin-abc-body"><div class="st-wrap"><p class="st-d">Carregue os produtos e clique em Calcular para ver a Curva ABC.</p></div></div>
+        <div class="toolbar">
+          <span style="font-size:14px;font-weight:600;color:var(--tx)">Curva ABC</span><span style="font-size:12px;color:var(--mu);margin-left:6px">— produtos por faturamento (A=80%, B=15%, C=5%); sem vendas não entram</span>
+          <div class="tr">
+            <div class="pchips" id="abc-filter-chips">
+              <span class="pchip on" data-c="" onclick="setAbcFilter('',this)">Todos</span>
+              <span class="pchip" data-c="A" onclick="setAbcFilter('A',this)">A</span>
+              <span class="pchip" data-c="B" onclick="setAbcFilter('B',this)">B</span>
+              <span class="pchip" data-c="C" onclick="setAbcFilter('C',this)">C</span>
+            </div>
+            <button class="bts" onclick="renderCurvaABC()">↻ Calcular</button>
+          </div>
+        </div>
+        <div id="fin-abc-body"><div class="st-wrap"><p class="st-d">Carregue os produtos e clique em Calcular para ver a Curva ABC.</p></div></div>
       </div>
       <!-- Margem por produto -->
       <div class="tcard" style="margin-top:0">
@@ -2371,8 +2382,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
 <!-- NOVA/EDITAR CONTA CUSTOMIZADA -->
 <div class="modal" id="conta-modal" onclick="if(event.target===this)closeContaModal()">
-  <div class="mbox" style="width:420px;max-width:92vw">
-    <div class="m-title" id="conta-modal-title">Nova conta customizada</div>
+  <div class="mbox" style="width:460px;max-width:92vw">
+    <div class="m-title" id="conta-modal-title">Nova conta</div>
     <div style="display:grid;gap:12px;margin:20px 0">
       <div>
         <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Tipo *</label>
@@ -2380,22 +2391,58 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <option value="">— Selecione —</option>
           <option value="pagar">Conta a Pagar</option>
           <option value="receber">Conta a Receber</option>
+          <option value="fixa">Conta Fixa</option>
         </select>
       </div>
       <div>
-        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Categoria *</label>
-        <input type="text" id="conta-categoria" placeholder="Ex: Frete, Taxa, Aluguel..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Nome *</label>
+        <input type="text" id="conta-descricao" placeholder="Ex: Aluguel do galpão, Frete pedido #123..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
       </div>
       <div>
-        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Descrição</label>
-        <input type="text" id="conta-descricao" placeholder="Ex: Frete com Flex - Pedido #123..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Categoria</label>
+        <input type="text" id="conta-categoria" placeholder="Ex: Frete, Taxa, Aluguel..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
       </div>
       <div>
         <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Valor (R$) *</label>
         <input type="number" id="conta-valor" placeholder="0.00" step="0.01" min="0" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
       </div>
       <div>
-        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Data de Vencimento</label>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Forma de pagamento</label>
+        <select id="conta-forma-pagamento" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+          <option value="">— Selecione —</option>
+          <option value="Pix">Pix</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Cartão de crédito">Cartão de crédito</option>
+          <option value="Cartão de débito">Cartão de débito</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Transferência">Transferência</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Pagamento</label>
+        <select id="conta-parcelamento" onchange="toggleParcelamentoFields()" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+          <option value="avista">À vista</option>
+          <option value="parcelado">Parcelado / recorrente</option>
+        </select>
+      </div>
+      <div id="conta-parcelamento-fields" style="display:none;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Frequência</label>
+          <select id="conta-frequencia" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">Quinzenal</option>
+            <option value="mensal" selected>Mensal</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Nº de parcelas</label>
+          <input type="number" id="conta-parcelas" placeholder="2" min="2" max="360" value="2" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Data de vencimento <span id="conta-venc-lbl-sufixo"></span></label>
         <input type="date" id="conta-data-vencimento" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
       </div>
       <div>
@@ -4729,32 +4776,77 @@ function exportRelatorioCSV(){
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=`relatorio_estoque_${new Date().toISOString().slice(0,10)}.csv`;a.click();
   toast(`${ps.length} produtos exportados`,'ok');
 }
+let _abcFilterCls='';
+let _abcRows=[];
+function setAbcFilter(cls,el){
+  _abcFilterCls=cls;
+  document.querySelectorAll('#abc-filter-chips .pchip').forEach(c=>c.classList.toggle('on',c.dataset.c===cls));
+  renderAbcGrid();
+}
 function renderCurvaABC(){
   const el=$('fin-abc-body');if(!el)return;
-  const ps=S.products.filter(p=>p.preco>0&&p.estoque>0).sort((a,b)=>(b.preco*b.estoque)-(a.preco*a.estoque));
-  if(!ps.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
-  const total=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
-  let cum=0;const cumByIdx=[];
-  const rows=ps.map((p,i)=>{
-    const val=p.preco*p.estoque;cum+=val;const pct=(cum/total)*100;
-    cumByIdx[i]=pct;
-    const cls=pct<=80?'ok':pct<=95?'lo':'out';
-    const label=pct<=80?'A':pct<=95?'B':'C';
-    return`<tr style="cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto"><td style="font-weight:700;color:var(--mu)">${i+1}</td><td><div class="pinfo"><span class="pname">${esc(p.nome)}</span><span class="pname-sub">${esc(p.codigo||'—')}</span></div></td><td class="r">${fmt(val)}</td><td class="r" style="color:var(--mu)">${((val/total)*100).toFixed(1)}%</td><td class="r">${pct.toFixed(1)}%</td><td><span class="sb2 s-${cls}">${label}</span></td></tr>`;
+  if(!S.products.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
+  if(!Object.keys(S.vendasPorCodigo||{}).length){
+    el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados de vendas…</p></div>';
+    loadVendasRanking().then(renderCurvaABC);
+    return;
+  }
+  // Faturamento estimado = qtd vendida (amostra) × preço atual; produtos sem
+  // nenhuma venda na amostra não entram na curva.
+  const comVendas=S.products
+    .map(p=>{
+      const qtd=S.vendasPorCodigo[p.codigo]||0;
+      const faturamento=qtd*p.preco;
+      const temCusto=p.precoCusto>0;
+      return{p,qtd,faturamento,lucroBruto:temCusto?qtd*(p.preco-p.precoCusto):null,temCusto};
+    })
+    .filter(x=>x.qtd>0)
+    .sort((a,b)=>b.faturamento-a.faturamento);
+  if(!comVendas.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto com vendas na amostra do período. Produtos sem vendas não entram na Curva ABC.</p></div>';return;}
+  const total=comVendas.reduce((a,x)=>a+x.faturamento,0);
+  let cum=0;
+  _abcRows=comVendas.map(x=>{
+    cum+=x.faturamento;const pctAcum=total>0?(cum/total)*100:100;
+    const cls=pctAcum<=80?'A':pctAcum<=95?'B':'C';
+    return{...x,cls,pctAcum};
   });
-  const countA=cumByIdx.filter(v=>v<=80).length;
-  const countB=cumByIdx.filter(v=>v>80&&v<=95).length;
-  const countC=ps.length-countA-countB;
-  const valA=ps.slice(0,countA).reduce((a,p)=>a+p.preco*p.estoque,0);
+  renderAbcGrid();
+}
+function renderAbcGrid(){
+  const el=$('fin-abc-body');if(!el)return;
+  const rows=_abcFilterCls?_abcRows.filter(r=>r.cls===_abcFilterCls):_abcRows;
+  const countA=_abcRows.filter(r=>r.cls==='A').length,countB=_abcRows.filter(r=>r.cls==='B').length,countC=_abcRows.filter(r=>r.cls==='C').length;
+  const totalFat=_abcRows.reduce((a,r)=>a+r.faturamento,0);
+  const clsCls={A:'s-ok',B:'s-lo',C:'s-out'};
+  const cards=!rows.length?'<div class="st-wrap" style="grid-column:1/-1"><p class="st-d">Nenhum produto nesta classe.</p></div>':rows.map(r=>{
+    const p=r.p;
+    const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+    return`<div style="background:var(--bg);border:1px solid var(--bord-l);border-radius:12px;overflow:hidden;cursor:pointer" onclick="setView('produtos');setTimeout(()=>openEditor(${p.id}),80)" title="Editar produto">
+      <div style="width:100%;aspect-ratio:1.6;background:var(--surf);display:flex;align-items:center;justify-content:center;color:var(--fa)">${thumb}</div>
+      <div style="padding:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px">
+          <span style="font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nome)}</span>
+          <span class="sb2 ${clsCls[r.cls]}" style="flex-shrink:0">${r.cls}</span>
+        </div>
+        <div style="font-size:11px;color:var(--mu);margin-bottom:8px">${esc(p.codigo||'—')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11.5px">
+          <div><span style="color:var(--mu)">Estoque</span><br><strong>${fmtN(p.estoque)}</strong></div>
+          <div><span style="color:var(--mu)">Vendas</span><br><strong>${fmtN(r.qtd)}</strong></div>
+          <div><span style="color:var(--mu)">Faturamento</span><br><strong>${fmt(r.faturamento)}</strong></div>
+          <div><span style="color:var(--mu)">Lucro bruto</span><br><strong>${r.temCusto?fmt(r.lucroBruto):'—'}</strong></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
   el.innerHTML=
     `<div style="display:flex;gap:16px;padding:12px 16px;border-bottom:1px solid var(--bord-l);font-size:12px;flex-wrap:wrap;align-items:center">`+
-    `<span style="color:var(--mu)">Total em estoque: <strong style="color:var(--tx)">${fmt(total)}</strong></span>`+
+    `<span style="color:var(--mu)">Faturamento total (amostra): <strong style="color:var(--tx)">${fmt(totalFat)}</strong></span>`+
     `<span style="margin-left:auto;display:flex;gap:12px">`+
-    `<span style="color:var(--ok-t)">🟢 A: <strong>${countA}</strong> itens (${fmt(valA)})</span>`+
-    `<span style="color:var(--wa-t)">🟡 B: <strong>${countB}</strong> itens</span>`+
-    `<span style="color:var(--er-t)">🔴 C: <strong>${countC}</strong> itens</span>`+
+    `<span style="color:var(--ok-t)">🟢 A: <strong>${countA}</strong></span>`+
+    `<span style="color:var(--wa-t)">🟡 B: <strong>${countB}</strong></span>`+
+    `<span style="color:var(--er-t)">🔴 C: <strong>${countC}</strong></span>`+
     `</span></div>`+
-    `<table><thead><tr><th>#</th><th>Produto</th><th class="r">Valor estoque</th><th class="r">% individual</th><th class="r">% acumulado</th><th>Classe</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:14px 16px">${cards}</div>`;
 }
 
 // ── MODALS ───────────────────────────────────────
@@ -5319,6 +5411,8 @@ function setFinPeriod(p,btn){
   if(p!=='custom')loadFinanceiro();
 }
 async function loadFinanceiro(force=false){
+  const pctEl=$('fin-custo-fixo-pct');
+  if(pctEl&&document.activeElement!==pctEl)pctEl.value=getCustoFixoPct();
   const body=$('fin-margin-body');
   let cacheKey=finPeriod;
   if(finPeriod==='custom'){const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;cacheKey=`custom:${s}:${e}`;}
@@ -5361,14 +5455,10 @@ function renderFinFromData(d){
     $('fin-total').textContent=fmtN(d.totalPedidos);
     // Sub-labels
     $('fin-sub-total').textContent=`${fmtN(d.totalPedidos)} pedidos no período`;
-    $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos concluídos`;
+    $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos pagos`;
     $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
     $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
-    // Taxas e frete por canal — Bling já veio nesta mesma resposta,
-    // Mercado Livre é buscado à parte (endpoint próprio, pode não estar conectado)
-    if($('fin-canal-bling-frete'))$('fin-canal-bling-frete').textContent=fmt(d.totalFrete);
-    if($('fin-canal-bling-desc'))$('fin-canal-bling-desc').textContent=fmt(d.totalDesconto);
-    try{loadFinCanalML();}catch(e){console.error('[loadFinCanalML]',e);}
+    _finLastData=d;
     try{loadFinTaxas();}catch(e){console.error('[loadFinTaxas]',e);}
     // Blocos abaixo isolados em try/catch próprio para que uma falha em um
     // deles não impeça a exibição dos KPIs principais já atualizados acima.
@@ -5391,46 +5481,32 @@ function renderFinFromData(d){
 }
 // Taxas REAIS por canal vindas do Bling (comissão + custo de frete que o
 // marketplace desconta) — o backend amostra os pedidos mais recentes do
-// período e projeta o total proporcional ao valor vendido.
+// período e projeta o total proporcional ao valor vendido. O resultado
+// alimenta os cards de Taxas/Lucro e o DRE (guardado em _finLastTaxas).
 let _finTaxasBusy=false;
+let _finLastData=null;
+let _finLastTaxas=null;
 async function loadFinTaxas(){
   if(_finTaxasBusy)return;_finTaxasBusy=true;
-  const comEl=$('fin-canal-bling-comissao'),cfEl=$('fin-canal-bling-custofrete'),notaEl=$('fin-canal-bling-nota'),lojasEl=$('fin-canal-lojas');
   try{
     let url=`/api/financeiro/taxas?period=${finPeriod}`;
     if(finPeriod==='custom'){const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;if(s&&e)url+=`&startDate=${s}&endDate=${e}`;}
     const r=await fetch(url),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
-    const est=d.estimativaPeriodo||{};
-    if(comEl)comEl.textContent=fmt(est.comissao??d.totais?.comissao??0);
-    if(cfEl)cfEl.textContent=fmt(est.custoFrete??d.totais?.custoFrete??0);
-    if(notaEl)notaEl.textContent=est.exata?`com base em todos os ${d.amostra} pedidos do período`:`projeção: amostra dos ${d.amostra} pedidos mais recentes de ${d.dePedidos}`;
-    if(lojasEl){
-      const lojas=(d.porLoja||[]).filter(l=>l.pedidos>0);
-      lojasEl.innerHTML=lojas.length<2?'':`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.4px;margin-bottom:6px">POR LOJA/CANAL (amostra)</div>`+lojas.map(l=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:7px 10px;background:var(--bg);border-radius:9px;margin-bottom:5px">
-          <span style="color:var(--tx);font-weight:600">${l.lojaId==='0'?'Sem loja vinculada':'Loja #'+esc(String(l.lojaId))} <span style="color:var(--fa);font-weight:400">· ${l.pedidos} ped.</span></span>
-          <span style="text-align:right"><strong>${fmt(l.comissao)}</strong> <span style="color:var(--mu)">comissão</span> · <strong>${fmt(l.custoFrete)}</strong> <span style="color:var(--mu)">frete</span></span>
-        </div>`).join('');
-    }
+    _finLastTaxas=d;
   }catch(e){
-    if(comEl)comEl.textContent='—';if(cfEl)cfEl.textContent='—';
-    if(notaEl)notaEl.textContent='não foi possível carregar as taxas: '+e.message;
-  }finally{_finTaxasBusy=false;}
+    _finLastTaxas=null;
+    console.error('[loadFinTaxas]',e.message);
+  }finally{
+    _finTaxasBusy=false;
+    try{renderDRE(_finLastData);}catch(e){console.error('[renderDRE]',e);}
+  }
 }
-async function loadFinCanalML(){
-  const taxaEl=$('fin-canal-ml-taxa'),freteEl=$('fin-canal-ml-frete');
-  if(!taxaEl||!freteEl)return;
-  taxaEl.textContent='…';freteEl.textContent='…';
-  try{
-    const status=await fetch('/api/ml/status').then(r=>r.json());
-    if(!status.connected){taxaEl.textContent='não conectado';freteEl.textContent='não conectado';return;}
-    const dash=await fetch('/api/ml/dashboard?period=30').then(r=>r.json());
-    if(dash&&!dash.error&&dash.faturamento!==undefined){
-      taxaEl.textContent=fmt(dash.taxas||0);
-      freteEl.textContent=fmt(dash.frete||0);
-    }else{taxaEl.textContent='—';freteEl.textContent='—';}
-  }catch(e){taxaEl.textContent='—';freteEl.textContent='—';}
+function getCustoFixoPct(){return Math.max(0,Math.min(100,parseFloat(localStorage.getItem('custoFixoPct')||'0')||0));}
+function setCustoFixoPct(v){
+  const pct=Math.max(0,Math.min(100,parseFloat(v)||0));
+  localStorage.setItem('custoFixoPct',String(pct));
+  if(_finLastData)renderDRE(_finLastData);
 }
 function renderFinTrend(d){
   const c=d.comparativo;
@@ -5448,29 +5524,45 @@ function renderFinTrend(d){
   sub.appendChild(span);
 }
 function renderDRE(d){
-  const el=$('dre-list');if(!el)return;
+  const el=$('dre-list');if(!el||!d)return;
   const margem=avgMargem();
   const receita=d.receitaConcluida||0;
   const cancel=d.totalCancelado||0;
   const pend=d.totalPendente||0;
   const frete=d.totalFrete||0;
-  const desconto=d.totalDesconto||0;
   const temCusto=margem>0;
-  const custo=temCusto?receita*(1-margem):0;
-  const lucro=temCusto?receita*margem:0;
-  const mPct=Math.round(margem*100);
-  const mCor=mPct<20?'var(--er-bg);color:var(--er-t)':mPct<40?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
+  const custoProdutos=temCusto?receita*(1-margem):0;
+  // Taxas de plataforma (comissão real/estimada do Bling) — vem de loadFinTaxas(),
+  // que roda em paralelo e pode ainda não ter chegado na primeira renderização.
+  const taxasEst=_finLastTaxas?.estimativaPeriodo||_finLastTaxas?.totais||{};
+  const temTaxas=_finLastTaxas!=null;
+  const taxas=temTaxas?(taxasEst.comissao||0):0;
+  const custoFixoPct=getCustoFixoPct();
+  const custoFixo=custoFixoPct>0?receita*(custoFixoPct/100):0;
+  // Lucro bruto = receita + frete − taxas de plataforma (não desconta custo de produto)
+  const receitaAjustada=receita+frete;
+  const lucroBruto=temTaxas?receitaAjustada-taxas:null;
+  // Lucro líquido = lucro bruto − custo de produtos − custos fixos/variáveis (%)
+  const lucroLiquido=(temTaxas&&temCusto)?lucroBruto-custoProdutos-custoFixo:null;
+  const mPct=lucroLiquido!=null&&receitaAjustada>0?Math.round((lucroLiquido/receitaAjustada)*100):null;
+  const mCor=mPct==null?'':mPct<10?'var(--er-bg);color:var(--er-t)':mPct<25?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
   const canN=d.cancelados||0,pedN=d.pendentes||0,conN=d.concluidos||0;
   el.innerHTML=
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Receita bruta <span style="font-size:10px;color:var(--mu)">(${conN+canN+pedN} pedidos)</span></span><span class="dre-val">${fmt(d.totalBruto||0)}</span></div>`+
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos <span style="font-size:10px;color:var(--mu)">(${canN} pedido${canN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(cancel)}</span></div>`+
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Pendentes <span style="font-size:10px;color:var(--mu)">(${pedN} pedido${pedN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(pend)}</span></div>`+
-    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada <span style="font-size:10px;color:var(--mu)">(${conN} concluídos)</span></span><span class="dre-val">${fmt(receita)}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada (pedidos pagos) <span style="font-size:10px;color:var(--mu)">(${conN} pagos)</span></span><span class="dre-val">${fmt(receita)}</span></div>`+
     (frete>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">+</span>Frete cobrado</span><span class="dre-val" style="color:var(--ok-t)">+&nbsp;${fmt(frete)}</span></div>`:'')+
-    (desconto>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Descontos concedidos</span><span class="dre-val neg">−&nbsp;${fmt(desconto)}</span></div>`:'')+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'−&nbsp;'+fmt(custo):'—'}</span></div>`+
-    `<div class="dre-row total"><span class="dre-lbl">Lucro líquido estimado</span><span class="dre-val pos">${temCusto?fmt(lucro):'—'}${temCusto?`<span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Taxas de plataforma</span><span class="dre-val neg">${temTaxas?'−&nbsp;'+fmt(taxas):'…'}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Lucro bruto</span><span class="dre-val">${lucroBruto!=null?fmt(lucroBruto):'—'}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'−&nbsp;'+fmt(custoProdutos):'—'}</span></div>`+
+    (custoFixoPct>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custos fixos/variáveis (${custoFixoPct}%)</span><span class="dre-val neg">−&nbsp;${fmt(custoFixo)}</span></div>`:'')+
+    `<div class="dre-row total"><span class="dre-lbl">Lucro líquido estimado</span><span class="dre-val pos">${lucroLiquido!=null?fmt(lucroLiquido):'—'}${mPct!=null?`<span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
     (temCusto?'':`<p class="sh-note" style="margin-top:10px">Cadastre o <strong>custo</strong> dos produtos no editor para calcular o lucro real.</p>`);
+  // Sincroniza os cards de KPI (fk-sm) com os mesmos números do DRE
+  if($('fin-taxas-plataforma'))$('fin-taxas-plataforma').textContent=temTaxas?fmt(taxas):'…';
+  if($('fin-lucro-bruto'))$('fin-lucro-bruto').textContent=lucroBruto!=null?fmt(lucroBruto):'—';
+  if($('fin-lucro-liquido'))$('fin-lucro-liquido').textContent=lucroLiquido!=null?fmt(lucroLiquido):'—';
 }
 function renderFinChart(byDay,inicio,fim){
   const wrap=$('fin-chart');if(!wrap)return;
@@ -5514,54 +5606,70 @@ let _contasCustomCache=[];
 let _contaEditorId=null;
 async function loadContasCustomizadas(){
   const el=$('fin-contas-custom');
-  el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando contas customizadas…</p></div>';
+  el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando contas…</p></div>';
   try{
     const r=await fetch('/api/contas/custom'),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro ao carregar contas');
-    _contasCustomCache=d||[];
+    _contasCustomCache=d.contas||[];
     renderContasCustomizadas();
   }catch(e){el.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
+function contaStatusInfo(c){
+  if(c.status==='pago'||c.status==='recebido')return{label:c.status==='recebido'?'Recebido':'Pago',bg:'var(--ok-bg)',fg:'var(--ok-t)'};
+  const hoje=isoLocalToday();
+  if(c.dataVencimento&&c.dataVencimento<hoje)return{label:'Atrasada',bg:'var(--er-bg)',fg:'var(--er-t)'};
+  return{label:'Pendente',bg:'var(--wa-bg)',fg:'var(--wa-t)'};
+}
+function isoLocalToday(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function renderContasCustomizadas(){
   const el=$('fin-contas-custom');
-  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma conta customizada. Clique em "+ Nova conta" para criar uma.</p></div>';return;}
-  const pagarList=_contasCustomCache.filter(c=>c.tipo==='pagar').sort((a,b)=>new Date(b.dataCriacao||0)-new Date(a.dataCriacao||0));
-  const receberList=_contasCustomCache.filter(c=>c.tipo==='receber').sort((a,b)=>new Date(b.dataCriacao||0)-new Date(a.dataCriacao||0));
-  const totalPagar=pagarList.reduce((a,c)=>a+(Number(c.valor)||0),0);
-  const totalReceber=receberList.reduce((a,c)=>a+(Number(c.valor)||0),0);
-  const renderLista=(titulo,lista,tipo)=>{
-    if(!lista.length)return '';
-    const total=tipo==='pagar'?totalPagar:totalReceber;
+  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma conta cadastrada. Clique em "+ Nova conta" para criar uma.</p></div>';return;}
+  const grupos=[['pagar','Contas a Pagar','var(--er-t)'],['receber','Contas a Receber','var(--ok-t)'],['fixa','Contas Fixas','var(--acc-t)']];
+  const html=grupos.map(([tipo,titulo,cor])=>{
+    const lista=_contasCustomCache.filter(c=>c.tipo===tipo).sort((a,b)=>(a.dataVencimento||'').localeCompare(b.dataVencimento||''));
+    if(!lista.length)return'';
+    const total=lista.reduce((a,c)=>a+(Number(c.valor)||0),0);
     return`<div style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bord-l)">
         <span style="font-weight:600;color:var(--tx)">${titulo}</span>
-        <span style="font-size:13px;font-weight:700;color:${tipo==='pagar'?'var(--er-t)':'var(--ok-t)'}">${fmt(total)}</span>
+        <span style="font-size:13px;font-weight:700;color:${cor}">${fmt(total)}</span>
       </div>
       ${lista.map(c=>{
-        const statusBg=c.status==='pago'||c.status==='recebido'?'var(--ok-bg);color:var(--ok-t)':c.status==='pendente'?'var(--wa-bg);color:var(--wa-t)':'var(--bg);color:var(--mu)';
-        const statusTxt=c.status==='pago'?'Pago':c.status==='recebido'?'Recebido':'Pendente';
+        const st=contaStatusInfo(c);
         const dataVenc=c.dataVencimento?new Date(c.dataVencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—';
-        return`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer" onclick="editContaCustomizada('${c.id}')">
+        const parcelaInfo=c.parcelaTotal?`Parcela ${c.parcelaAtual}/${c.parcelaTotal} · ${({semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',anual:'Anual'})[c.frequencia]||''} · `:'';
+        const formaInfo=c.formaPagamento?c.formaPagamento+' · ':'';
+        return`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer" onclick="editContaCustomizada(${c.id})">
           <div style="min-width:0;flex:1">
-            <div style="font-weight:600;color:var(--tx)">${esc(c.categoria)}</div>
-            <div style="font-size:12px;color:var(--mu);margin-top:2px">${c.descricao?esc(c.descricao):dataVenc}</div>
+            <div style="font-weight:600;color:var(--tx)">${esc(c.descricao||c.categoria)}</div>
+            <div style="font-size:12px;color:var(--mu);margin-top:2px">${parcelaInfo}${formaInfo}Vence em ${dataVenc}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
             <span style="font-weight:700;color:var(--tx)">${fmt(Number(c.valor)||0)}</span>
-            <span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${statusBg}">${statusTxt}</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${st.bg};color:${st.fg};font-weight:600">${st.label}</span>
           </div>
         </div>`;}).join('')}
     </div>`;
-  };
-  el.innerHTML=renderLista('Contas a Pagar',pagarList,'pagar')+renderLista('Contas a Receber',receberList,'receber');
+  }).join('');
+  el.innerHTML=html||'<div class="st-wrap"><p class="st-d">Nenhuma conta cadastrada.</p></div>';
+}
+function toggleParcelamentoFields(){
+  const v=$('conta-parcelamento').value;
+  $('conta-parcelamento-fields').style.display=v==='parcelado'?'grid':'none';
 }
 function openNovaContaModal(){
   _contaEditorId=null;
-  $('conta-modal-title').textContent='Nova conta customizada';
+  $('conta-modal-title').textContent='Nova conta';
   $('conta-tipo').value='';
   $('conta-categoria').value='';
   $('conta-descricao').value='';
   $('conta-valor').value='';
+  $('conta-forma-pagamento').value='';
+  $('conta-parcelamento').value='avista';
+  $('conta-frequencia').value='mensal';
+  $('conta-parcelas').value='2';
+  $('conta-parcelamento').disabled=false;
+  toggleParcelamentoFields();
   $('conta-data-vencimento').value='';
   $('conta-status').value='pendente';
   $('conta-err').style.display='none';
@@ -5570,14 +5678,20 @@ function openNovaContaModal(){
   setTimeout(()=>$('conta-tipo').focus(),80);
 }
 function editContaCustomizada(id){
-  const c=_contasCustomCache.find(x=>x.id===id);
+  const c=_contasCustomCache.find(x=>Number(x.id)===Number(id));
   if(!c)return;
   _contaEditorId=id;
-  $('conta-modal-title').textContent='Editar conta customizada';
+  $('conta-modal-title').textContent='Editar conta';
   $('conta-tipo').value=c.tipo||'';
   $('conta-categoria').value=c.categoria||'';
   $('conta-descricao').value=c.descricao||'';
   $('conta-valor').value=c.valor||'';
+  $('conta-forma-pagamento').value=c.formaPagamento||'';
+  // Parcelamento só é definido na criação — ao editar uma parcela isolada
+  // não faz sentido reabrir a divisão em novas parcelas.
+  $('conta-parcelamento').value='avista';
+  $('conta-parcelamento').disabled=true;
+  toggleParcelamentoFields();
   $('conta-data-vencimento').value=c.dataVencimento||'';
   $('conta-status').value=c.status||'pendente';
   $('conta-err').style.display='none';
@@ -5595,15 +5709,19 @@ async function saveContaCustomizada(){
   const valor=parseFloat($('conta-valor').value||0);
   const dataVencimento=$('conta-data-vencimento').value;
   const status=$('conta-status').value.trim();
+  const formaPagamento=$('conta-forma-pagamento').value;
+  const parcelamento=$('conta-parcelamento').value;
+  const frequencia=$('conta-frequencia').value;
+  const parcelas=$('conta-parcelas').value;
   const errEl=$('conta-err');
-  if(!tipo||!categoria||isNaN(valor)||valor<0){
-    errEl.textContent='Preencha os campos obrigatórios corretamente';
+  if(!tipo||!descricao||isNaN(valor)||valor<=0){
+    errEl.textContent='Preencha o tipo, nome e um valor válido';
     errEl.style.display='block';
     return;
   }
   const btn=$('conta-save-btn');btn.disabled=true;btn.textContent='Salvando…';
   try{
-    const payload={tipo,categoria,descricao,valor,dataVencimento,status};
+    const payload={tipo,categoria,descricao,valor,dataVencimento,status,formaPagamento,parcelamento,frequencia,parcelas};
     const url=_contaEditorId?`/api/contas/custom/${_contaEditorId}`:'/api/contas/custom';
     const method=_contaEditorId?'PUT':'POST';
     const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -5611,11 +5729,12 @@ async function saveContaCustomizada(){
     if(!r.ok)throw new Error(d.error||'Erro ao salvar');
     closeContaModal();
     await loadContasCustomizadas();
-    toast(_contaEditorId?'Conta atualizada com sucesso':'Conta criada com sucesso','ok');
+    const n=d.contas?.length;
+    toast(_contaEditorId?'Conta atualizada com sucesso':n>1?`${n} parcelas criadas com sucesso`:'Conta criada com sucesso','ok');
   }catch(e){
     errEl.textContent=e.message;
     errEl.style.display='block';
-  }finally{btn.disabled=false;btn.textContent=_contaEditorId?'Atualizar':'Salvar';}
+  }finally{btn.disabled=false;btn.textContent=_contaEditorId?'Atualizar':'Salvar';$('conta-parcelamento').disabled=false;}
 }
 async function deleteContaCustomizada(){
   if(!_contaEditorId)return;

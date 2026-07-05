@@ -2369,44 +2369,65 @@ app.get('/api/contas/custom', requireAuthJson, async (req, res) => {
   res.json({ contas: filtered });
 });
 
-app.post('/api/contas/custom', requireAuthJson, (req, res) => {
-  const { tipo, descricao, valor, dataVencimento, categoria, observacao } = req.body;
+const CONTA_FREQ_DIAS = { semanal: 7, quinzenal: 15, mensal: 30, anual: 365 };
 
-  if (!tipo || !['pagar', 'receber'].includes(tipo)) {
-    return sendErrorResponse(res, 400, 'Tipo inválido: use "pagar" ou "receber"');
+app.post('/api/contas/custom', requireAuthJson, (req, res) => {
+  const { tipo, descricao, valor, dataVencimento, categoria, observacao, formaPagamento, parcelamento, frequencia, parcelas } = req.body;
+
+  if (!tipo || !['pagar', 'receber', 'fixa'].includes(tipo)) {
+    return sendErrorResponse(res, 400, 'Tipo inválido: use "pagar", "receber" ou "fixa"');
   }
   if (!descricao || !valor) {
-    return sendErrorResponse(res, 400, 'Descrição e valor são obrigatórios');
+    return sendErrorResponse(res, 400, 'Nome e valor são obrigatórios');
   }
+  const valorNum = Number(valor);
+  if (!(valorNum > 0)) return sendErrorResponse(res, 400, 'Valor deve ser maior que zero');
 
-  const id = contaIdCounter++;
-  const conta = {
-    id,
-    tipo,
-    descricao,
-    valor: Number(valor),
-    dataVencimento: dataVencimento || isoLocal(),
-    categoria: categoria || 'Outras',
-    observacao: observacao || '',
-    status: 'pendente',
-    criada_em: new Date().toISOString(),
-    atualizada_em: new Date().toISOString(),
-  };
+  const isParcelado = parcelamento === 'parcelado';
+  const totalParcelas = isParcelado ? Math.max(1, Math.min(360, parseInt(parcelas, 10) || 1)) : 1;
+  const passoDias = CONTA_FREQ_DIAS[frequencia] || 30;
+  const grupoParcelamento = isParcelado && totalParcelas > 1 ? `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
+  const baseData = dataVencimento || isoLocal();
 
-  customContas.push(conta);
-    saveInMemoryData();
+  const criadas = [];
+  for (let i = 0; i < totalParcelas; i++) {
+    const id = contaIdCounter++;
+    const venc = new Date(`${baseData}T12:00:00`);
+    venc.setDate(venc.getDate() + passoDias * i);
+    const conta = {
+      id,
+      tipo,
+      descricao,
+      valor: valorNum,
+      dataVencimento: isNaN(venc.getTime()) ? baseData : venc.toISOString().slice(0, 10),
+      categoria: categoria || 'Outras',
+      observacao: observacao || '',
+      formaPagamento: formaPagamento || '',
+      parcelamento: isParcelado ? 'parcelado' : 'avista',
+      frequencia: isParcelado ? (frequencia || 'mensal') : null,
+      parcelaAtual: isParcelado ? i + 1 : null,
+      parcelaTotal: isParcelado ? totalParcelas : null,
+      grupoParcelamento,
+      status: 'pendente',
+      criada_em: new Date().toISOString(),
+      atualizada_em: new Date().toISOString(),
+    };
+    customContas.push(conta);
+    criadas.push(conta);
+  }
+  saveInMemoryData();
   changeLog.push({
     id: changeLog.length + 1,
-    produto_id: `conta_${id}`,
+    produto_id: `conta_${criadas[0].id}`,
     produto_nome: descricao,
     campo: `conta ${tipo}`,
     valor_anterior: '—',
-    valor_novo: `${tipo === 'pagar' ? '-' : '+'}R$ ${valor}`,
+    valor_novo: `${tipo === 'pagar' ? '-' : tipo === 'receber' ? '+' : '±'}R$ ${valorNum}${totalParcelas > 1 ? ` × ${totalParcelas}` : ''}`,
     timestamp: new Date().toISOString(),
   });
-    saveInMemoryData();
+  saveInMemoryData();
 
-  res.json(conta);
+  res.json(totalParcelas > 1 ? { contas: criadas } : criadas[0]);
 });
 
 app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
@@ -2416,7 +2437,7 @@ app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
 
     if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
 
-    const { descricao, valor, dataVencimento, categoria, observacao, status } = req.body;
+    const { descricao, valor, dataVencimento, categoria, observacao, status, formaPagamento, tipo } = req.body;
 
     if (descricao) conta.descricao = descricao;
     if (valor !== undefined) conta.valor = Number(valor);
@@ -2424,6 +2445,8 @@ app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
     if (categoria) conta.categoria = categoria;
     if (observacao !== undefined) conta.observacao = observacao;
     if (status) conta.status = status;
+    if (formaPagamento !== undefined) conta.formaPagamento = formaPagamento;
+    if (tipo && ['pagar', 'receber', 'fixa'].includes(tipo)) conta.tipo = tipo;
 
     conta.atualizada_em = new Date().toISOString();
 
