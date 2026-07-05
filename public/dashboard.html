@@ -597,6 +597,65 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 [data-theme=dark] .da-orange{background:rgba(234,88,12,.12);border-color:rgba(234,88,12,.3);color:#fdba74}[data-theme=dark] .da-orange .da-num{color:#fb923c}
 [data-theme=dark] .da-blue{background:rgba(37,99,235,.12);border-color:rgba(37,99,235,.3);color:#93c5fd}[data-theme=dark] .da-blue .da-num{color:#60a5fa}
 [data-theme=dark] .da-purple{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:#c4b5fd}[data-theme=dark] .da-purple .da-num{color:#a78bfa}
+/* MEU NEGÓCIO — padrão único: cards 3D roxo, texto branco, tamanho uniforme.
+   Substitui os antigos cards brancos (.dk-card/.da-card/.conta-card/etc.)
+   só nesta view — as outras abas continuam com as classes originais. */
+.mn-card{background:linear-gradient(135deg,#7c6ff0,#9b6ff5);border-radius:16px;padding:16px 18px;color:#fff;box-shadow:0 8px 22px rgba(99,102,241,.22),inset 0 1px 0 rgba(255,255,255,.16);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;animation:dashIn .5s cubic-bezier(.22,1,.36,1) both}
+.mn-card::after{content:'';position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08);top:-50px;right:-30px;pointer-events:none}
+.mn-card[onclick]{cursor:pointer}
+.mn-card[onclick]:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(99,102,241,.32),inset 0 1px 0 rgba(255,255,255,.16)}
+.mn-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;position:relative;z-index:1}
+.mn-ico{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mn-ico svg{width:15px;height:15px;color:#fff}
+.mn-arrow{color:rgba(255,255,255,.6);transition:transform .15s}
+.mn-card[onclick]:hover .mn-arrow{transform:translateX(3px);color:#fff}
+.mn-arrow svg{width:14px;height:14px}
+.mn-lbl{font-size:11.5px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:3px;position:relative;z-index:1}
+.mn-val{font-size:21px;font-weight:800;letter-spacing:-.6px;color:#fff;font-variant-numeric:tabular-nums;line-height:1.1;position:relative;z-index:1}
+.mn-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:3px;position:relative;z-index:1}
+/* variação só de intensidade (não de matiz) pra dar hierarquia sem sair do roxo */
+.mn-soft{background:linear-gradient(135deg,#8b7ff2,#a978f5)}
+.mn-deep{background:linear-gradient(135deg,#5b4fd6,#7c4fd6)}
+/* hero (cards grandes do topo) */
+.mn-hero{border-radius:18px;padding:22px 24px}
+.mn-hero .mn-top{font-size:12.5px;font-weight:600;opacity:.92;margin-bottom:14px;gap:8px}
+.mn-hero .mn-top svg{width:16px;height:16px}
+.mn-hero .mn-val{font-size:32px;letter-spacing:-1.2px}
+.mn-hero .mn-sub{font-size:12.5px;opacity:.9;margin-top:8px;display:flex;align-items:center;gap:5px}
+/* card "wide" pra listas (contas, fluxo, notas) — mesmo roxo, só maior */
+.mn-wide{border-radius:16px;padding:0;overflow:hidden}
+.mn-wide .mn-wide-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.14);position:relative;z-index:1}
+.mn-wide-hd-t{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px}
+.mn-wide-hd-t svg{width:15px;height:15px}
+.mn-wide-tot{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px;color:#fff}
+.mn-wide-body{max-height:230px;overflow-y:auto;position:relative;z-index:1}
+.mn-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.1);font-size:12.5px;gap:10px;color:#fff}
+.mn-row:last-child{border-bottom:none}
+.mn-row-info{min-width:0;flex:1}
+.mn-row-nome{font-weight:500;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mn-row-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:1px}
+.mn-row-sub.venc{color:#fecaca;font-weight:600}
+.mn-row-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff}
+/* seção/atalhos: título continua neutro (fora dos cards), atalhos viram roxo também */
+.mn-shortcut{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(135deg,#7c6ff0,#9b6ff5);border:none;border-radius:14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#fff;transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left;box-shadow:0 4px 14px rgba(99,102,241,.2)}
+.mn-shortcut:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(99,102,241,.32)}
+.mn-shortcut:active{transform:scale(.97)}
+.mn-shortcut-ico{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mn-shortcut-ico svg{width:17px;height:17px;color:#fff}
+/* barra de meta, dentro do padrão roxo */
+.mn-meta{background:linear-gradient(135deg,#7c6ff0,#9b6ff5);border-radius:16px;padding:14px 18px;color:#fff}
+.mn-meta-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px;font-weight:600}
+.mn-meta-track{height:8px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+.mn-meta-fill{height:100%;background:#fff;border-radius:99px;transition:width .4s ease}
+.mn-meta-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:6px}
+/* Risco de ruptura reaproveita .rupt-* (mesmo widget usado só aqui) — só
+   sobrescreve texto/fundo pra ficar legível dentro do card roxo. */
+.mn-wide .rupt-hd-t{color:rgba(255,255,255,.85)}
+.mn-wide .rupt-row{border-top-color:rgba(255,255,255,.14)}
+.mn-wide .rupt-row:active{background:rgba(255,255,255,.08)}
+.mn-wide .rupt-thumb{background:rgba(255,255,255,.14);color:#fff}
+.mn-wide .rupt-nome{color:#fff}
+.mn-wide .rupt-track{background:rgba(255,255,255,.22)}
 /* QUICK SHORTCUTS */
 .dash-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .qs-btn{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surf);border:1.5px solid var(--bord);border-radius:14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left;box-shadow:0 1px 3px rgba(0,0,0,.04)}
@@ -1353,147 +1412,179 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- HERO: Faturamento + Lucro -->
       <div class="dash-hero">
-        <div class="hero-card hero-fat" onclick="setView('financeiro')" style="cursor:pointer">
-          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div>
-          <div class="hero-val" id="dash-faturamento">—</div>
-          <div class="hero-sub" id="dash-fat-sub">no período selecionado</div>
-          <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap">
-            <span id="dash-fat-conc" style="color:var(--ok-t)"></span>
-            <span id="dash-fat-pend" style="color:var(--wa-t)"></span>
-            <span id="dash-fat-canc" style="color:var(--er-t)"></span>
+        <div class="mn-card mn-hero" onclick="setView('financeiro')">
+          <div class="mn-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div>
+          <div class="mn-val" id="dash-faturamento">—</div>
+          <div class="mn-sub" id="dash-fat-sub">no período selecionado</div>
+          <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap;position:relative;z-index:1">
+            <span id="dash-fat-conc" style="color:#d1fae5"></span>
+            <span id="dash-fat-pend" style="color:#fef3c7"></span>
+            <span id="dash-fat-canc" style="color:#fecaca"></span>
           </div>
           <div id="dash-fin-break"></div>
           <svg id="dash-sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="position:absolute;bottom:0;left:0;right:0;width:100%;height:52px;opacity:.35;pointer-events:none"></svg>
         </div>
-        <div class="hero-card hero-luc" onclick="setView('financeiro')" style="cursor:pointer">
-          <div class="hero-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado</div>
-          <div class="hero-val" id="dash-lucro">—</div>
-          <div class="hero-sub" id="dash-luc-sub">margem média do catálogo</div>
-          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.7)" id="dash-luc-custo"></div>
+        <div class="mn-card mn-hero mn-deep" onclick="setView('financeiro')">
+          <div class="mn-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado</div>
+          <div class="mn-val" id="dash-lucro">—</div>
+          <div class="mn-sub" id="dash-luc-sub">margem média do catálogo</div>
+          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.7);position:relative;z-index:1" id="dash-luc-custo"></div>
         </div>
       </div>
 
       <!-- META DE VENDAS -->
-      <div class="meta-bar-wrap" id="meta-bar-wrap">
-        <div class="meta-bar-hd">
-          <span class="meta-bar-lbl">Meta mensal de faturamento</span>
-          <span class="meta-bar-pct" id="meta-bar-pct">0%</span>
+      <div class="mn-meta" id="meta-bar-wrap">
+        <div class="mn-meta-hd">
+          <span>Meta mensal de faturamento</span>
+          <span id="meta-bar-pct">0%</span>
         </div>
-        <div class="meta-bar-track"><div class="meta-bar-fill" id="meta-bar-fill" style="width:0%"></div></div>
-        <div class="meta-bar-sub" id="meta-bar-sub"></div>
+        <div class="mn-meta-track"><div class="mn-meta-fill" id="meta-bar-fill" style="width:0%"></div></div>
+        <div class="mn-meta-sub" id="meta-bar-sub"></div>
       </div>
 
       <!-- KPIs -->
-      <div class="dash-kpis">
-        <div class="dk-card dk-blue" onclick="viewPedidosFiltrado('concluido')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">Vendas concluídas</div>
-          <div class="dk-val" id="dash-vendas">—</div>
-          <div class="dk-sub" id="dash-vendas-sub">pedidos no período</div>
+      <div class="dash-kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="mn-card" onclick="viewPedidosFiltrado('concluido')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">Vendas concluídas</div>
+          <div class="mn-val" id="dash-vendas">—</div>
+          <div class="mn-sub" id="dash-vendas-sub">pedidos no período</div>
         </div>
-        <div class="dk-card dk-green" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">Ticket médio</div>
-          <div class="dk-val" id="dash-ticket">—</div>
-          <div class="dk-sub">por venda concluída</div>
+        <div class="mn-card" onclick="viewPedidosFiltrado('cancelado')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">Pedidos cancelados</div>
+          <div class="mn-val" id="dash-cancelados">—</div>
+          <div class="mn-sub">no período</div>
         </div>
-        <div class="dk-card dk-amber" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">A receber</div>
-          <div class="dk-val" id="dash-receber">—</div>
-          <div class="dk-sub" id="dash-receber-sub">contas em aberto</div>
+        <div class="mn-card" onclick="setView('financeiro')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">Ticket médio</div>
+          <div class="mn-val" id="dash-ticket">—</div>
+          <div class="mn-sub">por venda concluída</div>
         </div>
-        <div class="dk-card dk-rose" onclick="setView('financeiro')">
-          <div class="dk-top"><div class="dk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><span class="dk-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="dk-lbl">A pagar</div>
-          <div class="dk-val" id="dash-pagar">—</div>
-          <div class="dk-sub" id="dash-pagar-sub">contas em aberto</div>
+        <div class="mn-card" onclick="setView('financeiro')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">Frete cobrado</div>
+          <div class="mn-val" id="dash-frete">—</div>
+          <div class="mn-sub">pedidos concluídos</div>
+        </div>
+        <div class="mn-card" onclick="setView('financeiro')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">Taxas de plataforma</div>
+          <div class="mn-val" id="dash-taxas">—</div>
+          <div class="mn-sub" id="dash-taxas-sub">estimado no período</div>
+        </div>
+        <div class="mn-card" onclick="setView('financeiro')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">A receber</div>
+          <div class="mn-val" id="dash-receber">—</div>
+          <div class="mn-sub" id="dash-receber-sub">contas em aberto</div>
+        </div>
+        <div class="mn-card" onclick="setView('financeiro')">
+          <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+          <div class="mn-lbl">A pagar</div>
+          <div class="mn-val" id="dash-pagar">—</div>
+          <div class="mn-sub" id="dash-pagar-sub">contas em aberto</div>
         </div>
       </div>
 
       <!-- ALERTAS -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Precisa de atenção</div>
-      <div class="dash-alerts">
-        <div class="da-card da-red" onclick="setView('produtos');setTimeout(()=>filterByStock(0,0),50)">
-          <div class="da-num" id="dash-zerados">—</div><div class="da-lbl">Produtos zerados</div>
+      <div class="dash-alerts" style="grid-template-columns:repeat(4,1fr)">
+        <div class="mn-card mn-soft" onclick="setView('produtos');setTimeout(()=>filterByStock(0,0),50)">
+          <div class="mn-val" id="dash-zerados">—</div><div class="mn-lbl">Produtos zerados</div>
         </div>
-        <div class="da-card da-orange" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin),50)">
-          <div class="da-num" id="dash-criticos">—</div><div class="da-lbl" id="dash-criticos-lbl">Estoque crítico (≤5)</div>
+        <div class="mn-card mn-soft" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin),50)">
+          <div class="mn-val" id="dash-criticos">—</div><div class="mn-lbl" id="dash-criticos-lbl">Estoque crítico (≤5)</div>
         </div>
-        <div class="da-card da-blue" onclick="viewPedidosFiltrado('pendente')">
-          <div class="da-num" id="dash-pendentes">—</div><div class="da-lbl">Pedidos pendentes</div>
+        <div class="mn-card mn-soft" onclick="viewPedidosFiltrado('pendente')">
+          <div class="mn-val" id="dash-pendentes">—</div><div class="mn-lbl">Pedidos pendentes</div>
         </div>
-        <div class="da-card da-purple" onclick="setView('financeiro')">
-          <div class="da-num" id="dash-vencidas">—</div><div class="da-lbl">Contas vencidas</div>
+        <div class="mn-card mn-soft" onclick="setView('financeiro')">
+          <div class="mn-val" id="dash-vencidas">—</div><div class="mn-lbl">Contas vencidas</div>
+        </div>
+      </div>
+
+      <!-- NOTAS FISCAIS (status sincronizado com a aba Notas) -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Notas fiscais</div>
+      <div class="dash-alerts" style="grid-template-columns:repeat(3,1fr)">
+        <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Pendente'),50)">
+          <div class="mn-val" id="dash-nfe-pendente">—</div><div class="mn-lbl">Nota pendente</div>
+        </div>
+        <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Cancelada'),50)">
+          <div class="mn-val" id="dash-nfe-cancelada">—</div><div class="mn-lbl">Nota cancelada</div>
+        </div>
+        <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Autorizada'),50)">
+          <div class="mn-val" id="dash-nfe-autorizada">—</div><div class="mn-lbl">Nota autorizada</div>
         </div>
       </div>
 
       <!-- RUPTURA -->
-      <div class="rupt-wrap" id="rupt-wrap" style="display:none">
-        <div class="rupt-hd">
-          <span class="rupt-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Risco de ruptura</span>
-          <span style="font-size:11px;color:var(--mu)" id="rupt-sub"></span>
+      <div class="mn-card mn-wide" id="rupt-wrap" style="display:none">
+        <div class="mn-wide-hd">
+          <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Risco de ruptura</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.7)" id="rupt-sub"></span>
         </div>
         <div id="rupt-list"></div>
-        <span class="rupt-ver-mais" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin*3),50)">Ver todos os críticos →</span>
+        <span class="rupt-ver-mais" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin*3),50)" style="display:block;text-align:center;padding:10px;color:#fff;position:relative;z-index:1;cursor:pointer">Ver todos os críticos →</span>
       </div>
 
       <!-- CONTAS -->
       <div class="dash-two">
-        <div class="conta-card">
-          <div class="conta-hd">
-            <span class="conta-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> A receber</span>
-            <span class="conta-tot" id="dash-receber-tot" style="color:var(--ok-t)">—</span>
+        <div class="mn-card mn-wide">
+          <div class="mn-wide-hd">
+            <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> A receber</span>
+            <span class="mn-wide-tot" id="dash-receber-tot">—</span>
           </div>
-          <div class="conta-body" id="dash-receber-list"><div class="st-wrap" style="padding:24px"><p class="st-d">Carregando…</p></div></div>
+          <div class="mn-wide-body" id="dash-receber-list"><div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.7)">Carregando…</p></div></div>
         </div>
-        <div class="conta-card">
-          <div class="conta-hd">
-            <span class="conta-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="var(--er)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> A pagar</span>
-            <span class="conta-tot" id="dash-pagar-tot" style="color:var(--er-t)">—</span>
+        <div class="mn-card mn-wide">
+          <div class="mn-wide-hd">
+            <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> A pagar</span>
+            <span class="mn-wide-tot" id="dash-pagar-tot">—</span>
           </div>
-          <div class="conta-body" id="dash-pagar-list"><div class="st-wrap" style="padding:24px"><p class="st-d">Carregando…</p></div></div>
+          <div class="mn-wide-body" id="dash-pagar-list"><div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.7)">Carregando…</p></div></div>
         </div>
       </div>
 
       <!-- FLUXO DE CAIXA (próximos 7 dias) -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg> Fluxo de caixa (próximos 7 dias)</div>
-      <div class="flow-wrap">
-        <div class="flow-summary">
-          <div class="flow-item flow-in">
-            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></div>
-            <div class="flow-lbl">A Receber</div>
-            <div class="flow-val" id="dash-flow-receber">—</div>
+      <div class="mn-card mn-wide">
+        <div class="flow-summary" style="position:relative;z-index:1">
+          <div class="flow-item flow-in" style="border-right-color:rgba(255,255,255,.14)">
+            <div class="flow-ico" style="background:rgba(255,255,255,.16);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></div>
+            <div class="flow-lbl" style="color:rgba(255,255,255,.8)">A Receber</div>
+            <div class="flow-val" id="dash-flow-receber" style="color:#fff">—</div>
           </div>
-          <div class="flow-item flow-out">
-            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
-            <div class="flow-lbl">A Pagar</div>
-            <div class="flow-val" id="dash-flow-pagar">—</div>
+          <div class="flow-item flow-out" style="border-right-color:rgba(255,255,255,.14)">
+            <div class="flow-ico" style="background:rgba(255,255,255,.16);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+            <div class="flow-lbl" style="color:rgba(255,255,255,.8)">A Pagar</div>
+            <div class="flow-val" id="dash-flow-pagar" style="color:#fff">—</div>
           </div>
           <div class="flow-item flow-net">
-            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-            <div class="flow-lbl">Saldo Líquido</div>
-            <div class="flow-val" id="dash-flow-liquido">—</div>
+            <div class="flow-ico" style="background:rgba(255,255,255,.16);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+            <div class="flow-lbl" style="color:rgba(255,255,255,.8)">Saldo Líquido</div>
+            <div class="flow-val" id="dash-flow-liquido" style="color:#fff">—</div>
           </div>
         </div>
-        <div class="flow-timeline" id="dash-flow-timeline">
-          <div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Carregando fluxo de caixa…</p></div>
+        <div class="flow-timeline" id="dash-flow-timeline" style="border-top-color:rgba(255,255,255,.14);position:relative;z-index:1">
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Carregando fluxo de caixa…</p></div>
         </div>
       </div>
 
       <!-- CONTAS PRÓXIMAS A VENCER -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Contas próximas a vencer</div>
-      <div class="venc-wrap">
-        <div class="venc-list" id="dash-venc-list">
-          <div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Carregando contas…</p></div>
+      <div class="mn-card mn-wide">
+        <div class="mn-wide-body" id="dash-venc-list">
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Carregando contas…</p></div>
         </div>
       </div>
 
       <!-- PRÓXIMAS DATAS IMPORTANTES (Calendário) -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Próximas datas importantes</div>
-      <div class="cal-preview">
-        <div class="cal-list" id="dash-cal-preview">
-          <div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhum evento cadastrado</p></div>
+      <div class="mn-card mn-wide">
+        <div class="mn-wide-body" id="dash-cal-preview">
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Nenhum evento cadastrado</p></div>
         </div>
       </div>
 
@@ -1502,13 +1593,21 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div id="enhanced-dash-wrap"></div>
       <div id="previsao-financeira-wrap"></div>
 
+      <!-- ATUALIZAÇÕES DO SISTEMA -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg> Atualizações do sistema</div>
+      <div class="mn-card mn-wide">
+        <div class="mn-wide-body" id="dash-updates-list">
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Carregando…</p></div>
+        </div>
+      </div>
+
       <!-- ATALHOS -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Atalhos rápidos</div>
       <div class="dash-shortcuts">
-        <button class="qs-btn" onclick="setView('produtos');setTimeout(openCreate,60)"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>Novo produto</button>
-        <button class="qs-btn" onclick="sync()"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"/></svg></span>Sincronizar</button>
-        <button class="qs-btn" onclick="setView('pedidos')"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Ver pedidos</button>
-        <button class="qs-btn" onclick="setView('notas');setTimeout(openEmitirNFe,60)"><span class="qs-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>Emitir NF-e</button>
+        <button class="mn-shortcut" onclick="setView('produtos');setTimeout(openCreate,60)"><span class="mn-shortcut-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>Novo produto</button>
+        <button class="mn-shortcut" onclick="sync()"><span class="mn-shortcut-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-5.36L23 10"/></svg></span>Sincronizar</button>
+        <button class="mn-shortcut" onclick="setView('pedidos')"><span class="mn-shortcut-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Ver pedidos</button>
+        <button class="mn-shortcut" onclick="setView('notas');setTimeout(openEmitirNFe,60)"><span class="mn-shortcut-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>Emitir NF-e</button>
       </div>
     </div>
 
@@ -2927,6 +3026,8 @@ async function loadDashboard(force=false){
     _dashPendentes=v.pendentes||0;
     setTxt('dash-pendentes',fmtN(_dashPendentes));
     setTxt('dash-ticket',fmt(v.ticketMedio));
+    setTxt('dash-cancelados',fmtN(v.cancelados||0));
+    setTxt('dash-frete',fmt(v.freteTotal||0));
     // Financial breakdown
     const finBreak=$('dash-fin-break');
     if(finBreak){
@@ -2957,6 +3058,9 @@ async function loadDashboard(force=false){
     try{renderDashSparkline(v.byDay||{});}catch(e){console.error('[renderDashSparkline]',e);}
     loadEnhancedDashboard();
     loadFinanceiroPrevisao();
+    loadDashTaxas();
+    loadDashNotasStatus();
+    loadDashUpdates();
   }catch(e){
     _dashLoaded=false;
     ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
@@ -2997,25 +3101,25 @@ async function loadEnhancedDashboard(){
     if(!wrap)return;
     const fluxoClass=fluxo>=0?'s-ok':'s-out';
     const fluxoIcon=fluxo>=0?'📈':'📉';
-    wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
-      <div style="background:var(--bg);border-radius:11px;padding:12px 14px;border-left:3px solid var(--acc)">
-        <div style="font-size:11px;color:var(--mu);margin-bottom:2px">Fluxo de Caixa (30 dias)</div>
+    wrap.innerHTML=`<div class="mn-card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div style="position:relative;z-index:1">
+        <div class="mn-lbl">Fluxo de Caixa (30 dias)</div>
         <div style="display:flex;align-items:baseline;gap:6px">
-          <div style="font-size:18px;font-weight:700;color:${fluxo>=0?'var(--ok-t)':'var(--er-t)'}">${fmt(fluxo)}</div>
-          <span class="sb2 ${fluxoClass}">${fluxoIcon}</span>
+          <div class="mn-val" style="font-size:18px">${fmt(fluxo)}</div>
+          <span>${fluxoIcon}</span>
         </div>
-        <div style="font-size:10px;color:var(--mu);margin-top:4px">A receber: ${fmt(receber.total||0)} · A pagar: ${fmt(pagar.total||0)}</div>
+        <div class="mn-sub">A receber: ${fmt(receber.total||0)} · A pagar: ${fmt(pagar.total||0)}</div>
       </div>
-      <div style="background:var(--bg);border-radius:11px;padding:12px 14px;border-left:3px solid var(--acc)">
-        <div style="font-size:11px;color:var(--mu);margin-bottom:2px">Contas Vencidas</div>
+      <div style="position:relative;z-index:1;border-left:1px solid rgba(255,255,255,.18);padding-left:12px">
+        <div class="mn-lbl">Contas Vencidas</div>
         <div style="display:flex;gap:8px">
           <div style="flex:1">
-            <div style="font-size:12px;font-weight:600;color:var(--tx)">${receber.vencidas||0}</div>
-            <div style="font-size:10px;color:var(--mu)">A receber</div>
+            <div class="mn-val" style="font-size:14px">${receber.vencidas||0}</div>
+            <div class="mn-sub">A receber</div>
           </div>
-          <div style="flex:1;border-left:1px solid var(--bord)">
-            <div style="font-size:12px;font-weight:600;color:var(--tx);padding-left:8px">${pagar.vencidas||0}</div>
-            <div style="font-size:10px;color:var(--mu);padding-left:8px">A pagar</div>
+          <div style="flex:1;border-left:1px solid rgba(255,255,255,.18)">
+            <div class="mn-val" style="font-size:14px;padding-left:8px">${pagar.vencidas||0}</div>
+            <div class="mn-sub" style="padding-left:8px">A pagar</div>
           </div>
         </div>
       </div>
@@ -3031,17 +3135,61 @@ async function loadFinanceiroPrevisao(){
     const fluxo=d.proximos30dias?.fluxoLiquido||0;
     const alertas=d.alertas||{};
     const recomendacoes=d.recomendacoes||[];
-    wrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="background:var(--bg);border-radius:11px;padding:12px 14px">
-        <div style="font-size:11px;color:var(--mu);margin-bottom:6px">🔮 Próximos 30 dias</div>
+    wrap.innerHTML=`<div class="mn-card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="position:relative;z-index:1">
+        <div class="mn-lbl">🔮 Próximos 30 dias</div>
         <div style="display:flex;justify-content:space-between">
-          <div><div style="font-size:11px;color:var(--fa)">A receber</div><div style="font-size:14px;font-weight:700;color:var(--ok-t)">${fmt(d.proximos30dias?.aReceber||0)}</div></div>
-          <div style="border-left:1px solid var(--bord);padding-left:12px"><div style="font-size:11px;color:var(--fa)">A pagar</div><div style="font-size:14px;font-weight:700;color:var(--er-t)">−${fmt(d.proximos30dias?.aPagar||0)}</div></div>
+          <div><div class="mn-sub">A receber</div><div class="mn-val" style="font-size:14px">${fmt(d.proximos30dias?.aReceber||0)}</div></div>
+          <div style="border-left:1px solid rgba(255,255,255,.18);padding-left:12px"><div class="mn-sub">A pagar</div><div class="mn-val" style="font-size:14px">−${fmt(d.proximos30dias?.aPagar||0)}</div></div>
         </div>
       </div>
-      ${recomendacoes.length?`<div style="background:linear-gradient(135deg,var(--wa-bg),var(--bg));border-radius:11px;padding:12px 14px;border-left:3px solid var(--wa)"><div style="font-size:11px;color:var(--mu);margin-bottom:6px">⚠️ Alertas</div><div style="font-size:12px;line-height:1.6;color:var(--tx)">${recomendacoes.slice(0,2).map(r=>'· '+esc(r)).join('<br>')}</div></div>`:''}
+      ${recomendacoes.length?`<div style="position:relative;z-index:1;border-left:1px solid rgba(255,255,255,.18);padding-left:12px"><div class="mn-lbl">⚠️ Alertas</div><div style="font-size:12px;line-height:1.6;color:#fff">${recomendacoes.slice(0,2).map(r=>'· '+esc(r)).join('<br>')}</div></div>`:''}
     </div>`;
   }catch(e){console.error('[Previsão]',e.message);}
+}
+async function loadDashTaxas(){
+  try{
+    const r=await fetch(`/api/financeiro/taxas?period=${dashPeriod}`),d=await r.json();
+    if(!r.ok)return;
+    const est=d.estimativaPeriodo||{};
+    const el=$('dash-taxas'),sub=$('dash-taxas-sub');
+    if(el)el.textContent=fmt(est.comissao||0);
+    if(sub)sub.textContent=est.exata?'no período':'estimado (amostra) no período';
+  }catch(e){console.error('[Taxas]',e.message);}
+}
+function filterNotasBySituacao(situ){
+  // Mapeia o rótulo do card (igual ao nfeSituacaoPT do backend) pro código
+  // de classe usado pelo filtro da aba Notas (notaSitClass).
+  const map={'Pendente':'pen','Cancelada':'can','Autorizada':'ok'};
+  const sel=$('nfe-f-status');if(sel)sel.value=map[situ]||'';
+  const search=$('nfe-search');if(search)search.value='';
+  if(typeof renderNotas==='function')renderNotas();
+}
+async function loadDashNotasStatus(){
+  try{
+    const r=await fetch('/api/notas-fiscais'),d=await r.json();
+    if(!r.ok)return;
+    const notas=d.notas||[];
+    const count=situ=>notas.filter(n=>n.situacao===situ).length;
+    setTxt2('dash-nfe-pendente',fmtN(count('Pendente')));
+    setTxt2('dash-nfe-cancelada',fmtN(count('Cancelada')));
+    setTxt2('dash-nfe-autorizada',fmtN(count('Autorizada')));
+  }catch(e){console.error('[Notas status]',e.message);}
+}
+function setTxt2(id,v){const el=$(id);if(el)el.textContent=v;}
+async function loadDashUpdates(){
+  const el=$('dash-updates-list');if(!el)return;
+  try{
+    const r=await fetch('/api/historico'),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    const hist=(d.history||[]).slice(0,6);
+    if(!hist.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhuma atualização registrada ainda.</p></div>';return;}
+    el.innerHTML=hist.map(h=>{
+      const quando=h.timestamp?new Date(h.timestamp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      const desc=h.descricao||h.acao||`${h.campo||''} alterado`;
+      return `<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${esc(String(desc))}</div><div class="mn-row-sub">${esc(quando)}</div></div></div>`;
+    }).join('');
+  }catch(e){el.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Erro ao carregar: ${esc(e.message)}</p></div>`;}
 }
 function renderDashSparkline(byDay){
   const svg=$('dash-sparkline');if(!svg)return;
@@ -3102,12 +3250,12 @@ function renderRupturaWidget(){
 }
 function renderContasList(elId,conta,tipo){
   const el=$(elId);if(!el)return;
-  if(!conta.ok){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p class="st-d">Sem acesso a contas a ${tipo} no Bling.<br><span style="font-size:11px">Verifique as permissões do app OAuth.</span></p></div>`;return;}
+  if(!conta.ok){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.8)">Sem acesso a contas a ${tipo} no Bling.<br><span style="font-size:11px">Verifique as permissões do app OAuth (escopo de contas ${tipo}).</span></p></div>`;return;}
   const itens=conta.itens||[];
-  if(!itens.length){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p class="st-d">Nenhuma conta a ${tipo} em aberto. 🎉</p></div>`;return;}
+  if(!itens.length){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.8)">Nenhuma conta a ${tipo} em aberto. 🎉</p></div>`;return;}
   el.innerHTML=itens.map(c=>{
     const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
-    return `<div class="conta-row"><div class="conta-r-info"><div class="conta-r-nome">${esc(c.contato||'—')}</div><div class="conta-r-venc${c.vencida?' vencida':''}">${c.vencida?'⚠ Vencida · ':''}vence ${venc}</div></div><div class="conta-r-val">${fmt(c.valor)}</div></div>`;
+    return `<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${esc(c.contato||'—')}</div><div class="mn-row-sub${c.vencida?' venc':''}">${c.vencida?'⚠ Vencida · ':''}vence ${venc}</div></div><div class="mn-row-val">${fmt(c.valor)}</div></div>`;
   }).join('');
 }
 function renderFluxoCaixa(cr={},cp={}){
@@ -3146,25 +3294,24 @@ function renderContasVencidas(cr={},cp={}){
   const crVals=cr.itens||[];
   const cpVals=cp.itens||[];
   const vencidas=[...crVals.filter(c=>c.vencida).map(c=>({...c,tipo:'receber'})),...cpVals.filter(c=>c.vencida).map(c=>({...c,tipo:'pagar'}))];
-  if(!vencidas.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhuma conta vencida 🎉</p></div>';return;}
+  if(!vencidas.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhuma conta vencida 🎉</p></div>';return;}
   el.innerHTML=vencidas.slice(0,5).map(c=>{
     const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
-    return`<div class="venc-item"><div class="venc-info"><div class="venc-tipo">${c.tipo==='receber'?'A Receber':'A Pagar'}</div><div class="venc-desc">${esc(c.contato||'—')}</div></div><div class="venc-val">${fmt(c.valor)}</div><div class="venc-badge">Vencida</div></div>`;
+    return`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-sub" style="margin-top:0">${c.tipo==='receber'?'A Receber':'A Pagar'}</div><div class="mn-row-nome">${esc(c.contato||'—')}</div></div><div class="mn-row-val">${fmt(c.valor)}<div class="mn-row-sub venc">Vencida ${venc}</div></div></div>`;
   }).join('');
 }
 function renderCalendarPreview(){
   const el=$('dash-cal-preview');if(!el)return;
-  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhum evento cadastrado. Crie eventos na aba Financeiro.</p></div>';return;}
+  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhum evento cadastrado. Crie eventos na aba Financeiro.</p></div>';return;}
   const hoje=new Date();
   const proximos30=new Date(hoje.getTime()+30*86400000);
   const eventos=_contasCustomCache.filter(c=>c.dataVencimento&&new Date(c.dataVencimento+'T23:59:59')>=hoje&&new Date(c.dataVencimento+'T23:59:59')<=proximos30);
-  if(!eventos.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p class="st-d" style="font-size:12px">Nenhum evento nos próximos 30 dias</p></div>';return;}
+  if(!eventos.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhum evento nos próximos 30 dias</p></div>';return;}
   el.innerHTML=eventos.slice(0,4).map(e=>{
     const d=new Date(e.dataVencimento+'T12:00:00');
     const dia=d.getDate();
     const mes=d.toLocaleDateString('pt-BR',{month:'short'}).substring(0,3);
-    const tipoIco=e.tipo==='pagar'?'📤':e.tipo==='receber'?'📥':'📅';
-    return`<div class="cal-item"><div class="cal-date"><div class="cal-date-day">${dia}</div><div class="cal-date-mês">${mes}</div></div><div class="cal-content"><div class="cal-tipo">${e.tipo===  'pagar'?'A Pagar':e.tipo==='receber'?'A Receber':'Evento'}</div><div class="cal-titulo">${esc(e.categoria)}</div><div class="cal-desc">${e.descricao?esc(e.descricao.substring(0,40)):fmt(Number(e.valor)||0)}</div></div></div>`;
+    return`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${dia} ${mes} — ${e.tipo==='pagar'?'A Pagar':e.tipo==='receber'?'A Receber':'Evento'}</div><div class="mn-row-sub">${esc(e.categoria)}${e.descricao?' · '+esc(e.descricao.substring(0,40)):''}</div></div><div class="mn-row-val">${e.valor?fmt(Number(e.valor)||0):''}</div></div>`;
   }).join('');
 }
 async function loadCalendario(force=false){
