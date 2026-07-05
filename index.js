@@ -246,7 +246,8 @@ app.delete('/api/config/logo', requireAuthJson, deleteAssetImage('app_assets', '
 
 // Públicas de propósito: favicon/manifest e a tag <img> do login (sem
 // sessão) precisam carregar essas imagens sem cookie.
-app.get('/img/:asset(icone|logo)', async (req, res) => {
+app.get('/img/:asset', async (req, res) => {
+  if (req.params.asset !== 'icone' && req.params.asset !== 'logo') return res.status(404).end();
   const admin = getAdmin();
   if (!admin) return res.status(404).end();
   try {
@@ -1083,10 +1084,13 @@ app.get('/api/ml/anuncios', requireAuthJson, async (req, res) => {
     const { data: searchData } = await axios.get(`https://api.mercadolibre.com/users/${ml.sellerId}/items/search?status=${status}&limit=50`, { headers: mlHeaders(ml.token) });
     const ids = (searchData.results || []).slice(0, 20);
     if (!ids.length) return res.json({ anuncios: [] });
-    const { data: itemsData } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}&attributes=id,title,price,available_quantity,status,thumbnail,permalink,seller_custom_field`, { headers: mlHeaders(ml.token) });
+    // "pictures" vem na mesma chamada em lote (sem custo extra de requisição)
+    // e traz a foto em alta do anúncio; "thumbnail" sozinho é a miniatura
+    // comprimida que o ML usa nos resultados de busca, sempre baixa qualidade.
+    const { data: itemsData } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}&attributes=id,title,price,available_quantity,status,thumbnail,pictures,permalink,seller_custom_field`, { headers: mlHeaders(ml.token) });
     const anuncios = (itemsData || []).map(r => r.body || r).filter(Boolean).map(it => ({
       id: it.id, titulo: it.title, preco: it.price, qtd: it.available_quantity,
-      situacao: it.status, thumb: it.thumbnail, link: it.permalink,
+      situacao: it.status, thumb: it.pictures?.[0]?.secure_url || it.pictures?.[0]?.url || it.thumbnail, link: it.permalink,
       // SKU do vendedor no anúncio — usado para vincular exclusivamente por
       // SKU exato ao produto correspondente no Bling (nunca por nome/título).
       sku: it.seller_custom_field || null,
