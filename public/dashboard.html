@@ -4785,11 +4785,22 @@ async function openPedidoDetalhe(id){
     const fretePed=Number(p.frete||0);
     const descPed=Number(p.desconto||0);
     const qtdItens=(p.itens||[]).reduce((a,it)=>a+Number(it.qtd||0),0);
+    // Lucro bruto do pedido: total menos taxas do canal (comissão + custo de
+    // frete cobrado pelo marketplace) menos o custo dos produtos vendidos,
+    // casando cada item pelo SKU com o custo já carregado em S.products —
+    // não requer nenhuma chamada extra à API do Bling.
+    const custoItens=(p.itens||[]).reduce((a,it)=>{
+      const mp=S.products.find(q=>q.codigo&&it.codigo&&q.codigo===it.codigo);
+      return a+(mp&&mp.precoCusto>0?mp.precoCusto*Number(it.qtd||0):0);
+    },0);
+    const temCustoItens=(p.itens||[]).some(it=>S.products.some(q=>q.codigo&&it.codigo&&q.codigo===it.codigo&&q.precoCusto>0));
+    const lucroBruto=totalPed-(p.taxaComissao||0)-(p.custoFreteCanal||0)-custoItens;
     $('ped-detalhe').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
         <div style="min-width:0">
           <div style="font-size:16px;font-weight:700">Pedido #${esc(String(p.numero||p.id))}</div>
           <div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(p.contato)}${p.contatoDoc?' · CNPJ/CPF: '+esc(p.contatoDoc):''}</div>
+          ${p.lojaNome?`<span class="sb2 s-lo" style="margin-top:6px;display:inline-flex">📦 ${esc(p.lojaNome)}</span>`:''}
           ${waLink?`<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#25d366;margin-top:4px;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>${p.contatoTel}</a>`:''}
         </div>
         <span class="sb2 ${sb}" style="flex-shrink:0;gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
@@ -4800,21 +4811,62 @@ async function openPedidoDetalhe(id){
         <div class="pd-fact"><div class="pd-fact-l">Frete</div><div class="pd-fact-v">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.transportadora)}</div>`:''}</div>
         <div class="pd-fact"><div class="pd-fact-l">Itens</div><div class="pd-fact-v">${fmtN(qtdItens)} un.</div></div>
       </div>
-      ${(Number(p.taxaComissao)>0||Number(p.custoFreteCanal)>0)?`<div class="pd-facts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
-        <div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Comissão do canal</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.taxaComissao||0)}</div></div>
-        <div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Custo de frete (canal)</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.custoFreteCanal||0)}</div></div>
-        <div class="pd-fact" style="border-left:3px solid var(--ok)"><div class="pd-fact-l">Líquido após taxas</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(Math.max(0,totalPed-(p.taxaComissao||0)-(p.custoFreteCanal||0)))}</div></div>
+      ${(Number(p.taxaComissao)>0||Number(p.custoFreteCanal)>0||temCustoItens)?`<div class="pd-facts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+        ${Number(p.taxaComissao)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Comissão do canal</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.taxaComissao||0)}</div></div>`:''}
+        ${Number(p.custoFreteCanal)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Custo de frete (canal)</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.custoFreteCanal||0)}</div></div>`:''}
+        <div class="pd-fact" style="border-left:3px solid var(--ok)"><div class="pd-fact-l">Lucro bruto${temCustoItens?'':' (sem custo cadastrado)'}</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(lucroBruto)}</div></div>
       </div>`:''}
       ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:10px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
       <div class="pd-items"><table><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
-      ${p.observacoes?`<div style="margin-top:12px;font-size:12px;color:var(--mu);background:var(--bg);border-radius:8px;padding:10px"><strong>Obs:</strong> ${esc(p.observacoes)}</div>`:''}
+      <div style="margin-top:14px;border-top:1px solid var(--bord-l);padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px">EDITAR PEDIDO</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Desconto (R$)</label>
+            <input type="number" id="ped-edit-desconto" value="${descPed}" min="0" step="0.01" style="width:100%;height:38px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx)">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Frete (R$)</label>
+            <input type="number" id="ped-edit-frete" value="${fretePed}" min="0" step="0.01" style="width:100%;height:38px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx)">
+          </div>
+        </div>
+        <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Observações (visíveis ao cliente/nota)</label>
+        <textarea id="ped-edit-obs" rows="2" style="width:100%;padding:8px 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);resize:vertical;margin-bottom:10px">${esc(p.observacoes||'')}</textarea>
+        <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Observações internas</label>
+        <textarea id="ped-edit-obs-int" rows="2" style="width:100%;padding:8px 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);resize:vertical">${esc(p.observacoesInternas||'')}</textarea>
+        <div id="ped-edit-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
+        <button class="btp" id="ped-edit-save-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="savePedidoEdicao('${esc(String(id))}')">Salvar alterações no Bling</button>
+      </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
         <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
       </div>
     `;
   }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+async function savePedidoEdicao(id){
+  const btn=$('ped-edit-save-btn');const errEl=$('ped-edit-err');
+  errEl.style.display='none';
+  const payload={
+    desconto:parseFloat($('ped-edit-desconto').value||0),
+    frete:parseFloat($('ped-edit-frete').value||0),
+    observacoes:$('ped-edit-obs').value,
+    observacoesInternas:$('ped-edit-obs-int').value,
+  };
+  btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    const r=await fetch(`/api/pedidos/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro ao salvar');
+    toast('Pedido atualizado no Bling','ok');
+    _pedidosLoaded=false;
+    openPedidoDetalhe(id);
+  }catch(e){
+    errEl.textContent=e.message;errEl.style.display='block';
+  }finally{btn.disabled=false;btn.textContent='Salvar alterações no Bling';}
 }
 function exportPedidosCSV(){
   let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);

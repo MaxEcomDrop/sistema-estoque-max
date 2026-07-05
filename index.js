@@ -1700,7 +1700,8 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       contato:     p.contato?.nome || '—',
       contatoDoc:  p.contato?.numeroDocumento || '',
       contatoTel:  p.contato?.celular || p.contato?.telefone || '',
-      observacoes: p.observacoes || p.observacoesInternas || '',
+      observacoes:         p.observacoes || '',
+      observacoesInternas: p.observacoesInternas || '',
       total:       Number(p.totalVenda) || Number(p.totalProdutos) || Number(p.total) || 0,
       totalProdutos:    Number(p.totalProdutos) || 0,
       frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
@@ -1711,6 +1712,10 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       taxaComissao:     Number(p.taxas?.taxaComissao) || 0,
       custoFreteCanal:  Number(p.taxas?.custoFrete) || 0,
       loja:             p.loja?.id || null,
+      // Canal de venda (nome da loja configurada no Bling — ex.: "Mercado
+      // Livre", "TikTok Shop"). Igual ao rótulo "Loja" que o próprio Bling
+      // exibe no formulário do pedido.
+      lojaNome:         p.loja?.nome || null,
       itens,
     });
   } catch (err) {
@@ -1720,6 +1725,45 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar detalhe do pedido', err.message);
+  }
+});
+
+// Edita um pedido de venda. O Bling v3 exige o objeto completo do pedido no
+// PUT (não aceita PATCH parcial), então buscamos o pedido bruto primeiro e
+// alteramos só os campos que o usuário editou, preservando o resto exatamente
+// como o Bling retornou — evita quebrar itens/cliente/transporte por omitir
+// um campo obrigatório que desconhecemos.
+app.put('/api/pedidos/:id', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const id = validateNumericId(req.params.id, 'ID do pedido');
+    const { observacoes, observacoesInternas, desconto, frete } = req.body || {};
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const raw = data?.data || data || {};
+    if (observacoes !== undefined) raw.observacoes = observacoes;
+    if (observacoesInternas !== undefined) raw.observacoesInternas = observacoesInternas;
+    if (desconto !== undefined) raw.desconto = Number(desconto) || 0;
+    if (frete !== undefined) {
+      raw.transporte = raw.transporte || {};
+      raw.transporte.frete = Number(frete) || 0;
+    }
+    await axios.put(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, raw, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    const detail = err.response?.data?.error?.fields?.[0]?.msg
+      || err.response?.data?.error?.message
+      || err.message;
+    sendErrorResponse(res, err.response?.status || 500, 'Erro ao atualizar pedido', detail);
   }
 });
 
