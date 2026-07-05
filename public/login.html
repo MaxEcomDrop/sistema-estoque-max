@@ -158,19 +158,36 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
-  // Identidade do sistema (nome/ícone) personalizável em Configurações —
-  // reflete aqui na tela de login também.
+  // Identidade do sistema (nome/ícone/logo/cor global) personalizável em
+  // Configurações — reflete aqui na tela de login também.
+  function hexToRgb(hex){const n=parseInt(hex.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+  function rgbToHex(r,g,b){return'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+  function mixColor(hex,target,amt){const[r,g,b]=hexToRgb(hex);return rgbToHex(r+(target[0]-r)*amt,g+(target[1]-g)*amt,b+(target[2]-b)*amt);}
   (async()=>{
     try{
       const r=await fetch('/api/config'),d=await r.json();
       if(!r.ok||!d)return;
       document.title=`Entrar — ${d.nome}`;
-      const bmark=document.getElementById('app-bmark');if(bmark){bmark.textContent=d.iniciais;bmark.style.background=d.cor;}
+      const bmark=document.getElementById('app-bmark');
+      if(bmark){
+        if(d.temLogo){bmark.innerHTML=`<img src="/img/logo?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`;bmark.style.background='transparent';bmark.style.boxShadow='none';}
+        else{bmark.textContent=d.iniciais;bmark.style.background=d.cor;}
+      }
       const bname=document.getElementById('app-bname');if(bname)bname.textContent=d.nome;
       const bnameInline=document.getElementById('app-bname-inline');if(bnameInline)bnameInline.textContent=d.nome;
       let link=document.querySelector("link[rel~='icon']");
       if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
-      link.href=`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${d.cor}'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>${d.iniciais}</text></svg>`)}`;
+      link.href=d.temIcone?`/img/icone?v=${Date.now()}`:`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${d.cor}'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>${d.iniciais}</text></svg>`)}`;
+      // Cor global — sobrescreve os hex fixos do tema roxo original nos
+      // pontos-chave (marca, foco de campo, botão principal, painel direito).
+      const cor2=mixColor(d.cor,[255,255,255],.28);
+      const style=document.createElement('style');
+      style.textContent=`.logo-mark{background:linear-gradient(135deg,${d.cor},${cor2}) !important}
+.field input:focus{border-color:${d.cor} !important}
+.btn-main:not(#googleLoginBtn){background:linear-gradient(135deg,${d.cor},${cor2}) !important}
+.pwa-icon{background:linear-gradient(135deg,${d.cor},${cor2}) !important}
+.right{background:linear-gradient(135deg,${mixColor(d.cor,[0,0,0],.12)} 0%,${d.cor} 60%,${cor2} 100%) !important}`;
+      document.head.appendChild(style);
     }catch(e){console.error('[config]',e);}
   })();
   // Initialize Firebase with config from project

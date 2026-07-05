@@ -170,7 +170,19 @@ function manifestIconSvg(size, iniciais, cor) {
 // antes de haver sessão.
 app.get('/api/config', async (req, res) => {
   await loadPersistedData();
-  res.json(appConfig);
+  const admin = getAdmin();
+  let temIcone = false, temLogo = false;
+  if (admin) {
+    try {
+      const [iconeDoc, logoDoc] = await Promise.all([
+        admin.firestore().collection('app_assets').doc('icone').get(),
+        admin.firestore().collection('app_assets').doc('logo').get(),
+      ]);
+      temIcone = iconeDoc.exists;
+      temLogo = logoDoc.exists;
+    } catch (e) { console.error('[api/config assets]', e.message); }
+  }
+  res.json({ ...appConfig, temIcone, temLogo });
 });
 
 app.put('/api/config', requireAuthJson, async (req, res) => {
@@ -194,9 +206,76 @@ app.put('/api/config', requireAuthJson, async (req, res) => {
   res.json(appConfig);
 });
 
+// Ícone (favicon/app instalável) e logo (marca exibida no menu lateral e no
+// login) são imagens SEPARADAS, cada uma enviada por upload e persistida no
+// Firestore — mesmo padrão já usado para imagem de produto (produto_imagens).
+function saveAssetImage(collection, docId) {
+  return async (req, res) => {
+    const admin = getAdmin();
+    if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+    try {
+      const m = String(req.body?.dataUrl || '').match(/^data:(image\/(?:jpeg|png|webp|svg\+xml));base64,([A-Za-z0-9+/=]+)$/);
+      if (!m) return res.status(400).json({ error: 'Envie um dataURL de imagem JPG, PNG, WEBP ou SVG' });
+      const [, mime, b64] = m;
+      if (b64.length > 950_000) return res.status(413).json({ error: 'Imagem grande demais mesmo após compressão (máx ~700KB)' });
+      await admin.firestore().collection(collection).doc(docId).set({
+        data: b64, mime, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      res.json({ ok: true, url: `/img/${docId}?v=${Date.now()}` });
+    } catch (err) {
+      sendErrorResponse(res, 500, 'Erro ao salvar imagem', err.message);
+    }
+  };
+}
+function deleteAssetImage(collection, docId) {
+  return async (req, res) => {
+    const admin = getAdmin();
+    if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+    try {
+      await admin.firestore().collection(collection).doc(docId).delete();
+      res.json({ ok: true });
+    } catch (err) {
+      sendErrorResponse(res, 500, 'Erro ao remover imagem', err.message);
+    }
+  };
+}
+app.post('/api/config/icone', requireAuthJson, saveAssetImage('app_assets', 'icone'));
+app.delete('/api/config/icone', requireAuthJson, deleteAssetImage('app_assets', 'icone'));
+app.post('/api/config/logo', requireAuthJson, saveAssetImage('app_assets', 'logo'));
+app.delete('/api/config/logo', requireAuthJson, deleteAssetImage('app_assets', 'logo'));
+
+// Públicas de propósito: favicon/manifest e a tag <img> do login (sem
+// sessão) precisam carregar essas imagens sem cookie.
+app.get('/img/:asset(icone|logo)', async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(404).end();
+  try {
+    const doc = await admin.firestore().collection('app_assets').doc(req.params.asset).get();
+    if (!doc.exists) return res.status(404).end();
+    const { data, mime } = doc.data();
+    res.set('Content-Type', mime || 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(data, 'base64'));
+  } catch { res.status(500).end(); }
+});
+
 app.get('/manifest.json', async (req, res) => {
   await loadPersistedData();
   const { nome, iniciais, cor } = appConfig;
+  const admin = getAdmin();
+  let temIcone = false;
+  if (admin) {
+    try { temIcone = (await admin.firestore().collection('app_assets').doc('icone').get()).exists; } catch {}
+  }
+  const icons = temIcone
+    ? [
+        { src: `/img/icone?v=${Date.now()}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: `/img/icone?v=${Date.now()}`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+      ]
+    : [
+        { src: manifestIconSvg(192, iniciais, cor), sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+        { src: manifestIconSvg(512, iniciais, cor), sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
+      ];
   res.json({
     name: nome,
     short_name: nome.length > 12 ? iniciais : nome,
@@ -210,10 +289,7 @@ app.get('/manifest.json', async (req, res) => {
     orientation: 'portrait-primary',
     categories: ['business', 'productivity'],
     lang: 'pt-BR',
-    icons: [
-      { src: manifestIconSvg(192, iniciais, cor), sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
-      { src: manifestIconSvg(512, iniciais, cor), sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
-    ],
+    icons,
     shortcuts: [
       { name: 'Produtos', short_name: 'Produtos', description: 'Ver e gerenciar produtos', url: '/dashboard.html#produtos', icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%234f46e5'/><rect x='18' y='32' width='60' height='42' rx='6' stroke='white' stroke-width='5' fill='none'/><path d='M36 32V26a12 12 0 0 1 24 0v6' stroke='white' stroke-width='5' fill='none' stroke-linecap='round'/></svg>", sizes: '96x96' }] },
       { name: 'Pedidos', short_name: 'Pedidos', description: 'Ver pedidos pendentes', url: '/dashboard.html#pedidos', icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%2310b981'/><path d='M24 48l16 16L72 28' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>", sizes: '96x96' }] },
@@ -1362,10 +1438,15 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const concluidos = allPedidos.filter(p => categorize(p.situacao) === 'concluido');
     const cancelados = allPedidos.filter(p => categorize(p.situacao) === 'cancelado');
     const pendentes  = allPedidos.filter(p => categorize(p.situacao) === 'pendente');
+    // "Pedidos feitos": todo pedido que existe no Bling já teve o pagamento
+    // confirmado pelo canal de venda — a única exclusão real é cancelamento/
+    // devolução. É essa a receita "realizada" do período, não só a fatia
+    // com situação de entrega/despacho (que ficava só em "concluídos").
+    const feitos = allPedidos.filter(p => categorize(p.situacao) !== 'cancelado');
 
     const sum = (arr, fn) => arr.reduce((a, p) => a + (fn(p) || 0), 0);
     const totalBruto       = sum(allPedidos, valorPedido);
-    const receitaConcluida = sum(concluidos,  valorPedido);
+    const receitaConcluida = sum(feitos,      valorPedido);
     const totalCancelado   = sum(cancelados,  valorPedido);
     const totalPendente    = sum(pendentes,   valorPedido);
     // Bling retorna frete aninhado em transporte.frete (não como campo
@@ -1374,14 +1455,14 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const totalFrete       = sum(allPedidos, p => Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || Number(p.frete) || 0);
     const totalDesconto    = sum(allPedidos, p => Number(p.desconto) || Number(p.descontoValor) || 0);
 
-    // Comparativo com período anterior (faturamento concluído)
-    const prevConcluidos = prevPedidos.filter(p => categorize(p.situacao) === 'concluido');
-    const prevReceita = sum(prevConcluidos, valorPedido);
+    // Comparativo com período anterior (pedidos feitos)
+    const prevFeitos = prevPedidos.filter(p => categorize(p.situacao) !== 'cancelado');
+    const prevReceita = sum(prevFeitos, valorPedido);
     const variacao = prevReceita > 0 ? ((receitaConcluida - prevReceita) / prevReceita) * 100 : null;
 
-    // Série diária para gráfico (apenas pedidos concluídos = receita real)
+    // Série diária para gráfico (pedidos feitos = receita real)
     const byDay = {};
-    concluidos.forEach(p => {
+    feitos.forEach(p => {
       const day = String(p.data || p.dataPedido || '').substring(0, 10);
       if (day) byDay[day] = (byDay[day] || 0) + valorPedido(p);
     });
@@ -1392,9 +1473,10 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
       totalFrete, totalDesconto,
       totalPedidos: allPedidos.length,
       concluidos: concluidos.length,
+      feitos: feitos.length,
       cancelados: cancelados.length,
       pendentes: pendentes.length,
-      ticketMedio: concluidos.length > 0 ? receitaConcluida / concluidos.length : 0,
+      ticketMedio: feitos.length > 0 ? receitaConcluida / feitos.length : 0,
       comparativo: { receitaAnterior: prevReceita, variacao, inicio: prev.inicio, fim: prev.fim },
       byDay,
     });
@@ -1733,6 +1815,10 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       valor:     Number(p.totalVenda) || Number(p.totalProdutos) || Number(p.total) || 0,
       situacao:  situacaoPT(p.situacao),
       contato:   p.contato?.nome || '—',
+      // Canal de venda (nome da loja configurada no Bling — ex. "Mercado
+      // Livre", "TikTok Shop"). Pode não vir na listagem em massa do Bling
+      // (só confirmado no detalhe do pedido); nesse caso fica "—".
+      canal:     p.loja?.nome || null,
     }));
 
     res.json({ total: pedidos.length, pedidos });
@@ -2373,24 +2459,30 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     const concluidos = allPedidos.filter(p => categorize(p.situacao) === 'concluido');
     const pendentes  = allPedidos.filter(p => categorize(p.situacao) === 'pendente');
     const cancelados = allPedidos.filter(p => categorize(p.situacao) === 'cancelado');
+    // "Pedidos feitos": a partir do momento em que o pedido existe no Bling
+    // (a maioria vem de marketplaces que só criam o pedido após o pagamento
+    // já ter sido confirmado pelo cliente), ele conta como faturamento real —
+    // a única exclusão é cancelamento/devolução. Isso é mais amplo que só
+    // "concluído" (que exigia situação de entrega/despacho).
+    const feitos = allPedidos.filter(p => categorize(p.situacao) !== 'cancelado');
     const sum = (arr) => arr.reduce((a, p) => a + valorOf(p), 0);
 
-    const faturamento = sum(concluidos);
+    const faturamento = sum(feitos);
     const totalBruto  = sum(allPedidos);
     const aReceberPedidos = sum(pendentes);
 
-    // Custos detalhados (frete, descontos) dos pedidos concluídos
-    const freteTotal = concluidos.reduce((a, p) => a + (Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0), 0);
-    const descontoTotal = concluidos.reduce((a, p) => a + (Number(p.desconto) || 0), 0);
+    // Custos detalhados (frete, descontos) dos pedidos feitos
+    const freteTotal = feitos.reduce((a, p) => a + (Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0), 0);
+    const descontoTotal = feitos.reduce((a, p) => a + (Number(p.desconto) || 0), 0);
 
     // Comparativo de faturamento com o período anterior
     const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
-    const prevFat = prevPedidos.filter(p => categorize(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
+    const prevFat = prevPedidos.filter(p => categorize(p.situacao) !== 'cancelado').reduce((a, p) => a + valorOf(p), 0);
     const variacao = prevFat > 0 ? ((faturamento - prevFat) / prevFat) * 100 : null;
 
-    // Série diária (vendas concluídas) p/ mini-gráfico
+    // Série diária (pedidos feitos) p/ mini-gráfico
     const byDay = {};
-    concluidos.forEach(p => {
+    feitos.forEach(p => {
       const day = String(p.data || p.dataPedido || '').substring(0, 10);
       if (day) byDay[day] = (byDay[day] || 0) + valorOf(p);
     });
@@ -2404,9 +2496,10 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
         faturamento, totalBruto, aReceberPedidos,
         totalPedidos: allPedidos.length,
         concluidos: concluidos.length,
+        feitos: feitos.length,
         pendentes: pendentes.length,
         cancelados: cancelados.length,
-        ticketMedio: concluidos.length ? faturamento / concluidos.length : 0,
+        ticketMedio: feitos.length ? faturamento / feitos.length : 0,
         variacao,
         byDay,
         freteTotal,

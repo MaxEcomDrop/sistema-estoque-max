@@ -646,7 +646,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 /* MEU NEGÓCIO — padrão único: cards 3D roxo, texto branco, tamanho uniforme.
    Substitui os antigos cards brancos (.dk-card/.da-card/.conta-card/etc.)
    só nesta view — as outras abas continuam com as classes originais. */
-.mn-card{background:linear-gradient(135deg,#7c6ff0,#9b6ff5);border-radius:16px;padding:16px 18px;color:#fff;box-shadow:0 8px 22px rgba(99,102,241,.22),inset 0 1px 0 rgba(255,255,255,.16);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;animation:dashIn .5s cubic-bezier(.22,1,.36,1) both}
+.mn-card{background:linear-gradient(135deg,#7c6ff0,#9b6ff5);border-radius:16px;padding:16px 18px;color:#fff;box-shadow:0 8px 22px rgba(99,102,241,.22),inset 0 1px 0 rgba(255,255,255,.16);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;animation:dashIn .5s cubic-bezier(.22,1,.36,1) both;display:flex;flex-direction:column;min-height:106px;box-sizing:border-box}
 .mn-card::after{content:'';position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08);top:-50px;right:-30px;pointer-events:none}
 .mn-card[onclick]{cursor:pointer}
 .mn-card[onclick]:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(99,102,241,.32),inset 0 1px 0 rgba(255,255,255,.16)}
@@ -806,7 +806,8 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .bnav-item.on::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2.5px;background:var(--acc);border-radius:0 0 3px 3px}
 .bnav-item svg{width:22px;height:22px;flex-shrink:0}
 .bnav-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;padding:0 2px;display:block}
-.bnav-badge{position:absolute;top:4px;right:calc(50% - 20px);background:var(--er);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;min-width:14px;text-align:center;line-height:14px;pointer-events:none}
+.bnav-ico-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.bnav-badge{position:absolute;top:-6px;right:-9px;background:var(--er);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;min-width:14px;text-align:center;line-height:14px;pointer-events:none}
 /* MAIS MENU */
 .mais-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;opacity:0;pointer-events:none;transition:opacity .2s;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .mais-ov.open{opacity:1;pointer-events:all}
@@ -1018,7 +1019,7 @@ select,input[type=date],input[type=number],input[type=text],input[type=url],inpu
   .bnav-item.on::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:48px;height:30px;border-radius:15px;background:color-mix(in srgb,var(--acc) 14%,transparent)}
   .bnav-item.on{color:var(--acc);font-weight:700}
   .bnav-item:active{transform:scale(.88)}
-  .bnav-badge{top:2px;right:calc(50% - 22px)}
+  .bnav-badge{top:-5px;right:-8px}
   /* Tudo que ancorava no rodapé antigo sobe junto com o dock */
   .content{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
   #noti-stack{bottom:calc(94px + env(safe-area-inset-bottom,0px))}
@@ -1490,9 +1491,9 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- KPIs -->
       <div class="dash-kpis" style="grid-template-columns:repeat(4,1fr)">
-        <div class="mn-card" onclick="viewPedidosFiltrado('concluido')">
+        <div class="mn-card" onclick="viewPedidosFiltrado('all')">
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Pedidos pagos</div>
+          <div class="mn-lbl">Pedidos feitos</div>
           <div class="mn-val" id="dash-vendas">—</div>
           <div class="mn-sub" id="dash-vendas-sub">pedidos no período</div>
         </div>
@@ -1506,14 +1507,16 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
           <div class="mn-lbl">Ticket médio</div>
           <div class="mn-val" id="dash-ticket">—</div>
-          <div class="mn-sub">por pedido pago</div>
+          <div class="mn-sub">por pedido feito</div>
         </div>
         <div class="mn-card" onclick="setView('financeiro')">
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
           <div class="mn-lbl">Frete cobrado</div>
           <div class="mn-val" id="dash-frete">—</div>
-          <div class="mn-sub">pedidos concluídos</div>
+          <div class="mn-sub">pedidos feitos</div>
         </div>
+      </div>
+      <div class="dash-kpis" style="grid-template-columns:repeat(3,1fr);margin-top:12px">
         <div class="mn-card" onclick="setView('financeiro')">
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
           <div class="mn-lbl">Taxas de plataforma</div>
@@ -1941,7 +1944,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="fk-sub" id="fin-sub-total">— pedidos no período</div>
         </div>
         <div class="fk-card fk-green" onclick="viewPedidosFiltrado('concluido')">
-          <div class="fk-top"><span class="fk-label">Pagas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
+          <div class="fk-top"><span class="fk-label">Feitas</span><div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div></div>
           <div class="fk-val" id="fin-rec">—</div>
           <div class="fk-sub" id="fin-sub-conc">— pedidos concluídos</div>
         </div>
@@ -1999,7 +2002,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
       <!-- Gráfico de vendas -->
       <div class="fin-chart-wrap">
-        <div class="fin-chart-title">Receita diária (pedidos pagos)</div>
+        <div class="fin-chart-title">Receita diária (pedidos feitos)</div>
         <div class="fin-chart-sub" id="fin-chart-range">Selecione um período e clique em Atualizar</div>
         <div id="fin-chart" style="min-height:140px"></div>
       </div>
@@ -2343,18 +2346,18 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="view" id="view-config">
       <div class="cfg-card">
         <div class="cfg-title">Identidade do sistema</div>
-        <div class="cfg-desc">Personalize o nome e o ícone do sistema — refletem na aba do navegador, no app instalável, na tela de login e no menu lateral.</div>
+        <div class="cfg-desc">Personalize nome, ícone, logo e a cor global do sistema — refletem na aba do navegador, no app instalável, na tela de login e no menu lateral.</div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-top:10px;align-items:end">
           <div>
             <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Nome do sistema</label>
             <input type="text" id="cfg-app-nome" maxlength="40" oninput="updateAppConfigPreview()" style="width:100%;height:40px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:10px;font-size:13px;font-family:inherit;color:var(--tx)">
           </div>
           <div>
-            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Iniciais (ícone)</label>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Iniciais (sem ícone/logo)</label>
             <input type="text" id="cfg-app-iniciais" maxlength="3" oninput="updateAppConfigPreview()" style="width:100%;height:40px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:10px;font-size:13px;font-family:inherit;color:var(--tx);text-transform:uppercase">
           </div>
           <div>
-            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Cor</label>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Cor global</label>
             <input type="color" id="cfg-app-cor" oninput="updateAppConfigPreview()" style="width:100%;height:40px;padding:2px;background:var(--bg);border:1.5px solid var(--bord);border-radius:10px;cursor:pointer">
           </div>
         </div>
@@ -2363,6 +2366,31 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <button class="btp" onclick="saveAppConfig()" id="cfg-app-save-btn">Salvar identidade</button>
         </div>
         <div id="cfg-app-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;padding-top:16px;border-top:1px solid var(--bord-l)">
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:8px;font-weight:600">Ícone (favicon / app instalável)</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div id="cfg-icone-preview" style="width:44px;height:44px;border-radius:12px;background:var(--bg);border:1px solid var(--bord-l);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"></div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="bts" style="font-size:12px" onclick="$('cfg-icone-file').click()">Enviar imagem</button>
+                <button class="bts" id="cfg-icone-del-btn" style="font-size:11px;color:var(--er-t);display:none" onclick="removeAssetImage('icone')">Remover (usar iniciais)</button>
+              </div>
+              <input type="file" id="cfg-icone-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="uploadAssetImage('icone',this)">
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:8px;font-weight:600">Logo (menu lateral / login)</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div id="cfg-logo-preview" style="width:44px;height:44px;border-radius:12px;background:var(--bg);border:1px solid var(--bord-l);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"></div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="bts" style="font-size:12px" onclick="$('cfg-logo-file').click()">Enviar imagem</button>
+                <button class="bts" id="cfg-logo-del-btn" style="font-size:11px;color:var(--er-t);display:none" onclick="removeAssetImage('logo')">Remover (usar iniciais)</button>
+              </div>
+              <input type="file" id="cfg-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="uploadAssetImage('logo',this)">
+            </div>
+          </div>
+        </div>
       </div>
       <div class="cfg-card">
         <div class="cfg-title">Aparência</div>
@@ -2864,13 +2892,11 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   <button class="bnav-item on" id="bn-inicio" onclick="setView('inicio')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Negócio</span>
   </button>
-  <button class="bnav-item" id="bn-produtos" onclick="setView('produtos')" style="position:relative">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg><span>Produtos</span>
-    <span class="bnav-badge" id="bnav-badge" style="display:none"></span>
+  <button class="bnav-item" id="bn-produtos" onclick="setView('produtos')">
+    <span class="bnav-ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg><span class="bnav-badge" id="bnav-badge" style="display:none"></span></span><span>Produtos</span>
   </button>
-  <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')" style="position:relative">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Pedidos</span>
-    <span class="bnav-badge" id="bnav-pend-badge" style="display:none"></span>
+  <button class="bnav-item" id="bn-pedidos" onclick="setView('pedidos')">
+    <span class="bnav-ico-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="bnav-badge" id="bnav-pend-badge" style="display:none"></span></span><span>Pedidos</span>
   </button>
   <button class="bnav-item" id="bn-financeiro" onclick="setView('financeiro')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Financeiro</span>
@@ -3023,8 +3049,8 @@ function lbStart(){$('lbar').className='go';}
 function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.className='',300);}
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
 
-// ── IDENTIDADE DO SISTEMA (nome/ícone) ─────────────
-let _appConfig={nome:'Estoque Max',iniciais:'EM',cor:'#4f46e5'};
+// ── IDENTIDADE DO SISTEMA (nome/ícone/logo/cor global) ─────────────
+let _appConfig={nome:'Estoque Max',iniciais:'EM',cor:'#4f46e5',temIcone:false,temLogo:false};
 function faviconLink(){
   let link=document.querySelector("link[rel~='icon']");
   if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
@@ -3033,10 +3059,36 @@ function faviconLink(){
 function faviconSvg(iniciais,cor){
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${cor}'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>${iniciais}</text></svg>`)}`;
 }
+// Utilitários de cor — geram tons derivados (hover/bg/texto) a partir da cor
+// global escolhida, para aplicar em --acc/--acc-h/--acc-bg/--acc-t.
+function hexToRgb(hex){const n=parseInt(hex.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function rgbToHex(r,g,b){return'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function mixColor(hex,target,amt){const[r,g,b]=hexToRgb(hex);return rgbToHex(r+(target[0]-r)*amt,g+(target[1]-g)*amt,b+(target[2]-b)*amt);}
+function applyGlobalColor(hex){
+  if(!/^#[0-9a-fA-F]{6}$/.test(hex))return;
+  const hover=mixColor(hex,[0,0,0],.15);
+  const bgLight=mixColor(hex,[255,255,255],.91);
+  const bgDark=mixColor(hex,[0,0,0],.82);
+  const tLight=mixColor(hex,[0,0,0],.08);
+  const tDark=mixColor(hex,[255,255,255],.35);
+  let style=document.getElementById('global-color-override');
+  if(!style){style=document.createElement('style');style.id='global-color-override';document.head.appendChild(style);}
+  style.textContent=`:root{--acc:${hex};--acc-h:${hover};--acc-bg:${bgLight};--acc-t:${tLight};--grad:linear-gradient(135deg,${hex},${mixColor(hex,[255,255,255],.25)})}
+[data-theme=dark]{--acc-bg:${bgDark};--acc-t:${tDark}}
+.bmark,.mn-card{background:${hex}}
+.mn-card{background:linear-gradient(135deg,${hex},${mixColor(hex,[255,255,255],.2)})}
+.mn-soft{background:linear-gradient(135deg,${mixColor(hex,[255,255,255],.12)},${mixColor(hex,[255,255,255],.32)})}
+.mn-deep{background:linear-gradient(135deg,${mixColor(hex,[0,0,0],.2)},${mixColor(hex,[0,0,0],.05)})}`;
+}
 function applyBranding(){
   document.title=_appConfig.nome;
-  faviconLink().href=faviconSvg(_appConfig.iniciais,_appConfig.cor);
-  const bmark=$('app-bmark');if(bmark){bmark.textContent=_appConfig.iniciais;bmark.style.background=_appConfig.cor;}
+  applyGlobalColor(_appConfig.cor);
+  faviconLink().href=_appConfig.temIcone?`/img/icone?v=${Date.now()}`:faviconSvg(_appConfig.iniciais,_appConfig.cor);
+  const bmark=$('app-bmark');
+  if(bmark){
+    if(_appConfig.temLogo){bmark.innerHTML=`<img src="/img/logo?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`;bmark.style.background='transparent';bmark.style.boxShadow='none';}
+    else{bmark.textContent=_appConfig.iniciais;bmark.style.background=_appConfig.cor;bmark.style.boxShadow='';}
+  }
   const bname=$('app-bname');if(bname)bname.textContent=_appConfig.nome;
   const meta=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(meta)meta.content=_appConfig.nome;
   const manifestLink=document.querySelector("link[rel='manifest']");if(manifestLink)manifestLink.href='/manifest.json?v='+Date.now();
@@ -3053,6 +3105,36 @@ function updateAppConfigPreview(){
   const iniciais=($('cfg-app-iniciais').value||'EM').toUpperCase();
   const cor=$('cfg-app-cor').value||'#4f46e5';
   const prev=$('cfg-app-preview');if(prev){prev.textContent=iniciais;prev.style.background=cor;}
+}
+function renderAssetPreview(tipo){
+  const el=$(`cfg-${tipo}-preview`);if(!el)return;
+  const has=tipo==='icone'?_appConfig.temIcone:_appConfig.temLogo;
+  el.innerHTML=has?`<img src="/img/${tipo}?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain">`:`<span style="font-size:11px;color:var(--fa)">Padrão</span>`;
+  const delBtn=$(`cfg-${tipo}-del-btn`);if(delBtn)delBtn.style.display=has?'':'none';
+}
+async function uploadAssetImage(tipo,inputEl){
+  const file=inputEl.files?.[0];if(!file)return;
+  try{
+    const dataUrl=file.type==='image/svg+xml'?await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('arquivo inválido'));r.readAsDataURL(file);}):await compressImage(file,512,.85);
+    const r=await fetch(`/api/config/${tipo}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataUrl})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao enviar imagem');
+    if(tipo==='icone')_appConfig.temIcone=true;else _appConfig.temLogo=true;
+    renderAssetPreview(tipo);
+    applyBranding();
+    toast(`${tipo==='icone'?'Ícone':'Logo'} atualizado(a) com sucesso`,'ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
+  finally{inputEl.value='';}
+}
+async function removeAssetImage(tipo){
+  try{
+    const r=await fetch(`/api/config/${tipo}`,{method:'DELETE'});
+    if(!r.ok)throw new Error((await r.json()).error||'Erro ao remover');
+    if(tipo==='icone')_appConfig.temIcone=false;else _appConfig.temLogo=false;
+    renderAssetPreview(tipo);
+    applyBranding();
+    toast(`${tipo==='icone'?'Ícone':'Logo'} removido(a) — voltando às iniciais`,'ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 async function saveAppConfig(){
   const nome=$('cfg-app-nome').value.trim();
@@ -3216,7 +3298,7 @@ async function loadDashboard(force=false){
     setTxt('dash-faturamento',fmt(v.faturamento));
     const fsub=$('dash-fat-sub');
     if(fsub){
-      let txt=`${fmtN(v.concluidos||0)} pedido${v.concluidos!==1?'s':''} pago${v.concluidos!==1?'s':''}`;
+      let txt=`${fmtN(v.feitos||0)} pedido${v.feitos!==1?'s':''} feito${v.feitos!==1?'s':''}`;
       if(v.variacao!==null&&v.variacao!==undefined){
         const cls=v.variacao>1?'up':v.variacao<-1?'down':'';
         txt+=` · <span class="hero-trend ${cls}">${v.variacao>0?'+':''}${v.variacao.toFixed(0)}% vs anterior</span>`;
@@ -3225,7 +3307,7 @@ async function loadDashboard(force=false){
     }
     // Extra info lines in the faturamento card
     const fatConc=$('dash-fat-conc'),fatPend=$('dash-fat-pend'),fatCanc=$('dash-fat-canc');
-    if(fatConc)fatConc.textContent=v.concluidos>0?`✅ ${fmtN(v.concluidos)} pagos`:'';
+    if(fatConc)fatConc.textContent=v.feitos>0?`✅ ${fmtN(v.feitos)} feitos`:'';
     if(fatPend)fatPend.textContent=v.pendentes>0?`⏳ ${fmtN(v.pendentes||0)} pendentes`:'';
     if(fatCanc)fatCanc.textContent=v.cancelados>0?`🚫 ${fmtN(v.cancelados)} cancelados`:'';
     // Lucro estimado via margem média do catálogo
@@ -3236,7 +3318,7 @@ async function loadDashboard(force=false){
     _dashDesconto=v.descontoTotal||0;
     recomputeDashLucro();
     // KPIs
-    setTxt('dash-vendas',fmtN(v.concluidos||0));
+    setTxt('dash-vendas',fmtN(v.feitos||0));
     setTxt('dash-vendas-sub',`${fmtN(v.totalPedidos||0)} pedidos no total`);
     _dashPendentes=v.pendentes||0;
     setTxt('dash-pendentes',fmtN(_dashPendentes));
@@ -4200,7 +4282,7 @@ function updateKpis(){
   $('k-out-tip').textContent=outList.length?`Zerados:\n${outList.join('\n')}`:'Nenhum produto zerado.';
   document.title=out>0?`⚠ ${out} críticos — ${_appConfig.nome}`:_appConfig.nome;
   const link=faviconLink();
-  link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":faviconSvg(_appConfig.iniciais,_appConfig.cor);
+  link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":(_appConfig.temIcone?`/img/icone?v=${Date.now()}`:faviconSvg(_appConfig.iniciais,_appConfig.cor));
 }
 function updateLowBadge(){
   const cnt=S.products.filter(p=>p.estoque<=S.estoqueMin).length;
@@ -4234,6 +4316,8 @@ async function loadConfig(){
   $('cfg-app-iniciais').value=_appConfig.iniciais;
   $('cfg-app-cor').value=_appConfig.cor;
   updateAppConfigPreview();
+  renderAssetPreview('icone');
+  renderAssetPreview('logo');
   try{
     const me=await fetch('/api/auth/me').then(r=>r.json());
     if(me.email){
@@ -4898,7 +4982,7 @@ function renderPedidosTable(status){
       return`<div class="mcard" onclick="openPedidoDetalhe('${esc(String(p.id))}')">
         <div class="mcard-main">
           <div class="mcard-t">${esc(p.contato)}</div>
-          <div class="mcard-s">#${esc(String(p.numero||p.id||'—'))} · ${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div>
+          <div class="mcard-s">#${esc(String(p.numero||p.id||'—'))} · ${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}${p.canal?' · '+esc(p.canal):''}</div>
         </div>
         <div class="mcard-side">
           <div class="mcard-v">${fmt(p.valor)}</div>
@@ -4917,12 +5001,13 @@ function renderPedidosTable(status){
       <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
       <td>${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mu);font-size:12px">${p.canal?esc(p.canal):'—'}</td>
       <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
       <td><span class="sb2 ${sb}" style="gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span></td>
     </tr>`;
   }).join('');
-  const tfoot=`<tfoot><tr style="border-top:2px solid var(--bord)"><td colspan="3" style="padding:10px 14px;font-size:12px;color:var(--mu);font-weight:600">${fmtN(list.length)} pedido${list.length!==1?'s':''}</td><td class="r" style="padding:10px 14px;font-weight:700;font-size:13px">${fmt(totalVal)}</td><td></td></tr></tfoot>`;
-  body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody>${tfoot}</table>`;
+  const tfoot=`<tfoot><tr style="border-top:2px solid var(--bord)"><td colspan="4" style="padding:10px 14px;font-size:12px;color:var(--mu);font-weight:600">${fmtN(list.length)} pedido${list.length!==1?'s':''}</td><td class="r" style="padding:10px 14px;font-weight:700;font-size:13px">${fmt(totalVal)}</td><td></td></tr></tfoot>`;
+  body.innerHTML=`<table><thead><tr><th style="width:90px">#</th><th style="width:100px">Data</th><th>Cliente</th><th style="width:120px">Canal</th><th class="r" style="width:110px">Valor</th><th style="width:140px">Situação</th></tr></thead><tbody>${rows}</tbody>${tfoot}</table>`;
 }
 async function openPedidoDetalhe(id){
   $('ped-detalhe').innerHTML='<div class="st-wrap"><p class="st-d">Carregando pedido…</p></div>';
@@ -5028,8 +5113,8 @@ function exportPedidosCSV(){
   const q=($('ped-search')?.value||'').toLowerCase().trim();
   if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao} ${pedSituacaoPT(p.situacao)}`.toLowerCase().includes(q));
   if(!list.length){toast('Nenhum pedido para exportar','err');return;}
-  const hdrs=['Número','Data','Cliente','Valor','Situação'];
-  const csv=[hdrs.join(','),...list.map(p=>['numero','data','contato','valor','situacao'].map(c=>{
+  const hdrs=['Número','Data','Cliente','Canal','Valor','Situação'];
+  const csv=[hdrs.join(','),...list.map(p=>['numero','data','contato','canal','valor','situacao'].map(c=>{
     if(c==='situacao')return pedSituacaoPT(p[c]);
     const v=p[c];return typeof v==='string'&&v.includes(',')?`"${v.replace(/"/g,'""')}"`:v??'';
   }).join(','))].join('\r\n');
@@ -5921,7 +6006,7 @@ function renderFinFromData(d){
     $('fin-total').textContent=fmtN(d.totalPedidos);
     // Sub-labels
     $('fin-sub-total').textContent=`${fmtN(d.totalPedidos)} pedidos no período`;
-    $('fin-sub-conc').textContent=`${fmtN(d.concluidos)} pedidos pagos`;
+    $('fin-sub-conc').textContent=`${fmtN(d.feitos)} pedidos feitos`;
     $('fin-sub-canc').textContent=`${fmtN(d.cancelados)} pedidos cancelados`;
     $('fin-sub-pend').textContent=`${fmtN(d.pendentes)} aguardando`;
     _finLastData=d;
@@ -5994,7 +6079,6 @@ function renderDRE(d){
   const margem=avgMargem();
   const receita=d.receitaConcluida||0;
   const cancel=d.totalCancelado||0;
-  const pend=d.totalPendente||0;
   const frete=d.totalFrete||0;
   const temCusto=margem>0;
   const custoProdutos=temCusto?receita*(1-margem):0;
@@ -6012,12 +6096,11 @@ function renderDRE(d){
   const lucroLiquido=(temTaxas&&temCusto)?lucroBruto-custoProdutos-custoFixo:null;
   const mPct=lucroLiquido!=null&&receitaAjustada>0?Math.round((lucroLiquido/receitaAjustada)*100):null;
   const mCor=mPct==null?'':mPct<10?'var(--er-bg);color:var(--er-t)':mPct<25?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
-  const canN=d.cancelados||0,pedN=d.pendentes||0,conN=d.concluidos||0;
+  const canN=d.cancelados||0,feiN=d.feitos||0;
   el.innerHTML=
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Receita bruta <span style="font-size:10px;color:var(--mu)">(${conN+canN+pedN} pedidos)</span></span><span class="dre-val">${fmt(d.totalBruto||0)}</span></div>`+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos <span style="font-size:10px;color:var(--mu)">(${canN} pedido${canN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(cancel)}</span></div>`+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Pendentes <span style="font-size:10px;color:var(--mu)">(${pedN} pedido${pedN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(pend)}</span></div>`+
-    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada (pedidos pagos) <span style="font-size:10px;color:var(--mu)">(${conN} pagos)</span></span><span class="dre-val">${fmt(receita)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Receita bruta <span style="font-size:10px;color:var(--mu)">(${feiN+canN} pedidos)</span></span><span class="dre-val">${fmt(d.totalBruto||0)}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos/devoluções <span style="font-size:10px;color:var(--mu)">(${canN} pedido${canN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(cancel)}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada (pedidos feitos) <span style="font-size:10px;color:var(--mu)">(${feiN} feitos)</span></span><span class="dre-val">${fmt(receita)}</span></div>`+
     (frete>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">+</span>Frete cobrado</span><span class="dre-val" style="color:var(--ok-t)">+&nbsp;${fmt(frete)}</span></div>`:'')+
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Taxas de plataforma</span><span class="dre-val neg">${temTaxas?'−&nbsp;'+fmt(taxas):'…'}</span></div>`+
     `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Lucro bruto</span><span class="dre-val">${lucroBruto!=null?fmt(lucroBruto):'—'}</span></div>`+
