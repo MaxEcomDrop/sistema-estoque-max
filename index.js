@@ -415,17 +415,20 @@ async function getCronBlingToken() {
 // ── Error Response Helper ────────────────────────────────────────────
 function sendErrorResponse(res, statusCode, errorMessage, detail = null) {
   const response = { error: errorMessage };
-  
-  // Apenas incluir detalhes em desenvolvimento
-  if (NODE_ENV === 'development' && detail) {
+
+  // Este painel é autenticado e de um único usuário (o dono da conta) — sempre
+  // inclui o motivo real (ex.: erro devolvido pelo Bling), não só em dev.
+  // Sem isso, uma edição rejeitada pelo Bling aparecia como "erro genérico"
+  // sem pista nenhuma de qual foi o problema real.
+  if (detail) {
     response.detail = detail;
   }
-  
+
   // Registrar erro completo em log interno
   if (detail) {
     console.error(`[${new Date().toISOString()}] Error:`, detail);
   }
-  
+
   res.status(statusCode).json(response);
 }
 

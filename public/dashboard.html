@@ -3925,19 +3925,22 @@ async function saveBulk(){
   const preco=$('bulk-preco').value.trim(),estoque=$('bulk-estoque').value.trim();
   if(!preco&&!estoque){toast('Preencha ao menos um campo','err');return;}
   const btn=$('bulk-save-btn');btn.disabled=true;btn.textContent='Salvando…';
-  let ok=0,err=0;
+  let ok=0,err=0,errMsg='';
   for(const id of S.selected){
     const p=S.products.find(x=>x.id===id);if(!p)continue;
     const body={nome_produto:p.nome};
     if(preco){body.preco=parseFloat(preco);body.valor_anterior=fmt(p.preco);}
     if(estoque){body.estoque=parseFloat(estoque);}
-    try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){if(preco)p.preco=parseFloat(preco);if(estoque)p.estoque=parseFloat(estoque);ok++;}else err++;}
-    catch{err++;}
+    try{
+      const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){if(preco)p.preco=parseFloat(preco);if(estoque)p.estoque=parseFloat(estoque);ok++;}
+      else{err++;if(!errMsg){const d=await r.json().catch(()=>({}));errMsg=d.detail||d.error||'';}}
+    }catch{err++;}
   }
   btn.disabled=false;btn.textContent='Salvar alterações';
   $('bulk-preco').value='';$('bulk-estoque').value='';
   closeSheet();clearSelection();updateKpis();updateLowBadge();applyFilters();
-  toast(`${ok} produto${ok!==1?'s':''} atualizado${ok!==1?'s':''}${err?' · '+err+' erro(s)':''}`,err?'err':'ok');
+  toast(`${ok} produto${ok!==1?'s':''} atualizado${ok!==1?'s':''}${err?' · '+err+' erro(s)'+(errMsg?': '+errMsg:''):''}`,err?'err':'ok');
 }
 
 // ── QUICK ENTRY ──────────────────────────────────
@@ -3951,18 +3954,21 @@ function closeQuick(){$('qpanel').classList.remove('open');}
 async function saveQuick(){
   const changes={};
   $('qbody').querySelectorAll('.qi-inp').forEach(inp=>{const id=parseInt(inp.dataset.id),field=inp.dataset.field;if(!changes[id])changes[id]={};changes[id][field]=parseFloat(inp.value);});
-  let ok=0,err=0;
+  let ok=0,err=0,errMsg='';
   for(const[id,vals]of Object.entries(changes)){
     const p=S.products.find(x=>x.id===parseInt(id));if(!p)continue;
     if(vals.preco===p.preco&&vals.estoque===p.estoque)continue;
     const body={nome_produto:p.nome};
     if(vals.preco!==p.preco)body.preco=vals.preco;
     if(vals.estoque!==p.estoque)body.estoque=vals.estoque;
-    try{const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok){if(body.preco!==undefined)p.preco=body.preco;if(body.estoque!==undefined)p.estoque=body.estoque;ok++;}else err++;}
-    catch{err++;}
+    try{
+      const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok){if(body.preco!==undefined)p.preco=body.preco;if(body.estoque!==undefined)p.estoque=body.estoque;ok++;}
+      else{err++;if(!errMsg){const d=await r.json().catch(()=>({}));errMsg=d.detail||d.error||'';}}
+    }catch{err++;}
   }
-  if(ok>0){updateKpis();updateLowBadge();applyFilters();toast(`${ok} produto${ok!==1?'s':''} salvo${ok!==1?'s':''}`, 'ok');closeQuick();}
-  else if(err>0)toast(`${err} erro(s) ao salvar`,'err');
+  if(ok>0){updateKpis();updateLowBadge();applyFilters();toast(`${ok} produto${ok!==1?'s':''} salvo${ok!==1?'s':''}${err?' · '+err+' erro(s)':''}`, err?'err':'ok');if(!err)closeQuick();}
+  else if(err>0)toast(`${err} erro(s) ao salvar${errMsg?': '+errMsg:''}`,'err');
   else{toast('Nenhuma alteração');closeQuick();}
 }
 
@@ -3977,18 +3983,34 @@ async function undoLast(){
 }
 
 // ── CARD QUICK STOCK ADJ ────────────────────────
+function renderCardStock(id,nv){
+  const card=document.querySelector(`.pcard[data-id="${id}"]`);
+  if(!card)return;
+  const stEl=card.querySelector(".pcard-stock");if(stEl)stEl.textContent=fmtN(nv);
+  const fill=card.querySelector(".pcard-sfill");
+  if(fill){const max=Math.max(S.estoqueMin*4,nv,1);const pct=nv<=0?0:Math.min(100,Math.round((nv/max)*100));fill.style.width=pct+"%";fill.style.background=nv<=0?"var(--er)":nv<=S.estoqueMin?"var(--wa)":"var(--ok)";}
+}
 async function cardStockAdj(id,delta){
   const p=S.products.find(x=>x.id===id);if(!p)return;
-  const nv=Math.max(0,p.estoque+delta);p.estoque=nv;
+  const prev=p.estoque;
+  const nv=Math.max(0,prev+delta);p.estoque=nv;
   vibrate(15);
+  renderCardStock(id,nv);
   const card=document.querySelector(`.pcard[data-id="${id}"]`);
-  if(card){
-    const stEl=card.querySelector(".pcard-stock");if(stEl)stEl.textContent=fmtN(nv);
-    const fill=card.querySelector(".pcard-sfill");
-    if(fill){const max=Math.max(S.estoqueMin*4,nv,1);const pct=nv<=0?0:Math.min(100,Math.round((nv/max)*100));fill.style.width=pct+"%";fill.style.background=nv<=0?"var(--er)":nv<=S.estoqueMin?"var(--wa)":"var(--ok)";}
-    card.classList.add("row-flash");setTimeout(()=>card.classList.remove("row-flash"),1000);
+  if(card){card.classList.add("row-flash");setTimeout(()=>card.classList.remove("row-flash"),1000);}
+  try{
+    const r=await fetch(`/api/produtos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estoque:nv})});
+    if(!r.ok){
+      // Bling recusou a alteração — desfaz o otimista local, senão o valor
+      // "parece salvo" na tela mas some no próximo F5/recarregamento.
+      const d=await r.json().catch(()=>({}));
+      p.estoque=prev;renderCardStock(id,prev);
+      toast(d.detail||d.error||"Erro ao salvar no Bling","err");
+    }
+  }catch{
+    p.estoque=prev;renderCardStock(id,prev);
+    toast("Erro de conexão — estoque não foi salvo","err");
   }
-  try{await fetch(`/api/produtos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estoque:nv})});}catch{toast("Erro ao salvar","err");}
   updateKpis();updateLowBadge();if(S.view==="inicio")renderDashAlerts();
 }
 
