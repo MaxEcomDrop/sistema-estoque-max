@@ -1300,6 +1300,7 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
     const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
     const amostra = validos.slice(0, TAXAS_AMOSTRA_MAX);
     const porLoja = {};
+    const produtos = {}; // agregação de itens vendidos, pra "top 5 mais vendidos"
     let comissao = 0, custoFrete = 0, freteCobrado = 0, valorAmostrado = 0, detalhados = 0;
     for (const p of amostra) {
       try {
@@ -1317,6 +1318,19 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
         if (!porLoja[lojaId]) porLoja[lojaId] = { lojaId, pedidos: 0, comissao: 0, custoFrete: 0, freteCobrado: 0, valor: 0 };
         const l = porLoja[lojaId];
         l.pedidos++; l.comissao += com; l.custoFrete += cf; l.freteCobrado += fc; l.valor += val;
+        // Reaproveita a MESMA chamada de detalhe (já paga o custo de API) pra
+        // agregar quantidade vendida por produto — evita uma segunda rodada
+        // de requisições só pra montar o "top 5 mais vendidos".
+        const itensPedido = Array.isArray(d.itens) ? d.itens : [];
+        for (const it of itensPedido) {
+          const codigo = it.codigo || it.produto?.codigo || '';
+          const chave = codigo || (it.descricao || it.produto?.nome || 'Item');
+          const qtd = Number(it.quantidade) || 0;
+          const valorItem = (Number(it.valor) || 0) * qtd;
+          if (!produtos[chave]) produtos[chave] = { codigo, nome: it.descricao || it.produto?.nome || 'Item', qtd: 0, faturamento: 0 };
+          produtos[chave].qtd += qtd;
+          produtos[chave].faturamento += valorItem;
+        }
       } catch { /* um pedido falhou; os demais seguem */ }
     }
     // Projeção: se só uma amostra foi detalhada, extrapola para o período
@@ -1331,6 +1345,7 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
         fator, exata: fator === 1,
       },
       porLoja: Object.values(porLoja).sort((a, b) => b.valor - a.valor),
+      topVendidos: Object.values(produtos).sort((a, b) => b.qtd - a.qtd).slice(0, 5),
       amostra: detalhados, dePedidos: validos.length,
     };
     _taxasCache.set(key, { at: Date.now(), payload });

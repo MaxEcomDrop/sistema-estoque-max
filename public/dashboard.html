@@ -1446,7 +1446,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="dash-kpis" style="grid-template-columns:repeat(4,1fr)">
         <div class="mn-card" onclick="viewPedidosFiltrado('concluido')">
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="mn-lbl">Vendas concluídas</div>
+          <div class="mn-lbl">Pedidos pagos</div>
           <div class="mn-val" id="dash-vendas">—</div>
           <div class="mn-sub" id="dash-vendas-sub">pedidos no período</div>
         </div>
@@ -1460,7 +1460,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
           <div class="mn-lbl">Ticket médio</div>
           <div class="mn-val" id="dash-ticket">—</div>
-          <div class="mn-sub">por venda concluída</div>
+          <div class="mn-sub">por pedido pago</div>
         </div>
         <div class="mn-card" onclick="setView('financeiro')">
           <div class="mn-top"><div class="mn-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><span class="mn-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span></div>
@@ -1516,6 +1516,14 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
         <div class="mn-card mn-soft" onclick="setView('notas');setTimeout(()=>filterNotasBySituacao('Autorizada'),50)">
           <div class="mn-val" id="dash-nfe-autorizada">—</div><div class="mn-lbl">Nota autorizada</div>
+        </div>
+      </div>
+
+      <!-- TOP 5 MAIS VENDIDOS -->
+      <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Top 5 mais vendidos</div>
+      <div class="mn-card mn-wide">
+        <div class="mn-wide-body" id="dash-top-vendidos">
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Carregando…</p></div>
         </div>
       </div>
 
@@ -3001,7 +3009,7 @@ async function loadDashboard(force=false){
     setTxt('dash-faturamento',fmt(v.faturamento));
     const fsub=$('dash-fat-sub');
     if(fsub){
-      let txt=`${fmtN(v.concluidos||0)} venda${v.concluidos!==1?'s':''} concluída${v.concluidos!==1?'s':''}`;
+      let txt=`${fmtN(v.concluidos||0)} pedido${v.concluidos!==1?'s':''} pago${v.concluidos!==1?'s':''}`;
       if(v.variacao!==null&&v.variacao!==undefined){
         const cls=v.variacao>1?'up':v.variacao<-1?'down':'';
         txt+=` · <span class="hero-trend ${cls}">${v.variacao>0?'+':''}${v.variacao.toFixed(0)}% vs anterior</span>`;
@@ -3010,7 +3018,7 @@ async function loadDashboard(force=false){
     }
     // Extra info lines in the faturamento card
     const fatConc=$('dash-fat-conc'),fatPend=$('dash-fat-pend'),fatCanc=$('dash-fat-canc');
-    if(fatConc)fatConc.textContent=v.concluidos>0?`✅ ${fmtN(v.concluidos)} concluídos`:'';
+    if(fatConc)fatConc.textContent=v.concluidos>0?`✅ ${fmtN(v.concluidos)} pagos`:'';
     if(fatPend)fatPend.textContent=v.pendentes>0?`⏳ ${fmtN(v.pendentes||0)} pendentes`:'';
     if(fatCanc)fatCanc.textContent=v.cancelados>0?`🚫 ${fmtN(v.cancelados)} cancelados`:'';
     // Lucro estimado via margem média do catálogo
@@ -3148,14 +3156,23 @@ async function loadFinanceiroPrevisao(){
   }catch(e){console.error('[Previsão]',e.message);}
 }
 async function loadDashTaxas(){
+  const topEl=$('dash-top-vendidos');
   try{
     const r=await fetch(`/api/financeiro/taxas?period=${dashPeriod}`),d=await r.json();
-    if(!r.ok)return;
+    if(!r.ok)throw new Error(d.error||'Erro');
     const est=d.estimativaPeriodo||{};
     const el=$('dash-taxas'),sub=$('dash-taxas-sub');
     if(el)el.textContent=fmt(est.comissao||0);
     if(sub)sub.textContent=est.exata?'no período':'estimado (amostra) no período';
-  }catch(e){console.error('[Taxas]',e.message);}
+    const top=d.topVendidos||[];
+    if(!topEl)return;
+    if(!top.length){topEl.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Sem pedidos detalhados o suficiente no período pra calcular.</p></div>';return;}
+    topEl.innerHTML=top.map((p,i)=>`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${i+1}. ${esc(p.nome)}</div><div class="mn-row-sub">${p.codigo?esc(p.codigo)+' · ':''}${fmtN(p.qtd)} un. vendidas</div></div><div class="mn-row-val">${fmt(p.faturamento)}</div></div>`).join('')
+      +`<div style="padding:8px 16px;font-size:10.5px;color:rgba(255,255,255,.6)">Baseado em uma amostra de ${d.amostra||0} de ${d.dePedidos||0} pedido(s) do período — não é a contagem exata quando há muitos pedidos.</div>`;
+  }catch(e){
+    console.error('[Taxas]',e.message);
+    if(topEl)topEl.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Erro ao carregar: ${esc(e.message)}</p></div>`;
+  }
 }
 function filterNotasBySituacao(situ){
   // Mapeia o rótulo do card (igual ao nfeSituacaoPT do backend) pro código
