@@ -939,10 +939,13 @@ app.get('/api/ml/anuncios', requireAuthJson, async (req, res) => {
     const { data: searchData } = await axios.get(`https://api.mercadolibre.com/users/${ml.sellerId}/items/search?status=${status}&limit=50`, { headers: mlHeaders(ml.token) });
     const ids = (searchData.results || []).slice(0, 20);
     if (!ids.length) return res.json({ anuncios: [] });
-    const { data: itemsData } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}&attributes=id,title,price,available_quantity,status,thumbnail,permalink`, { headers: mlHeaders(ml.token) });
+    const { data: itemsData } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}&attributes=id,title,price,available_quantity,status,thumbnail,permalink,seller_custom_field`, { headers: mlHeaders(ml.token) });
     const anuncios = (itemsData || []).map(r => r.body || r).filter(Boolean).map(it => ({
       id: it.id, titulo: it.title, preco: it.price, qtd: it.available_quantity,
       situacao: it.status, thumb: it.thumbnail, link: it.permalink,
+      // SKU do vendedor no anúncio — usado para vincular exclusivamente por
+      // SKU exato ao produto correspondente no Bling (nunca por nome/título).
+      sku: it.seller_custom_field || null,
     }));
     res.json({ anuncios, total: searchData.paging?.total || anuncios.length });
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar anúncios', e.message); }

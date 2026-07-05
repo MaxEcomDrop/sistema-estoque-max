@@ -2140,13 +2140,13 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div id="ml-seller-info" style="padding:10px 0;font-size:13px;color:var(--mu)"></div>
           <!-- Tabs -->
           <div class="ptabs" style="margin-top:8px">
-            <button class="ptab on" id="ml-tab-perg" onclick="mlTab('perguntas',this)">Perguntas <span id="ml-perg-cnt" class="tab-cnt"></span></button>
+            <button class="ptab on" id="ml-tab-met" onclick="mlTab('metricas',this)">Métricas &amp; Reputação</button>
             <button class="ptab" id="ml-tab-anu" onclick="mlTab('anuncios',this)">Anúncios</button>
-            <button class="ptab" id="ml-tab-met" onclick="mlTab('metricas',this)">Métricas</button>
+            <button class="ptab" id="ml-tab-perg" onclick="mlTab('perguntas',this)">Perguntas <span id="ml-perg-cnt" class="tab-cnt"></span></button>
           </div>
-          <div id="ml-perguntas-body" style="margin-top:8px"></div>
+          <div id="ml-metricas-body" style="margin-top:8px"></div>
           <div id="ml-anuncios-body" style="margin-top:8px;display:none"></div>
-          <div id="ml-metricas-body" style="margin-top:8px;display:none"></div>
+          <div id="ml-perguntas-body" style="margin-top:8px;display:none"></div>
         </div>
       </div>
       <!-- Status do Bling -->
@@ -2257,6 +2257,14 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div id="ml-seller-detail" style="padding:12px 0;font-size:13px;color:var(--mu)">Carregando dados…</div>
       </div>
 
+      <!-- REPUTAÇÃO (mostrado já ao abrir a aba, sem precisar clicar em nada) -->
+      <div class="cfg-card">
+        <div class="cfg-title">Reputação</div>
+        <div id="ml-reputacao" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:8px">
+          <div class="st-wrap" style="grid-column:1/-1"><p class="st-d">Carregando reputação…</p></div>
+        </div>
+      </div>
+
       <!-- VENDAS ML -->
       <div class="cfg-card">
         <div class="cfg-title">Vendas no Mercado Livre (últimos 30 dias)</div>
@@ -2295,10 +2303,19 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div id="ml-questions-list" style="margin-top:8px"></div>
       </div>
 
-      <!-- ANÚNCIOS ATIVOS -->
+      <!-- ANÚNCIOS ATIVOS (grade estilo Produtos, com edição) -->
       <div class="cfg-card">
-        <div class="cfg-title">Anúncios Ativos</div>
-        <div id="ml-listings-list" style="margin-top:8px"></div>
+        <div class="cfg-title" style="display:flex;align-items:center;gap:10px">
+          Anúncios
+          <select id="ml-grid-status" onchange="loadMLAnunciosGrid()" style="margin-left:auto;height:32px;padding:0 8px;background:var(--bg);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;color:var(--tx);font-family:inherit">
+            <option value="active">Ativos</option>
+            <option value="paused">Pausados</option>
+            <option value="closed">Encerrados</option>
+          </select>
+          <button class="bts" style="height:32px;font-size:12px" onclick="loadMLAnunciosGrid()">↻</button>
+        </div>
+        <div class="cfg-desc">Vínculo ao produto do Bling é feito exclusivamente por SKU exato (campo "SKU" do anúncio).</div>
+        <div id="ml-anuncios-grid" style="margin-top:10px"></div>
       </div>
 
       <!-- MÉTRICAS -->
@@ -3800,6 +3817,7 @@ function mlTab(tab,btn){
   $('ml-metricas-body').style.display=tab==='metricas'?'':'none';
   if(tab==='anuncios'&&!$('ml-anuncios-body').dataset.loaded)loadMLAnuncios();
   if(tab==='metricas'&&!$('ml-metricas-body').dataset.loaded)loadMLMetricas();
+  if(tab==='perguntas'&&!$('ml-perguntas-body').dataset.loaded){$('ml-perguntas-body').dataset.loaded='1';loadMLPerguntas();}
 }
 async function loadMLPerguntas(){
   const body=$('ml-perguntas-body');if(!body)return;
@@ -3924,12 +3942,13 @@ async function loadMercadoLivre(){
       return;
     }
     if(badge){badge.textContent='Conectado';badge.className='sb2 s-ok';}
-    const[mlQuestions,mlListings,mlMetrics,mlDash]=await Promise.all([
+    const[mlQuestions,mlMetrics,mlDash]=await Promise.all([
       fetch('/api/ml/perguntas').then(r=>r.json()).catch(()=>({})),
-      fetch('/api/ml/anuncios').then(r=>r.json()).catch(()=>({})),
       fetch('/api/ml/metricas').then(r=>r.json()).catch(()=>({})),
       fetch('/api/ml/dashboard?period=30').then(r=>r.json()).catch(()=>({})),
     ]);
+    renderMLReputacao(mlMetrics);
+    loadMLAnunciosGrid();
     const sellerInfo=$('ml-seller-detail');
     if(sellerInfo)sellerInfo.innerHTML=`<div style="display:flex;gap:12px"><div style="width:36px;height:36px;border-radius:9px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#333;flex-shrink:0">ML</div><div><div style="font-size:13px;font-weight:700">${esc(mlStatus.apelido||'Vendedor ML')}</div><div style="font-size:11px;color:var(--mu);margin-top:1px">🔗 Independente do Bling</div></div></div>`;
     // KPIs financeiros do ML (faturamento, taxas, frete, lucro) — /api/ml/dashboard
@@ -3950,11 +3969,81 @@ async function loadMercadoLivre(){
     }
     const questionsList=$('ml-questions-list');
     if(mlQuestions.perguntas?.length){questionsList.innerHTML=mlQuestions.perguntas.slice(0,3).map(q=>`<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid var(--acc)"><div style="font-size:12px;font-weight:600">${esc(q.comprador)}</div><div style="font-size:12px;margin:4px 0">${esc(q.texto)}</div><div style="font-size:11px;color:var(--wa-t)">⏳ Pendente</div></div>`).join('');}else{questionsList.innerHTML='<div style="padding:14px;text-align:center;color:var(--mu);font-size:12px">✓ Sem perguntas</div>';}
-    const listingsList=$('ml-listings-list');
-    const listings=(mlListings.anuncios||[]).slice(0,3);
-    if(listings.length){listingsList.innerHTML=listings.map(a=>`<div style="background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border:1px solid var(--bord-l)" onclick="window.open('${esc(a.link||'')}','_blank')"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.titulo)}</div><div style="font-size:11px;color:var(--mu);margin-top:2px">${fmt(a.preco)} • ${fmtN(a.qtd)} un</div></div>`).join('');}else{listingsList.innerHTML='<div style="padding:14px;text-align:center;color:var(--mu);font-size:12px">Sem anúncios ativos</div>';}
     $('ml-response-rate').textContent=mlMetrics.avaliacaoPositiva?`${mlMetrics.avaliacaoPositiva}%`:'—';
   }catch(e){if(badge)badge.className='sb2 s-out';$('ml-seller-detail').innerHTML=`<div style="color:var(--er-t);font-size:12px">Erro: ${esc(e.message)}</div>`;}
+}
+function renderMLReputacao(d){
+  const el=$('ml-reputacao');if(!el)return;
+  const nivelMap={platinum:'Platinum',gold:'Gold',silver:'Silver',bronze:'Bronze'};
+  const nivel=d.pontuacao||'';const nivelPT=nivelMap[nivel]||nivel||'—';
+  const corNivel=nivel==='platinum'?'#9333ea':nivel==='gold'?'#d97706':nivel==='silver'?'#64748b':nivel==='bronze'?'#92400e':'var(--acc)';
+  const avPct=d.avaliacaoPositiva,txCanc=d.txCancelamentos,txRec=d.txReclamacoes;
+  const cards=[
+    `<div style="background:var(--bg);border-radius:10px;padding:12px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Nível de reputação</div>
+      <div style="font-size:18px;font-weight:800;color:${corNivel}">${esc(nivelPT)}</div>
+      ${d.vendas30d!=null?`<div style="font-size:11px;color:var(--mu);margin-top:2px">${fmtN(d.vendas30d)} vendas concluídas</div>`:''}
+    </div>`,
+    avPct!=null?`<div style="background:var(--bg);border-radius:10px;padding:12px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Avaliações positivas</div>
+      <div style="font-size:18px;font-weight:800;color:${avPct>=95?'var(--ok-t)':avPct>=80?'var(--wa-t)':'var(--er-t)'}">${avPct}%</div>
+    </div>`:null,
+    txCanc!=null?`<div style="background:var(--bg);border-radius:10px;padding:12px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Cancelamentos</div>
+      <div style="font-size:18px;font-weight:800;color:${txCanc>5?'var(--er-t)':txCanc>2?'var(--wa-t)':'var(--ok-t)'}">${txCanc.toFixed(2)}%</div>
+    </div>`:null,
+    txRec!=null?`<div style="background:var(--bg);border-radius:10px;padding:12px">
+      <div style="font-size:11px;color:var(--mu);margin-bottom:4px">Envios atrasados</div>
+      <div style="font-size:18px;font-weight:800;color:${txRec>5?'var(--er-t)':txRec>2?'var(--wa-t)':'var(--ok-t)'}">${txRec.toFixed(2)}%</div>
+    </div>`:null,
+  ].filter(Boolean);
+  el.innerHTML=cards.join('');
+}
+let _mlAnunciosGridCache=[];
+async function loadMLAnunciosGrid(){
+  const el=$('ml-anuncios-grid');if(!el)return;
+  el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando anúncios…</p></div>';
+  const status=$('ml-grid-status')?.value||'active';
+  try{
+    if(!S.products.length)await loadProducts();
+    const r=await fetch(`/api/ml/anuncios?status=${status}`),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    _mlAnunciosGridCache=d.anuncios||[];
+    if(!_mlAnunciosGridCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum anúncio encontrado.</p></div>';return;}
+    el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px">${_mlAnunciosGridCache.map(a=>renderMLAnuncioCard(a)).join('')}</div>`;
+  }catch(e){el.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+const ML_SIT_MAP={active:'Ativo',paused:'Pausado',closed:'Encerrado',under_review:'Em revisão'};
+function renderMLAnuncioCard(a){
+  const sc=a.situacao==='active'?'ok':a.situacao==='paused'?'lo':'out';
+  // Vínculo exclusivamente por SKU exato — nunca por nome/título do anúncio.
+  const mp=a.sku?S.products.find(p=>p.codigo&&p.codigo===a.sku):null;
+  const vinculo=a.sku
+    ?(mp?`<span class="sb2 s-ok" title="Vinculado ao produto do Bling por SKU exato">🔗 ${esc(a.sku)}</span>`:`<span class="sb2 s-lo" title="SKU '${esc(a.sku)}' não encontrado nos produtos do Bling">⚠ ${esc(a.sku)}</span>`)
+    :`<span class="sb2 s-out" title="Anúncio sem SKU cadastrado no Mercado Livre">Sem SKU</span>`;
+  const syncBtn=mp?`<button class="bts" style="width:100%;margin-top:6px;height:28px;font-size:11px" onclick="syncMLEstoque('${esc(a.id)}',${mp.estoque},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')" title="Enviar o estoque do Bling (${fmtN(mp.estoque)}) para este anúncio">↻ Sincronizar estoque (Bling: ${fmtN(mp.estoque)})</button>`:'';
+  return`<div class="pcard" data-ml-id="${esc(a.id)}">
+    <div class="pcard-img" onclick="window.open('${esc(a.link||'')}','_blank')" style="cursor:pointer">${a.thumb?`<img src="${esc(a.thumb)}" alt="" loading="lazy">`:''}</div>
+    <div class="pcard-body">
+      <div class="pcard-name plink" title="Abrir no Mercado Livre" onclick="window.open('${esc(a.link||'')}','_blank')">${esc(a.titulo)}</div>
+      <div style="margin:4px 0">${vinculo}</div>
+      <div class="pcard-meta">
+        <span class="pcard-price ev" onclick="editMLCell(this,'preco','${esc(a.id)}',${a.preco},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmt(a.preco)}${editIco}</span>
+        <span class="ev" onclick="editMLCell(this,'estoque','${esc(a.id)}',${a.qtd},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmtN(a.qtd)} un.${editIco}</span>
+      </div>
+      <span class="sb2 s-${sc}" style="margin-top:4px;display:inline-flex">${ML_SIT_MAP[a.situacao]||esc(a.situacao)}</span>
+      ${syncBtn}
+    </div>
+  </div>`;
+}
+async function syncMLEstoque(itemId,estoqueBling,titulo){
+  try{
+    const r=await fetch(`/api/ml/anuncios/${itemId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({estoque:estoqueBling,titulo_produto:titulo})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    toast('Estoque sincronizado com o Mercado Livre','ok');
+    loadMLAnunciosGrid();
+  }catch(e){toast('Erro ao sincronizar: '+e.message,'err');}
 }
 
 // ── LOAD ──────────────────────────────────────────
