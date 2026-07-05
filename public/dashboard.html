@@ -470,6 +470,42 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .dre-row.total .dre-lbl{font-size:14px;font-weight:700;color:var(--tx)}
 .dre-row.total .dre-val{font-size:19px;font-weight:800;letter-spacing:-.5px}
 .dre-margin-pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:8px}
+/* CALENDÁRIO */
+.cal-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.cal-toolbar select{height:36px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;cursor:pointer}
+.cal-filters{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;font-size:11px;font-weight:700;color:var(--mu);text-align:center;text-transform:uppercase;letter-spacing:.4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px}
+.cal-day{min-height:88px;border:1px solid var(--bord-l);border-radius:10px;padding:6px;background:var(--surf);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:box-shadow .12s,border-color .12s;overflow:hidden}
+.cal-day:hover{box-shadow:var(--sh-md);border-color:var(--bord)}
+.cal-day.out{visibility:hidden;pointer-events:none}
+.cal-day.today{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-bg)}
+.cal-day-num{font-size:12px;font-weight:700;color:var(--tx)}
+.cal-day.today .cal-day-num{color:var(--acc-t)}
+.cal-pill{font-size:9.5px;font-weight:700;padding:1.5px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-pill-feriado{background:#f5f3ff;color:#7c3aed}
+.cal-pill-facultativo{background:#f1f5f9;color:#64748b}
+.cal-pill-fixa{background:#eff6ff;color:#2563eb}
+.cal-pill-receber{background:#ecfdf5;color:#059669}
+.cal-pill-pagar{background:#fef2f2;color:#dc2626}
+.cal-pill-tarefa{background:#fff7ed;color:#ea580c}
+.cal-more{font-size:9.5px;color:var(--fa);font-weight:600}
+[data-theme=dark] .cal-pill-feriado{background:rgba(124,58,237,.18);color:#c4b5fd}
+[data-theme=dark] .cal-pill-facultativo{background:rgba(100,116,139,.2);color:#cbd5e1}
+[data-theme=dark] .cal-pill-fixa{background:rgba(37,99,235,.18);color:#93c5fd}
+[data-theme=dark] .cal-pill-receber{background:rgba(5,150,105,.18);color:#34d399}
+[data-theme=dark] .cal-pill-pagar{background:rgba(220,38,38,.18);color:#f87171}
+[data-theme=dark] .cal-pill-tarefa{background:rgba(234,88,12,.18);color:#fb923c}
+.cal-detail-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg);margin-bottom:8px;border-left:3px solid currentColor}
+.cal-detail-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.8}
+.cal-detail-title{font-size:13px;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cal-detail-val{font-weight:700;color:var(--tx);white-space:nowrap}
+@media (max-width:700px){
+  .cal-day{min-height:58px;padding:4px;border-radius:8px}
+  .cal-day-num{font-size:11px}
+  .cal-pill{font-size:8.5px;padding:1px 3px}
+  .cal-filters{margin-left:0}
+}
 /* TREND BADGE */
 .fin-trend{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle}
 .fin-trend svg{width:11px;height:11px}
@@ -2051,34 +2087,34 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="view" id="view-calendario">
       <div class="view-header">
         <h2 style="margin:0">📅 Calendário</h2>
-        <p style="margin:4px 0 0;color:var(--mu);font-size:12px">Datas importantes, feriados, contas a pagar/receber e eventos customizados</p>
+        <p style="margin:4px 0 0;color:var(--mu);font-size:12px">Feriados, pontos facultativos, contas fixas, valores a receber/pagar e tarefas agendadas</p>
       </div>
 
-      <!-- Filtros e ações -->
-      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-        <select id="cal-mes" onchange="renderCalendario()" style="height:40px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:13px;font-family:inherit;color:var(--tx);outline:none;flex:1;min-width:140px">
-          <option value="">Todos os meses</option>
-          <option value="01">Janeiro</option>
-          <option value="02">Fevereiro</option>
-          <option value="03">Março</option>
-          <option value="04">Abril</option>
-          <option value="05">Maio</option>
-          <option value="06">Junho</option>
-          <option value="07">Julho</option>
-          <option value="08">Agosto</option>
-          <option value="09">Setembro</option>
-          <option value="10">Outubro</option>
-          <option value="11">Novembro</option>
-          <option value="12">Dezembro</option>
+      <div class="cal-toolbar">
+        <button class="bts" onclick="calMonthDelta(-1)" title="Mês anterior">‹</button>
+        <select id="cal-mes-sel" onchange="calSetMonth()">
+          <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+          <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+          <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+          <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
         </select>
-        <button class="bts" onclick="loadCalendario(true)" style="flex:0">↻ Atualizar</button>
-        <button class="btp" onclick="setView('financeiro')" style="flex:0">⚙ Gerenciar na Aba Financeiro</button>
+        <select id="cal-ano-sel" onchange="calSetMonth()"></select>
+        <button class="bts" onclick="calMonthDelta(1)" title="Próximo mês">›</button>
+        <button class="bts" onclick="calGoToday()">Hoje</button>
+        <div class="cal-filters" id="cal-filters">
+          <span class="pchip on" data-f="feriado" onclick="toggleCalFilter(this)">Feriados</span>
+          <span class="pchip on" data-f="facultativo" onclick="toggleCalFilter(this)">Facultativos</span>
+          <span class="pchip on" data-f="fixa" onclick="toggleCalFilter(this)">Contas fixas</span>
+          <span class="pchip on" data-f="receber" onclick="toggleCalFilter(this)">A receber</span>
+          <span class="pchip on" data-f="pagar" onclick="toggleCalFilter(this)">A pagar</span>
+          <span class="pchip on" data-f="tarefa" onclick="toggleCalFilter(this)">Tarefas</span>
+        </div>
+        <button class="btp" onclick="openNovaTarefaModal()">+ Nova tarefa</button>
       </div>
 
-      <!-- Lista de eventos por data -->
-      <div id="cal-eventos-list" style="min-height:200px">
-        <div class="st-wrap"><p class="st-d">Carregando calendário…</p></div>
-      </div>
+      <div id="cal-titulo" style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:10px"></div>
+      <div class="cal-weekdays"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div>
+      <div class="cal-grid" id="cal-grid"></div>
     </div>
 
     <!-- VIEW CONFIGURAÇÕES -->
@@ -2459,6 +2495,51 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <button class="btp" id="conta-save-btn" onclick="saveContaCustomizada()">Salvar</button>
       <button class="bts" onclick="closeContaModal()">Cancelar</button>
       <button class="bts" id="conta-del-btn" style="display:none;flex:0;background:var(--er-bg);color:var(--er-t)" onclick="deleteContaCustomizada()">Deletar</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOVA TAREFA (CALENDÁRIO) -->
+<div class="modal" id="tarefa-modal" onclick="if(event.target===this)closeModal('tarefa-modal')">
+  <div class="mbox" style="width:400px;max-width:92vw">
+    <div class="m-title">Nova tarefa</div>
+    <div style="display:grid;gap:12px;margin:20px 0">
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Título *</label>
+        <input type="text" id="tarefa-titulo" placeholder="Ex: Ligar para o fornecedor" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Data *</label>
+          <input type="date" id="tarefa-data" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Hora</label>
+          <input type="time" id="tarefa-hora" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Observação</label>
+        <input type="text" id="tarefa-obs" placeholder="Detalhes opcionais…" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+    </div>
+    <div id="tarefa-err" style="display:none;color:var(--er-t);font-size:12px;margin-bottom:12px;font-weight:500"></div>
+    <div class="m-foot">
+      <button class="btp" id="tarefa-save-btn" onclick="saveTarefa()">Salvar</button>
+      <button class="bts" onclick="closeModal('tarefa-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETALHE DO DIA (CALENDÁRIO) -->
+<div class="modal" id="cal-day-modal" onclick="if(event.target===this)closeModal('cal-day-modal')">
+  <div class="mbox" style="width:440px;max-width:92vw">
+    <div class="m-title" id="cal-day-modal-title">Detalhes do dia</div>
+    <div id="cal-day-modal-body" style="margin:16px 0;max-height:50vh;overflow-y:auto"></div>
+    <input type="hidden" id="cal-day-modal-add-date">
+    <div class="m-foot">
+      <button class="btp" onclick="openNovaTarefaModal($('cal-day-modal-add-date').value)">+ Tarefa neste dia</button>
+      <button class="bts" onclick="closeModal('cal-day-modal')">Fechar</button>
     </div>
   </div>
 </div>
@@ -3377,52 +3458,190 @@ function renderCalendarPreview(){
     return`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${dia} ${mes} — ${e.tipo==='pagar'?'A Pagar':e.tipo==='receber'?'A Receber':'Evento'}</div><div class="mn-row-sub">${esc(e.categoria)}${e.descricao?' · '+esc(e.descricao.substring(0,40)):''}</div></div><div class="mn-row-val">${e.valor?fmt(Number(e.valor)||0):''}</div></div>`;
   }).join('');
 }
+// ── CALENDÁRIO (grade mensal) ─────────────────────
+const CAL_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let calYear=new Date().getFullYear();
+let calMonth=new Date().getMonth();
+let calFilters=new Set(['feriado','facultativo','fixa','receber','pagar','tarefa']);
+let _calEventsCache=[];
+let _tarefasCache=[];
+// Algoritmo de Gauss (padrão para cálculo civil da Páscoa) — usado para
+// derivar os feriados/pontos facultativos móveis do calendário brasileiro
+// (Carnaval, Sexta-feira Santa, Corpus Christi), que não têm data fixa.
+function calcularPascoa(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;
+  return new Date(ano,mes-1,dia);
+}
+const BR_FERIADOS_FIXOS=[
+  {mes:1,dia:1,nome:'Confraternização Universal'},
+  {mes:4,dia:21,nome:'Tiradentes'},
+  {mes:5,dia:1,nome:'Dia do Trabalho'},
+  {mes:9,dia:7,nome:'Independência do Brasil'},
+  {mes:10,dia:12,nome:'Nossa Senhora Aparecida'},
+  {mes:11,dia:2,nome:'Finados'},
+  {mes:11,dia:15,nome:'Proclamação da República'},
+  {mes:11,dia:20,nome:'Consciência Negra'},
+  {mes:12,dia:25,nome:'Natal'},
+];
+let _feriadosCache={};
+function getFeriadosDoAno(ano){
+  if(_feriadosCache[ano])return _feriadosCache[ano];
+  const pascoa=calcularPascoa(ano);
+  const addDays=(d,n)=>{const r=new Date(d);r.setDate(r.getDate()+n);return r;};
+  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const list=BR_FERIADOS_FIXOS.map(f=>({data:`${ano}-${String(f.mes).padStart(2,'0')}-${String(f.dia).padStart(2,'0')}`,nome:f.nome,tipo:'feriado'}));
+  list.push({data:iso(addDays(pascoa,-2)),nome:'Sexta-feira Santa',tipo:'feriado'});
+  list.push({data:iso(addDays(pascoa,-48)),nome:'Carnaval (segunda)',tipo:'facultativo'});
+  list.push({data:iso(addDays(pascoa,-47)),nome:'Carnaval (terça)',tipo:'facultativo'});
+  list.push({data:iso(addDays(pascoa,60)),nome:'Corpus Christi',tipo:'facultativo'});
+  _feriadosCache[ano]=list;
+  return list;
+}
 async function loadCalendario(force=false){
-  const el=$('cal-eventos-list');
-  el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando eventos do calendário…</p></div>';
+  if(force||!_contasCustomCache.length)await loadContasCustomizadas();
   try{
     const r=await fetch('/api/calendario'),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro ao carregar calendário');
-    const eventos=d.eventos||[];
-    renderCalendario(eventos);
-  }catch(e){el.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+    _calEventsCache=d.eventos||[];
+    _tarefasCache=_calEventsCache.filter(e=>e.tipo==='tarefa');
+  }catch(e){console.error('[loadCalendario]',e.message);}
+  syncCalSelects();
+  renderCalendarioGrid();
 }
-function renderCalendario(eventos=null){
-  const el=$('cal-eventos-list');if(!el)return;
-  const mesFiltro=$('cal-mes')?.value||'';
-  if(!eventos){eventos=_contasCustomCache||[];}
-  let filtrados=eventos;
-  if(mesFiltro)filtrados=filtrados.filter(e=>e.dataVencimento&&e.dataVencimento.startsWith('2026-'+mesFiltro));
-  filtrados.sort((a,b)=>new Date(a.dataVencimento||'9999')- new Date(b.dataVencimento||'9999'));
-  if(!filtrados.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum evento encontrado para o período selecionado.</p></div>';return;}
-  const byDate={};
-  filtrados.forEach(e=>{
-    const data=e.dataVencimento||'—';
-    if(!byDate[data])byDate[data]=[];
-    byDate[data].push(e);
+function calSetMonth(){
+  calMonth=parseInt($('cal-mes-sel').value,10);
+  calYear=parseInt($('cal-ano-sel').value,10);
+  renderCalendarioGrid();
+}
+function calMonthDelta(n){
+  calMonth+=n;
+  if(calMonth<0){calMonth=11;calYear--;}
+  else if(calMonth>11){calMonth=0;calYear++;}
+  syncCalSelects();
+  renderCalendarioGrid();
+}
+function calGoToday(){
+  const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
+  syncCalSelects();renderCalendarioGrid();
+}
+function syncCalSelects(){
+  const ms=$('cal-mes-sel'),ys=$('cal-ano-sel');
+  if(ms)ms.value=String(calMonth);
+  if(ys){
+    if(!ys.options.length){
+      for(let y=calYear-3;y<=calYear+3;y++){const o=document.createElement('option');o.value=y;o.textContent=y;ys.appendChild(o);}
+    }
+    if(![...ys.options].some(o=>o.value===String(calYear))){const o=document.createElement('option');o.value=calYear;o.textContent=calYear;ys.appendChild(o);}
+    ys.value=String(calYear);
+  }
+}
+function toggleCalFilter(el){
+  const f=el.dataset.f;
+  el.classList.toggle('on');
+  if(calFilters.has(f))calFilters.delete(f);else calFilters.add(f);
+  renderCalendarioGrid();
+}
+function calEventsForDay(dateStr){
+  const evts=[];
+  (_contasCustomCache||[]).forEach(c=>{
+    if(c.dataVencimento!==dateStr)return;
+    if(!calFilters.has(c.tipo))return;
+    evts.push({tipo:c.tipo,titulo:c.descricao||c.categoria,valor:c.valor,status:c.status});
   });
-  el.innerHTML=Object.entries(byDate).map(([data,evts])=>{
-    const d=new Date(data+'T12:00:00');
-    const diasDiff=Math.floor((d-new Date())/(1000*86400));
-    let badge='';
-    if(diasDiff<0)badge='<span style="background:var(--er-bg);color:var(--er-t);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">Vencido</span>';
-    else if(diasDiff===0)badge='<span style="background:var(--wa-bg);color:var(--wa-t);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">Hoje</span>';
-    else if(diasDiff===1)badge='<span style="background:var(--acc-bg);color:var(--acc-t);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">Amanhã</span>';
-    return `<div style="margin-bottom:16px;border-left:3px solid var(--bord);padding-left:14px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <span style="font-size:13px;font-weight:700;color:var(--tx)">${data}</span>
-        ${badge}
-      </div>
-      ${evts.map(e=>`<div style="background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:700;color:var(--fa);text-transform:uppercase;margin-bottom:2px">${e.tipo||'Evento'}</div>
-          <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(e.categoria||e.titulo||'—')}</div>
-          ${e.descricao?`<div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(e.descricao.substring(0,60))}</div>`:''}
-        </div>
-        ${e.valor?`<div style="text-align:right;font-weight:700;color:var(--tx);white-space:nowrap">${fmt(Number(e.valor)||0)}</div>`:''}
-      </div>`).join('')}
+  if(calFilters.has('tarefa')){
+    _tarefasCache.forEach(t=>{if(t.data===dateStr)evts.push({tipo:'tarefa',titulo:t.titulo,status:t.status,id:t.id,data:t.data});});
+  }
+  return evts;
+}
+function renderCalendarioGrid(){
+  const grid=$('cal-grid');if(!grid)return;
+  const titEl=$('cal-titulo');if(titEl)titEl.textContent=`${CAL_MESES[calMonth]} de ${calYear}`;
+  const first=new Date(calYear,calMonth,1);
+  const startWeekday=first.getDay();
+  const lastDay=new Date(calYear,calMonth+1,0).getDate();
+  const feriados=calFilters.has('feriado')||calFilters.has('facultativo')?getFeriadosDoAno(calYear).filter(f=>calFilters.has(f.tipo)):[];
+  const feriadosPorData={};
+  feriados.forEach(f=>{(feriadosPorData[f.data]=feriadosPorData[f.data]||[]).push(f);});
+  const todayStr=isoLocalToday();
+  let cells='';
+  for(let i=0;i<startWeekday;i++)cells+='<div class="cal-day out"></div>';
+  for(let d=1;d<=lastDay;d++){
+    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr;
+    const fer=(feriadosPorData[dateStr]||[]);
+    const outros=calEventsForDay(dateStr);
+    const todos=[...fer.map(f=>({tipo:f.tipo,titulo:f.nome})),...outros];
+    const maxShow=3;
+    const pills=todos.slice(0,maxShow).map(e=>`<span class="cal-pill cal-pill-${e.tipo}">${esc(e.titulo)}</span>`).join('');
+    const more=todos.length>maxShow?`<span class="cal-more">+${todos.length-maxShow}</span>`:'';
+    cells+=`<div class="cal-day${isToday?' today':''}" onclick="openDayDetail('${dateStr}')">
+      <span class="cal-day-num">${d}</span>
+      ${pills}${more}
     </div>`;
-  }).join('');
+  }
+  const trailing=(7-((startWeekday+lastDay)%7))%7;
+  for(let i=0;i<trailing;i++)cells+='<div class="cal-day out"></div>';
+  grid.innerHTML=cells;
+}
+const CAL_TIPO_LBL={feriado:'Feriado',facultativo:'Ponto facultativo',fixa:'Conta fixa',receber:'A receber',pagar:'A pagar',tarefa:'Tarefa'};
+function openDayDetail(dateStr){
+  const feriados=(calFilters.has('feriado')||calFilters.has('facultativo'))?getFeriadosDoAno(calYear).filter(f=>f.data===dateStr&&calFilters.has(f.tipo)):[];
+  const outros=calEventsForDay(dateStr);
+  const d=new Date(dateStr+'T12:00:00');
+  $('cal-day-modal-title').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const all=[...feriados.map(f=>({tipo:f.tipo,titulo:f.nome})),...outros];
+  const body=$('cal-day-modal-body');
+  if(!all.length){body.innerHTML='<p class="st-d" style="padding:12px 0">Nenhum evento nesta data.</p>';}
+  else{
+    body.innerHTML=all.map(e=>`<div class="cal-detail-row cal-pill-${e.tipo}">
+      <div><div class="cal-detail-lbl">${CAL_TIPO_LBL[e.tipo]||e.tipo}</div><div class="cal-detail-title">${esc(e.titulo)}${e.id?`<button class="bts" style="height:22px;padding:0 8px;font-size:10px" onclick="toggleTarefaStatus(${e.id})">${e.status==='concluida'?'✓ Feita':'Marcar feita'}</button>`:''}</div></div>
+      ${e.valor?`<div class="cal-detail-val">${fmt(Number(e.valor)||0)}</div>`:''}
+    </div>`).join('');
+  }
+  $('cal-day-modal-add-date').value=dateStr;
+  openModal('cal-day-modal');
+}
+async function toggleTarefaStatus(id){
+  const t=_tarefasCache.find(x=>x.id===id);if(!t)return;
+  const novo=t.status==='concluida'?'pendente':'concluida';
+  try{
+    const r=await fetch(`/api/calendario/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:novo})});
+    if(!r.ok)throw new Error((await r.json()).error||'Erro');
+    t.status=novo;
+    toast(novo==='concluida'?'Tarefa concluída':'Tarefa reaberta','ok');
+    renderCalendarioGrid();
+    openDayDetail(t.data);
+  }catch(e){toast('Erro: '+e.message,'err');}
+}
+function openNovaTarefaModal(dateStr){
+  closeModal('cal-day-modal');
+  $('tarefa-titulo').value='';
+  $('tarefa-data').value=dateStr||isoLocalToday();
+  $('tarefa-hora').value='';
+  $('tarefa-obs').value='';
+  $('tarefa-err').style.display='none';
+  openModal('tarefa-modal');
+  setTimeout(()=>$('tarefa-titulo').focus(),80);
+}
+async function saveTarefa(){
+  const titulo=$('tarefa-titulo').value.trim();
+  const data=$('tarefa-data').value;
+  const hora=$('tarefa-hora').value;
+  const observacao=$('tarefa-obs').value.trim();
+  const errEl=$('tarefa-err');
+  if(!titulo||!data){errEl.textContent='Preencha o título e a data';errEl.style.display='block';return;}
+  const btn=$('tarefa-save-btn');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    const r=await fetch('/api/calendario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:'tarefa',titulo,data,hora,descricao:observacao})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro ao salvar');
+    _calEventsCache.push(d);_tarefasCache.push(d);
+    closeModal('tarefa-modal');
+    renderCalendarioGrid();
+    toast('Tarefa criada com sucesso','ok');
+  }catch(e){errEl.textContent=e.message;errEl.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Salvar';}
 }
 
 // ── MAIS MENU ────────────────────────────────────

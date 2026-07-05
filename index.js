@@ -2506,9 +2506,9 @@ app.get('/api/calendario', requireAuthJson, async (req, res) => {
 });
 
 app.post('/api/calendario', requireAuthJson, (req, res) => {
-  const { tipo, titulo, descricao, data, contaId } = req.body;
+  const { tipo, titulo, descricao, data, hora, contaId } = req.body;
 
-  if (!tipo || !['feriado', 'comemorativo', 'vencimento', 'recebimento', 'evento'].includes(tipo)) {
+  if (!tipo || !['feriado', 'comemorativo', 'vencimento', 'recebimento', 'evento', 'tarefa'].includes(tipo)) {
     return sendErrorResponse(res, 400, 'Tipo de evento inválido');
   }
   if (!titulo || !data) {
@@ -2522,13 +2522,36 @@ app.post('/api/calendario', requireAuthJson, (req, res) => {
     titulo,
     descricao: descricao || '',
     data,
+    hora: hora || '',
     contaId: contaId || null,
+    status: tipo === 'tarefa' ? 'pendente' : null,
     criado_em: new Date().toISOString(),
   };
 
   calendarEvents.push(evento);
     saveInMemoryData();
   res.json(evento);
+});
+
+app.put('/api/calendario/:id', requireAuthJson, (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const evento = calendarEvents.find(e => e.id === id);
+    if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
+
+    const { titulo, descricao, data, hora, status } = req.body;
+    if (titulo) evento.titulo = titulo;
+    if (descricao !== undefined) evento.descricao = descricao;
+    if (data) evento.data = data;
+    if (hora !== undefined) evento.hora = hora;
+    if (status) evento.status = status;
+    evento.atualizado_em = new Date().toISOString();
+
+    saveInMemoryData();
+    res.json(evento);
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao atualizar evento', err.message);
+  }
 });
 
 app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
