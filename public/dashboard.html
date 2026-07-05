@@ -3072,16 +3072,7 @@ function renderCards(){
 // ── VIEWS ──────────────────────────────────────────
 const VIEWS={inicio:'Meu Negócio',produtos:'Produtos',pedidos:'Pedidos',clientes:'Clientes',historico:'Histórico',relatorio:'Relatório',notas:'Notas Fiscais',financeiro:'Financeiro',calendario:'Calendário','mercado-livre':'Mercado Livre',integracoes:'Integrações',config:'Configurações'};
 const MAIS_VIEWS=['clientes','relatorio','notas','historico','calendario','mercado-livre','integracoes','config'];
-// Gate de senha para a aba Notas Fiscais
-let _nfeUnlocked=false;
 function setView(v){
-  if(v==='notas'&&!_nfeUnlocked){
-    requireSenha(()=>{_nfeUnlocked=true;setView('notas');},{
-      force:true,title:'🔒 Notas Fiscais protegidas',
-      desc:'Digite sua senha para acessar esta área e evitar alterações indevidas.'
-    });
-    return;
-  }
   vibrate(8);
   S.view=v;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
@@ -5072,9 +5063,49 @@ async function openNotaDetalhe(id){
       ${n.chave?`<div style="background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10px;color:var(--mu);flex-shrink:0">Chave de acesso:</span><span class="nfe-key" style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(n.chave)}</span><button class="bts" style="height:26px;padding:0 10px;font-size:11px" onclick="copySku('${esc(n.chave)}');event.stopPropagation()">Copiar</button></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS (${n.itens?.length||0})</div>
       <div class="pd-items"><table><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
+      <div style="margin-top:14px;border-top:1px solid var(--bord-l);padding-top:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:10px">EDITAR NF-e</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Desconto (R$)</label>
+            <input type="number" id="nfe-edit-desconto" value="${n.totalDesconto||0}" min="0" step="0.01" style="width:100%;height:38px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx)">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Frete (R$)</label>
+            <input type="number" id="nfe-edit-frete" value="${n.totalFrete||0}" min="0" step="0.01" style="width:100%;height:38px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx)">
+          </div>
+        </div>
+        <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Informações complementares</label>
+        <textarea id="nfe-edit-obs" rows="2" style="width:100%;padding:8px 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);resize:vertical">${esc(n.observacoes||'')}</textarea>
+        <div id="nfe-edit-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
+        <div id="nfe-edit-note" style="font-size:11px;color:var(--mu);margin-top:8px">Notas já autorizadas costumam ter a maioria dos campos travada pela legislação fiscal — se o Bling recusar a alteração, o motivo real será exibido aqui.</div>
+        <button class="btp" id="nfe-edit-save-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="saveNotaEdicao('${esc(String(id))}')">Salvar alterações no Bling</button>
+      </div>
     `;
     if(sc==='ok')$('nfe-det-danfe-btn').style.display='';
   }catch(e){$('nfe-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+function saveNotaEdicao(id){
+  requireSenha(async()=>{
+    const btn=$('nfe-edit-save-btn');const errEl=$('nfe-edit-err');
+    errEl.style.display='none';
+    const payload={
+      desconto:parseFloat($('nfe-edit-desconto').value||0),
+      frete:parseFloat($('nfe-edit-frete').value||0),
+      observacoes:$('nfe-edit-obs').value,
+    };
+    btn.disabled=true;btn.textContent='Salvando…';
+    try{
+      const r=await fetch(`/api/nfe/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.detail||d.error||'Erro ao salvar');
+      toast('NF-e atualizada no Bling','ok');
+      _notasLoaded=false;
+      openNotaDetalhe(id);
+    }catch(e){
+      errEl.textContent=e.message;errEl.style.display='block';
+    }finally{btn.disabled=false;btn.textContent='Salvar alterações no Bling';}
+  },{title:'Confirmar edição de NF-e',desc:'Digite sua senha para salvar as alterações desta nota fiscal no Bling.'});
 }
 async function abrirDanfeDet(){
   if(!_nfeDetId)return;

@@ -1816,20 +1816,31 @@ app.get('/api/nfe/:id/detalhe', requireAuthJson, async (req, res) => {
       valor: Number(it.valor) || 0,
       total: (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
     }));
+    // Total dos produtos: os campos de topo (totalProdutos/total/valor) vêm
+    // vazios em boa parte das notas retornadas pelo Bling — a soma dos itens
+    // (sempre presente e correta) é usada como valor garantido.
+    const itensTotal = itens.reduce((a, it) => a + it.total, 0);
+    // "naturezaOperacao" é um objeto relacional ({id, descricao}), igual a
+    // contato/transportadora/loja em outros recursos do Bling — usar o
+    // objeto direto como string produzia "[object Object]" na tela.
+    const naturezaDesc = typeof n.naturezaOperacao === 'string'
+      ? n.naturezaOperacao
+      : (n.naturezaOperacao?.descricao || n.naturezaOperacao?.nome || '');
     res.json({
       id: n.id,
       numero: n.numero,
       serie: n.serie || '1',
       dataEmissao: n.dataEmissao || n.data || '',
-      total: n.totalProdutos || n.total || n.valor || 0,
-      totalFrete: Number(n.totalFrete || 0),
-      totalDesconto: Number(n.totalDesconto || 0),
+      total: Number(n.totalProdutos) || Number(n.total) || Number(n.valor) || itensTotal,
+      totalFrete: Number(n.totalFrete) || Number(n.valorFrete) || Number(n.transporte?.frete) || 0,
+      totalDesconto: Number(n.totalDesconto) || Number(n.desconto) || 0,
       situacao: nfeSituacaoPT(n.situacao),
       chave: n.chaveAcesso || n.chave || '',
       contato: n.contato?.nome || '—',
       contatoDoc: n.contato?.numeroDocumento || '',
-      natureza: n.naturezaOperacao || '',
+      natureza: naturezaDesc,
       modelo: n.modelo || '55',
+      observacoes: n.observacoes || '',
       itens,
     });
   } catch (err) {
@@ -1839,6 +1850,44 @@ app.get('/api/nfe/:id/detalhe', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar NF-e', err.message);
+  }
+});
+
+// Edita uma NF-e. Assim como em pedidos, o Bling exige o objeto completo no
+// PUT — buscamos a nota bruta e alteramos só os campos editados. Notas já
+// autorizadas normalmente têm a maior parte dos campos travada por lei
+// (usar carta de correção/cancelamento nesse caso); deixamos o Bling
+// recusar com o motivo real em vez de bloquear no sistema por adivinhação.
+app.put('/api/nfe/:id', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  try {
+    const id = validateNumericId(req.params.id, 'ID da NF-e');
+    const { observacoes, desconto, frete } = req.body || {};
+    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/nfe/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const raw = data?.data || data || {};
+    if (observacoes !== undefined) raw.observacoes = observacoes;
+    if (desconto !== undefined) raw.desconto = Number(desconto) || 0;
+    if (frete !== undefined) {
+      raw.transporte = raw.transporte || {};
+      raw.transporte.frete = Number(frete) || 0;
+    }
+    await axios.put(`https://www.bling.com.br/Api/v3/nfe/${id}`, raw, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    const detail = err.response?.data?.error?.fields?.[0]?.msg
+      || err.response?.data?.error?.message
+      || err.message;
+    sendErrorResponse(res, err.response?.status || 500, 'Erro ao atualizar NF-e', detail);
   }
 });
 
