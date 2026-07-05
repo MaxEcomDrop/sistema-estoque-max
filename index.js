@@ -1656,7 +1656,10 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       id:        p.id,
       numero:    p.numero,
       data:      p.data,
-      valor:     Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
+      // totalVenda é o valor final do pedido (já com desconto aplicado); totalProdutos
+      // é a soma dos itens ANTES do desconto — priorizar totalProdutos aqui inflava o
+      // valor exibido sempre que o pedido tinha desconto.
+      valor:     Number(p.totalVenda) || Number(p.totalProdutos) || Number(p.total) || 0,
       situacao:  situacaoPT(p.situacao),
       contato:   p.contato?.nome || '—',
     }));
@@ -1698,7 +1701,8 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       contatoDoc:  p.contato?.numeroDocumento || '',
       contatoTel:  p.contato?.celular || p.contato?.telefone || '',
       observacoes: p.observacoes || p.observacoesInternas || '',
-      total:       Number(p.totalProdutos) || Number(p.totalVenda) || Number(p.total) || 0,
+      total:       Number(p.totalVenda) || Number(p.totalProdutos) || Number(p.total) || 0,
+      totalProdutos:    Number(p.totalProdutos) || 0,
       frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
       transportadora:   p.transporte?.transportadora?.nome || _TRANSP_TIPO[p.transporte?.tipo] || '',
       desconto:         Number(p.desconto) || 0,
