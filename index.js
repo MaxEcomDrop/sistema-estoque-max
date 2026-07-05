@@ -115,6 +115,9 @@ let contaIdCounter = 1;
 let calendarEvents = [];
 let eventIdCounter = 1;
 let _persistLoaded = false;
+// Identidade visual do sistema (nome + ícone) — editável em Configurações,
+// refletida na aba do Chrome, no app instalável, no login e no menu lateral.
+let appConfig = { nome: 'Estoque Max', iniciais: 'EM', cor: '#4f46e5' };
 
 async function loadPersistedData() {
   if (_persistLoaded) return;
@@ -128,6 +131,7 @@ async function loadPersistedData() {
     if (Array.isArray(d.customContas)) customContas = d.customContas;
     if (Array.isArray(d.calendarEvents)) calendarEvents = d.calendarEvents;
     if (Array.isArray(d.changeLog)) changeLog = d.changeLog;
+    if (d.appConfig && typeof d.appConfig === 'object') appConfig = { ...appConfig, ...d.appConfig };
     contaIdCounter = customContas.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
     eventIdCounter = calendarEvents.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0) + 1;
     console.log(`[Persistência] ${customContas.length} conta(s), ${calendarEvents.length} evento(s) e ${changeLog.length} log(s) restaurados do Firestore`);
@@ -149,10 +153,74 @@ function saveInMemoryData() {
       customContas,
       calendarEvents,
       changeLog: changeLog.slice(-500),
+      appConfig,
       updatedAt: new Date().toISOString(),
     }).catch(e => console.error('[saveInMemoryData]', e.message));
   }, 1500);
 }
+
+function manifestIconSvg(size, iniciais, cor) {
+  const fontSize = Math.round(size * 0.47);
+  const y = Math.round(size * 0.68);
+  const rx = Math.round(size * 0.2);
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${size} ${size}'><rect width='${size}' height='${size}' rx='${rx}' fill='${cor}'/><text x='${size / 2}' y='${y}' text-anchor='middle' font-size='${fontSize}' font-weight='700' fill='white' font-family='Inter,sans-serif'>${iniciais}</text></svg>`)}`;
+}
+
+// Config pública (sem autenticação) — o login precisa da identidade visual
+// antes de haver sessão.
+app.get('/api/config', async (req, res) => {
+  await loadPersistedData();
+  res.json(appConfig);
+});
+
+app.put('/api/config', requireAuthJson, async (req, res) => {
+  await loadPersistedData();
+  const { nome, iniciais, cor } = req.body || {};
+  if (nome !== undefined) {
+    const n = String(nome).trim().slice(0, 40);
+    if (!n) return sendErrorResponse(res, 400, 'Nome não pode ser vazio');
+    appConfig.nome = n;
+  }
+  if (iniciais !== undefined) {
+    const i = String(iniciais).trim().toUpperCase().slice(0, 3);
+    if (!i) return sendErrorResponse(res, 400, 'Iniciais não podem ser vazias');
+    appConfig.iniciais = i;
+  }
+  if (cor !== undefined) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(cor)) return sendErrorResponse(res, 400, 'Cor inválida (use #RRGGBB)');
+    appConfig.cor = cor;
+  }
+  saveInMemoryData();
+  res.json(appConfig);
+});
+
+app.get('/manifest.json', async (req, res) => {
+  await loadPersistedData();
+  const { nome, iniciais, cor } = appConfig;
+  res.json({
+    name: nome,
+    short_name: nome.length > 12 ? iniciais : nome,
+    description: 'Gestão de estoque e produtos integrado ao Bling ERP',
+    start_url: '/dashboard.html',
+    scope: '/',
+    display: 'standalone',
+    display_override: ['standalone', 'minimal-ui', 'browser'],
+    background_color: '#0f172a',
+    theme_color: cor,
+    orientation: 'portrait-primary',
+    categories: ['business', 'productivity'],
+    lang: 'pt-BR',
+    icons: [
+      { src: manifestIconSvg(192, iniciais, cor), sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+      { src: manifestIconSvg(512, iniciais, cor), sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
+    ],
+    shortcuts: [
+      { name: 'Produtos', short_name: 'Produtos', description: 'Ver e gerenciar produtos', url: '/dashboard.html#produtos', icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%234f46e5'/><rect x='18' y='32' width='60' height='42' rx='6' stroke='white' stroke-width='5' fill='none'/><path d='M36 32V26a12 12 0 0 1 24 0v6' stroke='white' stroke-width='5' fill='none' stroke-linecap='round'/></svg>", sizes: '96x96' }] },
+      { name: 'Pedidos', short_name: 'Pedidos', description: 'Ver pedidos pendentes', url: '/dashboard.html#pedidos', icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%2310b981'/><path d='M24 48l16 16L72 28' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>", sizes: '96x96' }] },
+      { name: 'Financeiro', short_name: 'Financeiro', description: 'Painel financeiro', url: '/dashboard.html#financeiro', icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' rx='18' fill='%23f59e0b'/><text x='48' y='64' text-anchor='middle' font-size='54' font-weight='700' fill='white' font-family='sans-serif'>$</text></svg>", sizes: '96x96' }] },
+    ],
+  });
+});
 
 // Cache do depósito padrão (evita chamada extra a cada edição de estoque)
 let _depositoId = null;

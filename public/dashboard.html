@@ -1310,8 +1310,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 <!-- SIDEBAR -->
 <aside class="sb" id="sidebar">
   <div class="sb-head">
-    <div class="bmark">EM</div>
-    <span class="bname">Estoque Max</span>
+    <div class="bmark" id="app-bmark">EM</div>
+    <span class="bname" id="app-bname">Estoque Max</span>
   </div>
   <nav class="sb-nav">
     <span class="nav-sec">Menu</span>
@@ -2342,6 +2342,29 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
     <div class="view" id="view-config">
       <div class="cfg-card">
+        <div class="cfg-title">Identidade do sistema</div>
+        <div class="cfg-desc">Personalize o nome e o ícone do sistema — refletem na aba do navegador, no app instalável, na tela de login e no menu lateral.</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-top:10px;align-items:end">
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Nome do sistema</label>
+            <input type="text" id="cfg-app-nome" maxlength="40" oninput="updateAppConfigPreview()" style="width:100%;height:40px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:10px;font-size:13px;font-family:inherit;color:var(--tx)">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Iniciais (ícone)</label>
+            <input type="text" id="cfg-app-iniciais" maxlength="3" oninput="updateAppConfigPreview()" style="width:100%;height:40px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:10px;font-size:13px;font-family:inherit;color:var(--tx);text-transform:uppercase">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Cor</label>
+            <input type="color" id="cfg-app-cor" oninput="updateAppConfigPreview()" style="width:100%;height:40px;padding:2px;background:var(--bg);border:1.5px solid var(--bord);border-radius:10px;cursor:pointer">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <div id="cfg-app-preview" class="bmark" style="width:40px;height:40px;font-size:15px;border-radius:12px">EM</div>
+          <button class="btp" onclick="saveAppConfig()" id="cfg-app-save-btn">Salvar identidade</button>
+        </div>
+        <div id="cfg-app-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
+      </div>
+      <div class="cfg-card">
         <div class="cfg-title">Aparência</div>
         <div class="cfg-desc">Escolha o tema do aplicativo.</div>
         <div class="theme-grid">
@@ -2999,6 +3022,55 @@ function vibrate(ms=10){try{if(navigator.vibrate)navigator.vibrate(ms);}catch{}}
 function lbStart(){$('lbar').className='go';}
 function lbDone(){const b=$('lbar');b.className='done';setTimeout(()=>b.className='',300);}
 function animNum(el,target){const from=parseInt(el.textContent.replace(/\D/g,''))||0;const steps=20;let s=0;const tick=()=>{s++;el.textContent=fmtN(Math.round(from+(target-from)*(s/steps)));if(s<steps)setTimeout(tick,400/steps);};tick();}
+
+// ── IDENTIDADE DO SISTEMA (nome/ícone) ─────────────
+let _appConfig={nome:'Estoque Max',iniciais:'EM',cor:'#4f46e5'};
+function faviconLink(){
+  let link=document.querySelector("link[rel~='icon']");
+  if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
+  return link;
+}
+function faviconSvg(iniciais,cor){
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${cor}'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>${iniciais}</text></svg>`)}`;
+}
+function applyBranding(){
+  document.title=_appConfig.nome;
+  faviconLink().href=faviconSvg(_appConfig.iniciais,_appConfig.cor);
+  const bmark=$('app-bmark');if(bmark){bmark.textContent=_appConfig.iniciais;bmark.style.background=_appConfig.cor;}
+  const bname=$('app-bname');if(bname)bname.textContent=_appConfig.nome;
+  const meta=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(meta)meta.content=_appConfig.nome;
+  const manifestLink=document.querySelector("link[rel='manifest']");if(manifestLink)manifestLink.href='/manifest.json?v='+Date.now();
+}
+async function loadAppConfig(){
+  try{
+    const r=await fetch('/api/config'),d=await r.json();
+    if(r.ok&&d)_appConfig={..._appConfig,...d};
+  }catch(e){console.error('[loadAppConfig]',e);}
+  applyBranding();
+}
+function updateAppConfigPreview(){
+  const nome=$('cfg-app-nome').value||'Estoque Max';
+  const iniciais=($('cfg-app-iniciais').value||'EM').toUpperCase();
+  const cor=$('cfg-app-cor').value||'#4f46e5';
+  const prev=$('cfg-app-preview');if(prev){prev.textContent=iniciais;prev.style.background=cor;}
+}
+async function saveAppConfig(){
+  const nome=$('cfg-app-nome').value.trim();
+  const iniciais=$('cfg-app-iniciais').value.trim().toUpperCase();
+  const cor=$('cfg-app-cor').value;
+  const errEl=$('cfg-app-err');errEl.style.display='none';
+  if(!nome||!iniciais){errEl.textContent='Preencha o nome e as iniciais';errEl.style.display='block';return;}
+  const btn=$('cfg-app-save-btn');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    const r=await fetch('/api/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,iniciais,cor})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro ao salvar');
+    _appConfig={nome:d.nome,iniciais:d.iniciais,cor:d.cor};
+    applyBranding();
+    toast('Identidade do sistema atualizada','ok');
+  }catch(e){errEl.textContent=e.message;errEl.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='Salvar identidade';}
+}
 
 // ── THEME/SIDEBAR ──────────────────────────────────
 function effectiveDark(){return S.theme==='dark'||(S.theme==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches);}
@@ -4126,10 +4198,9 @@ function updateKpis(){
   $('k-ok-tip').textContent=lowList.length?`Estoque baixo:\n${lowList.join('\n')}`:'Todos os produtos com estoque normal.';
   const outList=ps.filter(p=>p.estoque===0).map(p=>p.nome).slice(0,5);
   $('k-out-tip').textContent=outList.length?`Zerados:\n${outList.join('\n')}`:'Nenhum produto zerado.';
-  document.title=out>0?`⚠ ${out} críticos — Estoque Max`:'Estoque Max';
-  let link=document.querySelector("link[rel~='icon']");
-  if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
-  link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>EM</text></svg>";
+  document.title=out>0?`⚠ ${out} críticos — ${_appConfig.nome}`:_appConfig.nome;
+  const link=faviconLink();
+  link.href=out>0?"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠</text></svg>":faviconSvg(_appConfig.iniciais,_appConfig.cor);
 }
 function updateLowBadge(){
   const cnt=S.products.filter(p=>p.estoque<=S.estoqueMin).length;
@@ -4159,6 +4230,10 @@ function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseI
 let _cfgLoaded=false;
 async function loadConfig(){
   if(_cfgLoaded)return;_cfgLoaded=true;
+  $('cfg-app-nome').value=_appConfig.nome;
+  $('cfg-app-iniciais').value=_appConfig.iniciais;
+  $('cfg-app-cor').value=_appConfig.cor;
+  updateAppConfigPreview();
   try{
     const me=await fetch('/api/auth/me').then(r=>r.json());
     if(me.email){
@@ -6836,6 +6911,7 @@ function startVoiceSearch(){
 
 // ── INIT ─────────────────────────────────────────
 (function(){
+  loadAppConfig();
   applyTheme();
   if(S.collapsed)$('sidebar').classList.add('col');
   const cfgMin=$('cfg-min-stock');if(cfgMin)cfgMin.value=S.estoqueMin;

@@ -72,8 +72,8 @@
 
 <div class="left">
   <div class="logo">
-    <div class="logo-mark">EM</div>
-    <span class="logo-name">Estoque Max</span>
+    <div class="logo-mark" id="app-bmark">EM</div>
+    <span class="logo-name" id="app-bname">Estoque Max</span>
   </div>
 
   <h1>Entrar na sua conta</h1>
@@ -127,7 +127,7 @@
     </div>
   </div>
 
-  <p class="foot-note">Conexão segura · Estoque Max integrado ao Bling ERP</p>
+  <p class="foot-note">Conexão segura · <span id="app-bname-inline">Estoque Max</span> integrado ao Bling ERP</p>
 </div>
 
 <div class="right">
@@ -158,6 +158,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
+  // Identidade do sistema (nome/ícone) personalizável em Configurações —
+  // reflete aqui na tela de login também.
+  (async()=>{
+    try{
+      const r=await fetch('/api/config'),d=await r.json();
+      if(!r.ok||!d)return;
+      document.title=`Entrar — ${d.nome}`;
+      const bmark=document.getElementById('app-bmark');if(bmark){bmark.textContent=d.iniciais;bmark.style.background=d.cor;}
+      const bname=document.getElementById('app-bname');if(bname)bname.textContent=d.nome;
+      const bnameInline=document.getElementById('app-bname-inline');if(bnameInline)bnameInline.textContent=d.nome;
+      let link=document.querySelector("link[rel~='icon']");
+      if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
+      link.href=`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${d.cor}'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>${d.iniciais}</text></svg>`)}`;
+    }catch(e){console.error('[config]',e);}
+  })();
   // Initialize Firebase with config from project
   firebase.initializeApp({
     apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
