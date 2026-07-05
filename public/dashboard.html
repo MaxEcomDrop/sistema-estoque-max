@@ -144,13 +144,23 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .fa-cnt{font-size:10px;font-weight:700;background:var(--acc);color:#fff;border-radius:10px;padding:1px 5px;margin-left:2px}
 
 /* FILTER PANEL */
-.fpanel{border-bottom:1px solid var(--bord-l);padding:12px 16px;display:none;background:var(--bg)}
+.fpanel{border-bottom:1px solid var(--bord-l);padding:16px;display:none;background:var(--surf);box-shadow:inset 0 1px 0 var(--bord-l),0 6px 16px -8px rgba(0,0,0,.18);animation:fpanelIn .16s ease}
+@keyframes fpanelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .fpanel.open{display:block}
-.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end}
-.fg label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:4px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;align-items:end}
+.fg{background:var(--bg);border:1px solid var(--bord-l);border-radius:10px;padding:8px 10px}
+.fg label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mu);margin-bottom:5px}
 .fg select,.fg input{width:100%;height:30px;padding:0 8px;background:var(--surf);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;font-family:inherit;color:var(--tx);outline:none;transition:border-color .12s,box-shadow .12s}
 .fg select:focus,.fg input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
-.frow{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.frow{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.sort-select{height:32px;padding:0 10px;background:var(--surf);border:1.5px solid var(--bord);border-radius:20px;font-size:12px;font-weight:600;font-family:inherit;color:var(--tx);outline:none;cursor:pointer;flex-shrink:0}
+.sort-select:focus{border-color:var(--acc)}
+.prod-pagination{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;border-top:1px solid var(--bord-l)}
+.pg-info{font-size:12px;color:var(--mu)}
+.pg-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pg-ctl label{font-size:11px;color:var(--mu)}
+.pg-ctl select{height:30px;padding:0 8px;background:var(--surf);border:1.5px solid var(--bord);border-radius:8px;font-size:12px;font-family:inherit;color:var(--tx)}
+.pg-num{font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap}
 .pchips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
 .pchip{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--surf);border:1px solid var(--bord);color:var(--mu);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .1s}
 .pchip:hover{border-color:var(--acc);color:var(--acc-t)}
@@ -1621,32 +1631,6 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
     <!-- VIEW PRODUTOS -->
     <div class="view" id="view-produtos">
-      <!-- Painel de Tarefas (aparece só quando há alertas) -->
-      <div class="tarefas-panel" id="tarefas-panel" style="display:none">
-        <div class="tf-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span class="tf-header-title">Atenção necessária</span>
-          <span class="tf-badge" id="tf-total-badge">0</span>
-        </div>
-        <div class="tf-grid">
-          <div class="tf-card tf-red" onclick="filterByStock(0,0)" title="Ver produtos sem estoque">
-            <div class="tf-num" id="tf-zerados">0</div>
-            <div class="tf-lbl">Zerados</div>
-          </div>
-          <div class="tf-card tf-orange" onclick="filterByStock(1,S.estoqueMin)" title="Ver estoque crítico">
-            <div class="tf-num" id="tf-criticos">0</div>
-            <div class="tf-lbl" id="tf-criticos-lbl">Críticos (≤5)</div>
-          </div>
-          <div class="tf-card tf-blue" onclick="viewPedidosFiltrado('pendente')" title="Ver pedidos pendentes">
-            <div class="tf-num" id="tf-pend-count">0</div>
-            <div class="tf-lbl">Pedidos pend.</div>
-          </div>
-          <div class="tf-card tf-green" onclick="setView('notas')" title="Ver notas fiscais">
-            <div class="tf-num" id="tf-nfe-count">—</div>
-            <div class="tf-lbl">NF-e emitidas</div>
-          </div>
-        </div>
-      </div>
       <div class="kpi-row">
         <div class="kpi">
           <div class="kpi-lbl">Total de produtos</div>
@@ -1666,15 +1650,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="kpi-sub" id="k-out-s">precisam de reposição</div>
           <div class="kpi-tip" id="k-out-tip"></div>
         </div>
-        <div class="kpi">
+        <div class="kpi" onclick="openModal('custo-import-modal')" style="cursor:pointer" title="Clique para importar/editar custos">
           <div class="kpi-lbl">Valor em estoque</div>
           <div class="kpi-val" id="k-val" style="font-size:18px;letter-spacing:-.5px">—</div>
-          <div class="kpi-sub" id="k-val-s">preço × quantidade</div>
-        </div>
-        <div class="kpi" onclick="openModal('custo-import-modal')" style="cursor:pointer" title="Clique para importar custos">
-          <div class="kpi-lbl">Margem média</div>
-          <div class="kpi-val" id="k-margem" style="font-size:18px;letter-spacing:-.5px">—</div>
-          <div class="kpi-sub" id="k-margem-s">cadastre custos p/ calcular</div>
+          <div class="kpi-sub" id="k-val-s">custo × quantidade</div>
         </div>
       </div>
 
@@ -1686,9 +1665,6 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <input class="sinp" id="search" type="search" placeholder="Buscar nome, SKU ou cole código de barras…" oninput="debouncedSearch(this)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="padding-right:28px">
             <button class="sw-clr" id="sw-clr" onclick="clearSearch()" aria-label="Limpar busca" tabindex="-1">×</button>
           </div>
-          <button class="bti" id="voice-btn" onclick="startVoiceSearch()" title="Busca por voz (V)" aria-label="Busca por voz" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </button>
           <button class="bti" id="scan-btn" onclick="openScanner()" title="Escanear código de barras">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="6" height="16" rx="1"/><rect x="10" y="4" width="2" height="16" rx=".5"/><rect x="14" y="4" width="4" height="16" rx=".5"/><rect x="20" y="4" width="2" height="16" rx=".5"/></svg>
           </button>
@@ -1697,14 +1673,6 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filtros <span class="fa-cnt" id="fa-cnt" style="display:none"></span>
           </button>
-          <button class="bts" onclick="toggleGroup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span id="grp-lbl">Agrupar</span></button>
-          <div class="dvv"></div>
-          <div class="layout-toggle">
-            <button class="lt-btn on" id="lt-list" onclick="setLayout('list')" title="Tabela (L)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
-            <button class="lt-btn" id="lt-grid" onclick="setLayout('grid')" title="Grade (G)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
-            <button class="lt-btn" id="lt-cat" onclick="setLayout('catalog')" title="Catálogo (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg></button>
-          </div>
-          <button class="bti" id="lt-compact" onclick="toggleCompact()" title="Modo compacto (K)" style="margin-left:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button>
           <div class="tr">
             <button class="btp" onclick="openCreate()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Novo Produto</button>
             <button class="bts" onclick="openModal('im-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar</button>
@@ -1720,7 +1688,15 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <span class="qchip" data-s="ok" onclick="setQChip(this,'ok')">Em estoque</span>
           <span class="qchip" data-s="lo" onclick="setQChip(this,'lo')" id="qchip-lo">Estoque baixo</span>
           <span class="qchip" data-s="out" onclick="setQChip(this,'out')">Sem estoque</span>
-          <span style="width:1px;background:var(--bord);margin:4px 2px;flex-shrink:0;align-self:stretch"></span><span id="qchips-cats-inner"></span><span class="qchip" id="qchip-crit" onclick="toggleCritSort(this)" data-s="__crit" style="border-color:transparent;color:var(--mu)">⬆ Críticos</span>
+          <span style="width:1px;background:var(--bord);margin:4px 2px;flex-shrink:0;align-self:stretch"></span>
+          <select id="sort-select" class="sort-select" onchange="setSortSelect(this.value)" title="Ordenar produtos">
+            <option value="relevancia:desc">Relevância (mais vendidos → estoque)</option>
+            <option value="vendas:desc">Mais vendido</option>
+            <option value="vendas:asc">Menos vendas</option>
+            <option value="preco:desc">Maior valor</option>
+            <option value="preco:asc">Menor valor</option>
+          </select>
+          <span id="qchips-cats-inner"></span><span class="qchip" id="qchip-crit" onclick="toggleCritSort(this)" data-s="__crit" style="border-color:transparent;color:var(--mu)">⬆ Críticos</span>
           <span class="qchip" id="qchip-clear" onclick="clearFilters()" style="display:none;border-color:var(--er);color:var(--er);background:var(--er-bg,#fee2e2)">× Limpar filtros</span>
           <span id="qchip-count" style="margin-left:auto;font-size:11px;color:var(--fa);white-space:nowrap;align-self:center;padding-right:2px;flex-shrink:0"></span>
         </div>
@@ -1747,7 +1723,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
 
         <div id="card-container"></div>
-        <div class="twrap" id="list-container">
+        <div class="prod-pagination" id="prod-pagination"></div>
+        <div class="twrap" id="list-container" style="display:none">
           <table>
             <thead>
               <tr>
@@ -2566,11 +2543,9 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="sc-row"><span class="sc-lbl">Entrada rápida</span><kbd class="kbd">Q</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Editar em massa</span><kbd class="kbd">B</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Modo escuro</span><kbd class="kbd">D</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Modo compacto</span><kbd class="kbd">K</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Desfazer edição</span><kbd class="kbd">Z</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Selecionar tudo</span><kbd class="kbd">A</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Novo produto</span><kbd class="kbd">N</kbd></div>
-      <div class="sc-row"><span class="sc-lbl">Busca por voz</span><kbd class="kbd">V</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Fechar / cancelar</span><kbd class="kbd">Esc</kbd></div>
       <div class="sc-row"><span class="sc-lbl">Este painel</span><kbd class="kbd">?</kbd></div>
     </div>
@@ -2829,11 +2804,12 @@ firebase.initializeApp({
 const S = {
   products:[], filtered:[], selected:new Set(),
   prevPrices:{}, prevStocks:{}, dupSkus:new Set(),
-  view:'produtos', sort:{field:localStorage.getItem('sf')||'nome',dir:localStorage.getItem('sd')||'asc'},
-  grouped:false, page:0, PAGE:50,
+  view:'produtos', sort:{field:localStorage.getItem('sf')||'relevancia',dir:localStorage.getItem('sd')||'desc'},
+  vendasPorCodigo:{},
+  grouped:false, page:0, PAGE:50, pageSize:parseInt(localStorage.getItem('pgsz')||'10'),
   lastSync:null, autoRefresh:parseInt(localStorage.getItem('ar')??'1'),
   arTimer:null, arCountdown:0,
-  layout:localStorage.getItem('layout')||'list',
+  layout:'grid',
   theme:localStorage.getItem('theme')||(localStorage.getItem('dm')==='1'?'dark':'light'),
   collapsed:localStorage.getItem('sc')==='1',
   presets:JSON.parse(localStorage.getItem('presets')||'[]'),
@@ -2896,10 +2872,33 @@ function setLayout(l){
   if(l==='list'){cc.className='';cc.style.display='none';lc.style.display='';}
   else{lc.style.display='none';cc.style.display='';cc.className='card-grid '+(l==='grid'?'vg':'vc');renderCards();}
 }
+function pageCount(){return Math.max(1,Math.ceil(S.filtered.length/S.pageSize));}
+function setPageSize(v){S.pageSize=parseInt(v)||10;localStorage.setItem('pgsz',S.pageSize);S.page=0;renderCards();}
+function gotoPage(delta){const max=pageCount()-1;S.page=Math.min(max,Math.max(0,S.page+delta));renderCards();window.scrollTo({top:0,behavior:'smooth'});}
+function renderPagination(){
+  const el=$('prod-pagination');if(!el)return;
+  const tot=S.filtered.length;
+  if(!tot){el.innerHTML='';return;}
+  const pc=pageCount();
+  const from=S.page*S.pageSize+1,to=Math.min(tot,(S.page+1)*S.pageSize);
+  el.innerHTML=`
+    <div class="pg-info">Mostrando ${fmtN(from)}–${fmtN(to)} de ${fmtN(tot)}</div>
+    <div class="pg-ctl">
+      <label>Por página</label>
+      <select onchange="setPageSize(this.value)">
+        ${[10,50,100,500].map(n=>`<option value="${n}" ${S.pageSize===n?'selected':''}>${n}</option>`).join('')}
+      </select>
+      <button class="bts" onclick="gotoPage(-1)" ${S.page<=0?'disabled':''}>‹ Anterior</button>
+      <span class="pg-num">Página ${S.page+1} de ${pc}</span>
+      <button class="bts" onclick="gotoPage(1)" ${S.page>=pc-1?'disabled':''}>Próxima ›</button>
+    </div>`;
+}
 function renderCards(){
   const cc=$('card-container');
   const q=($('search').value||'').trim();
-  const slice=S.filtered.slice(0,(S.page+1)*S.PAGE);
+  if(S.page>0&&S.page*S.pageSize>=S.filtered.length)S.page=0;
+  const slice=S.filtered.slice(S.page*S.pageSize,(S.page+1)*S.pageSize);
+  renderPagination();
   if(!slice.length){cc.innerHTML=`<div class="empty-st" style="grid-column:1/-1"><div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div><p class="empty-t">Nenhum produto encontrado</p><p class="empty-d">Tente ajustar os filtros ou termos da busca.</p><button class="empty-btn" onclick="clearFilters();clearSearch()">Limpar filtros e busca</button></div>`;return;}
   cc.innerHTML=slice.map(p=>{
     const isSel=S.selected.has(p.id);
@@ -3720,6 +3719,7 @@ async function loadProducts(showToast=false){
     const _sf=localStorage.getItem('sf')||'nome',_sd=localStorage.getItem('sd')||'asc';
     ['codigo','nome','categoria','preco','estoque','status'].forEach(f=>{const el=$('si-'+f);if(!el)return;if(f===_sf){el.textContent=_sd==='asc'?'\u2191':'\u2193';el.closest('th')?.classList.add('srt');}else{el.textContent='';el.closest('th')?.classList.remove('srt');}});
     updateKpis();applyFilters();updateSyncTs();updateLowBadge();renderTarefas();
+    if(!S._vendasRankingLoaded){S._vendasRankingLoaded=true;loadVendasRanking();}
     if(S.view==='inicio'){renderDashAlerts();recomputeDashLucro();if(!_dashLoaded)loadDashboard();}
     else{renderDashAlerts();recomputeDashLucro();}
     if(showToast)toast('Produtos atualizados','ok');
@@ -3765,25 +3765,15 @@ function sync(){
 // ── KPI ──────────────────────────────────────────
 function updateKpis(){
   const ps=S.products,total=ps.length,ok=ps.filter(p=>p.estoque>0).length,out=total-ok;
-  const val=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
+  // Valor em estoque = custo × quantidade (o que a empresa tem investido em
+  // estoque parado) — não preço de venda, que superestimaria o valor real.
+  const withCost=ps.filter(p=>p.precoCusto>0);
   const custoTotal=ps.reduce((a,p)=>a+(p.precoCusto>0?p.precoCusto*p.estoque:0),0);
+  const valPreco=ps.reduce((a,p)=>a+(p.preco*p.estoque),0);
   animNum($('k-total'),total);animNum($('k-ok'),ok);animNum($('k-out'),out);
-  $('k-val').textContent=fmt(val);
-  const vs=$('k-val-s');if(vs)vs.textContent=custoTotal>0?`custo: ${fmt(custoTotal)}`:'preço × quantidade';
-  const withCost=ps.filter(p=>p.preco>0&&p.precoCusto>0);
-  const margEl=$('k-margem'),margSub=$('k-margem-s');
-  if(margEl&&margSub){
-    if(withCost.length){
-      const m=withCost.reduce((a,p)=>a+((p.preco-p.precoCusto)/p.preco),0)/withCost.length;
-      margEl.textContent=Math.round(m*100)+'%';
-      margSub.textContent=`${withCost.length} de ${total} com custo`;
-      margEl.style.color=m>=0.25?'var(--ok-t)':m>=0.1?'var(--wa)':'var(--er-t)';
-    }else{
-      margEl.textContent='—';
-      margSub.textContent=`toque para importar custos`;
-      margEl.style.color='';
-    }
-  }
+  $('k-val').textContent=fmt(withCost.length?custoTotal:valPreco);
+  const vs=$('k-val-s');
+  if(vs)vs.textContent=withCost.length?`${withCost.length} de ${total} com custo cadastrado`:'sem custo cadastrado — usando preço de venda';
   $('k-total-s').textContent=`${total} produto${total!==1?'s':''} no Bling`;
   $('k-out-s').textContent=`${out} produto${out!==1?'s':''} sem estoque`;
   const lowList=ps.filter(p=>p.estoque>0&&p.estoque<=S.estoqueMin).map(p=>p.nome).slice(0,5);
@@ -3942,9 +3932,38 @@ function applyFilters(){
     return true;
   });
   const{field,dir}=S.sort;
-  filtered.sort((a,b)=>{let av=a[field],bv=b[field];if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}if(av<bv)return dir==='asc'?-1:1;if(av>bv)return dir==='asc'?1:-1;return 0;});
+  const vendas=p=>S.vendasPorCodigo[p.codigo]||0;
+  if(field==='relevancia'){
+    // Ordem padrão: mais vendidos → em estoque → sem estoque
+    filtered.sort((a,b)=>{
+      const va=vendas(a),vb=vendas(b);
+      if(va!==vb)return vb-va;
+      const ea=a.estoque>0?1:0,eb=b.estoque>0?1:0;
+      if(ea!==eb)return eb-ea;
+      return a.nome.toLowerCase().localeCompare(b.nome.toLowerCase());
+    });
+  }else if(field==='vendas'){
+    filtered.sort((a,b)=>{const va=vendas(a),vb=vendas(b);return dir==='asc'?va-vb:vb-va;});
+  }else{
+    filtered.sort((a,b)=>{let av=a[field],bv=b[field];if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}if(av<bv)return dir==='asc'?-1:1;if(av>bv)return dir==='asc'?1:-1;return 0;});
+  }
   S.filtered=filtered;S.page=0;
   updateFilterBadge();updateQChips();renderTable();
+}
+function setSortSelect(val){
+  const[field,dir]=val.split(':');
+  S.sort.field=field;S.sort.dir=dir||'desc';
+  localStorage.setItem('sf',S.sort.field);localStorage.setItem('sd',S.sort.dir);
+  applyFilters();
+}
+async function loadVendasRanking(){
+  try{
+    const r=await fetch('/api/produtos/vendas-ranking');
+    if(!r.ok)return;
+    const d=await r.json();
+    S.vendasPorCodigo=d.vendasPorCodigo||{};
+    if(S.sort.field==='relevancia'||S.sort.field==='vendas')applyFilters();
+  }catch{}
 }
 function sortBy(field){
   if(S.sort.field===field)S.sort.dir=S.sort.dir==='asc'?'desc':'asc';
@@ -3995,6 +4014,7 @@ function setQCat(v){
   $('f-cat').value=v;vibrate(8);applyFilters();
 }
 function updateQChips(){
+  const ss=$('sort-select');if(ss){const val=`${S.sort.field}:${S.sort.dir}`;if(ss.value!==val&&[...ss.options].some(o=>o.value===val))ss.value=val;}
   const v=$('f-status').value;
   document.querySelectorAll('#qchips-bar .qchip').forEach(c=>{if(c.dataset.s!=='__crit')c.classList.toggle('on',c.dataset.s===v);});
   const cc=$('qchip-crit'),isCrit=S.sort.field==='estoque'&&S.sort.dir==='asc';
@@ -4760,7 +4780,6 @@ const _CP_CMDS=[
   {label:'Entrada rápida',sub:'Lançar movimentação de estoque',icon:'zap',fn:()=>openQuick()},
   {label:'Scanner',sub:'Escanear código de barras por câmera',icon:'camera',fn:()=>{setView('produtos');setTimeout(openScanner,60)}},
   {label:'Modo escuro',sub:'Alternar tema claro/escuro',icon:'moon',fn:()=>toggleDark()},
-  {label:'Modo compacto',sub:'Visualização densa da tabela',icon:'list',fn:()=>toggleCompact()},
   {label:'Atalhos de teclado',sub:'Ver todos os atalhos',icon:'command',fn:()=>openModal('sc-modal')},
 ];
 let _cpIdx=-1;
@@ -4834,16 +4853,11 @@ document.addEventListener('keydown',e=>{
   else if(k==='q')  openQuick();
   else if(k==='b'&&S.selected.size)  openBulk();
   else if(k==='d')  toggleDark();
-  else if(k==='l')  setLayout('list');
-  else if(k==='g')  setLayout('grid');
-  else if(k==='c')  setLayout('catalog');
-  else if(k==='k')  toggleCompact();
   else if(k==='z')  undoLast();
   else if(k==='a')  {$('cb-all').checked=true;toggleAllCb();}
   else if(k==='?')  openModal('sc-modal');
   else if(k==='escape'){closeSheet();closeQuick();closeCmdPalette();closeModal('sc-modal');closeModal('im-modal');closeModal('create-modal');closeEditor();closeRowActions();closeImgLbox();$('undo-toast').classList.remove('vis');}
   else if(k==='n'&&S.view==='produtos')openCreate();
-  else if(k==='v'&&S.view==='produtos'){const vb=$('voice-btn');if(vb&&vb.style.display!=='none')startVoiceSearch();}
 });
 
 // ── EDITOR DRAWER ─────────────────────────────────

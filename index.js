@@ -1097,6 +1097,62 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
   }
 });
 
+const _vendasRankingCache = new Map();
+const VENDAS_RANKING_AMOSTRA_MAX = 30; // ~30 × 350ms ≈ 10s — mesmo raciocínio do TAXAS_AMOSTRA_MAX
+
+// Ranking de quantidade vendida por SKU — usado pra ordenar "mais vendido"/
+// "menos vendas" na aba Produtos. O Bling não expõe isso na listagem de
+// produtos nem de pedidos (só no detalhe por ID), então é uma AMOSTRA dos
+// pedidos mais recentes do período — não a contagem exata quando há muitos
+// pedidos (mesma limitação já assumida no "Top 5" do Financeiro/Dashboard).
+app.get('/api/produtos/vendas-ranking', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
+  const dias = Math.min(Math.max(parseInt(req.query.dias) || 90, 1), 365);
+  const fim = isoLocal();
+  const inicio = isoLocalDiasAtras(dias);
+  const key = `${inicio}|${fim}`;
+  const hit = _vendasRankingCache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60000 && !req.query.force) return res.json(hit.payload);
+  try {
+    const lista = await fetchPedidos(token, inicio, fim, 3);
+    const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
+    const amostra = validos.slice(0, VENDAS_RANKING_AMOSTRA_MAX);
+    const porCodigo = {};
+    let detalhados = 0;
+    for (const p of amostra) {
+      try {
+        const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${p.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = data?.data || data || {};
+        const itens = Array.isArray(d.itens) ? d.itens : [];
+        for (const it of itens) {
+          const codigo = it.codigo || it.produto?.codigo || '';
+          if (!codigo) continue;
+          porCodigo[codigo] = (porCodigo[codigo] || 0) + (Number(it.quantidade) || 0);
+        }
+        detalhados++;
+      } catch { /* um pedido falhou; os demais seguem */ }
+    }
+    const payload = {
+      periodo: { inicio, fim, dias },
+      vendasPorCodigo: porCodigo,
+      amostra: detalhados,
+      dePedidos: validos.length,
+      exata: detalhados >= validos.length,
+    };
+    _vendasRankingCache.set(key, { at: Date.now(), payload });
+    res.json(payload);
+  } catch (err) {
+    if (err.response?.status === 401) {
+      res.clearCookie('bling_token');
+      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
+    }
+    sendErrorResponse(res, 500, 'Erro ao calcular ranking de vendas', err.message);
+  }
+});
+
 // Busca produto completo (para editor)
 app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
