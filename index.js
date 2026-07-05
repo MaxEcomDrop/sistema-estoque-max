@@ -1572,6 +1572,23 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
   }
 });
 
+// Remove do objeto do produto (vindo de um GET do Bling) os campos
+// computados/somente-leitura que não fazem parte do payload de escrita —
+// reenviá-los num PUT arrisca o Bling rejeitar ou ignorar a atualização
+// inteira silenciosamente. O estoque em especial é uma foto ANTIGA de
+// quando os dados foram lidos (o saldo real é gerenciado à parte, pelo
+// endpoint /estoques) — mandar de volta podia sobrescrever estoque real
+// por um valor desatualizado.
+function stripReadOnlyProdutoFields(obj) {
+  const clean = { ...obj };
+  delete clean.id;
+  delete clean.estoque;
+  delete clean.dataCriacao;
+  delete clean.dataAlteracao;
+  delete clean.imagem;
+  return clean;
+}
+
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
@@ -1583,27 +1600,18 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     // Atualização completa via drawer editor
     if (_fullUpdate) {
       try {
+      // O objeto _fullUpdate vem do editor, que carrega o produto INTEIRO do
+      // Bling (GET) e devolve ele quase todo de volta no PUT — stripReadOnlyProdutoFields
+      // remove os campos computados/somente-leitura (estoque agregado, timestamps,
+      // id) que não fazem parte do payload de escrita e cujo reenvio é o risco
+      // real de o Bling rejeitar ou ignorar a atualização inteira silenciosamente.
       // Converte imagemUrl (campo frontend) para o formato do Bling v3:
       // imagens ficam em midia.imagens.externas[].link ("imagem.link" não existe)
-      const payload = { ..._fullUpdate };
+      const payload = stripReadOnlyProdutoFields(_fullUpdate);
       if (payload.imagemUrl !== undefined) {
         if (payload.imagemUrl) payload.midia = { imagens: { externas: [{ link: payload.imagemUrl }] } };
         delete payload.imagemUrl;
       }
-      // O objeto _fullUpdate vem do editor, que carrega o produto INTEIRO do
-      // Bling (GET) e devolve ele quase todo de volta no PUT — inclui campos
-      // computados/somente-leitura (estoque agregado, timestamps, id) que não
-      // fazem parte do payload de escrita. Reenviá-los é o risco real de o
-      // Bling rejeitar ou ignorar a atualização inteira silenciosamente: o
-      // estoque em especial é uma foto ANTIGA de quando o editor foi aberto
-      // (o saldo real é gerenciado à parte, pelo endpoint /estoques logo
-      // abaixo) — mandar de volta podia sobrescrever estoque real por um
-      // valor desatualizado.
-      delete payload.id;
-      delete payload.estoque;
-      delete payload.dataCriacao;
-      delete payload.dataAlteracao;
-      delete payload.imagem;
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
@@ -1630,12 +1638,14 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
 
   try {
     if (preco !== undefined) {
-      // Busca o produto completo antes de atualizar (Bling exige objeto completo no PUT)
+      // Busca o produto completo antes de atualizar (Bling exige objeto completo no PUT).
+      // stripReadOnlyProdutoFields remove estoque/id/timestamps computados do GET —
+      // reenviá-los é o que fazia o Bling ignorar a atualização silenciosamente.
       const { data: current } = await axios.get(
         `https://www.bling.com.br/Api/v3/produtos/${id}`,
         { headers: blingHeaders(token) }
       );
-      const prod = current?.data || {};
+      const prod = stripReadOnlyProdutoFields(current?.data || {});
       await axios.put(
         `https://www.bling.com.br/Api/v3/produtos/${id}`,
         { ...prod, preco: Number(preco) },
@@ -1655,7 +1665,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         `https://www.bling.com.br/Api/v3/produtos/${id}`,
         { headers: blingHeaders(token) }
       );
-      const prod = current?.data || {};
+      const prod = stripReadOnlyProdutoFields(current?.data || {});
       await axios.put(
         `https://www.bling.com.br/Api/v3/produtos/${id}`,
         { ...prod, precoCusto: Number(precoCusto) },

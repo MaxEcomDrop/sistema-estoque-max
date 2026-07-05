@@ -309,6 +309,9 @@ tr:hover .thumb{box-shadow:0 2px 8px rgba(0,0,0,.1)}
 
 /* AR BAR */
 .ar-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu);padding:6px 16px;background:var(--bg);border-bottom:1px solid var(--bord-l)}
+/* Faixa de status do auto-sync ocultada: o refresh continua rodando em
+   silêncio, sem precisar de uma barra dedicada roubando espaço da tela. */
+#ar-bar{display:none!important}
 .ar-cd{font-variant-numeric:tabular-nums;font-weight:600;color:var(--tx);min-width:25px;display:inline-block}
 
 /* SECONDARY VIEWS */
@@ -425,7 +428,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .fk-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:18px 20px;cursor:pointer;transition:box-shadow .15s,transform .12s;position:relative}
 .fk-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
 .fk-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
-.fk-label{font-size:12px;font-weight:600;color:var(--mu);line-height:1.3}
+.fk-label{font-size:12px;font-weight:600;color:var(--mu);line-height:1.3;flex:1;min-width:0}
 .fk-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .fk-ico svg{width:17px;height:17px}
 .fk-val{font-size:22px;font-weight:800;letter-spacing:-.8px;line-height:1;margin-bottom:5px;font-variant-numeric:tabular-nums}
@@ -674,18 +677,18 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .mn-hero .mn-sub{font-size:12.5px;opacity:.9;margin-top:8px;display:flex;align-items:center;gap:5px}
 /* card "wide" pra listas (contas, fluxo, notas) — mesmo roxo, só maior */
 .mn-wide{border-radius:16px;padding:0;overflow:hidden}
-.mn-wide .mn-wide-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.14);position:relative;z-index:1}
-.mn-wide-hd-t{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:7px}
+.mn-wide .mn-wide-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bord-l);position:relative;z-index:1}
+.mn-wide-hd-t{font-size:13px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:7px}
 .mn-wide-hd-t svg{width:15px;height:15px}
-.mn-wide-tot{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px;color:#fff}
+.mn-wide-tot{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px;color:var(--tx)}
 .mn-wide-body{max-height:230px;overflow-y:auto;position:relative;z-index:1}
-.mn-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.1);font-size:12.5px;gap:10px;color:#fff}
+.mn-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bord-l);font-size:12.5px;gap:10px;color:var(--tx)}
 .mn-row:last-child{border-bottom:none}
 .mn-row-info{min-width:0;flex:1}
-.mn-row-nome{font-weight:500;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mn-row-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:1px}
-.mn-row-sub.venc{color:#fecaca;font-weight:600}
-.mn-row-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff}
+.mn-row-nome{font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mn-row-sub{font-size:11px;color:var(--mu);margin-top:1px}
+.mn-row-sub.venc{color:var(--er-t);font-weight:600}
+.mn-row-val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tx)}
 /* seção/atalhos: título continua neutro (fora dos cards), atalhos viram roxo também */
 .mn-shortcut{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(135deg,#7c6ff0,#9b6ff5);border:none;border-radius:14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#fff;transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left;box-shadow:0 4px 14px rgba(99,102,241,.2)}
 .mn-shortcut:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(99,102,241,.32)}
@@ -698,14 +701,6 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .mn-meta-track{height:8px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
 .mn-meta-fill{height:100%;background:#fff;border-radius:99px;transition:width .4s ease}
 .mn-meta-sub{font-size:11px;color:rgba(255,255,255,.75);margin-top:6px}
-/* Risco de ruptura reaproveita .rupt-* (mesmo widget usado só aqui) — só
-   sobrescreve texto/fundo pra ficar legível dentro do card roxo. */
-.mn-wide .rupt-hd-t{color:rgba(255,255,255,.85)}
-.mn-wide .rupt-row{border-top-color:rgba(255,255,255,.14)}
-.mn-wide .rupt-row:active{background:rgba(255,255,255,.08)}
-.mn-wide .rupt-thumb{background:rgba(255,255,255,.14);color:#fff}
-.mn-wide .rupt-nome{color:#fff}
-.mn-wide .rupt-track{background:rgba(255,255,255,.22)}
 /* QUICK SHORTCUTS */
 .dash-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .qs-btn{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surf);border:1.5px solid var(--bord);border-radius:14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--tx);transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:left;box-shadow:0 1px 3px rgba(0,0,0,.04)}
@@ -1085,6 +1080,15 @@ select,input[type=date],input[type=number],input[type=text],input[type=url],inpu
   .edraw{width:100vw;max-width:100vw}
   .content{padding:12px 8px calc(76px + env(safe-area-inset-bottom,0px))}
   .fk-grid,.fk-grid-2{grid-template-columns:1fr 1fr}
+  /* Cards de estatística (fk-card) mais compactos no mobile — sem isso o
+     selo de ícone de tamanho fixo espremia o rótulo em colunas de 2, quebrando
+     título em palavras soltas ("A" / "receber") */
+  .fk-card{padding:14px}
+  .fk-label{font-size:11px}
+  .fk-val{font-size:19px}
+  .fk-sub{font-size:11px}
+  .fk-ico{width:28px;height:28px;border-radius:8px}
+  .fk-ico svg{width:14px;height:14px}
   .fin-period-bar{flex-direction:column;align-items:flex-start}
   .fin-chart-wrap{padding:14px}
   .tf-grid{grid-template-columns:1fr 1fr}
@@ -1588,78 +1592,78 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- TOP 5 MAIS VENDIDOS -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Top 5 mais vendidos</div>
-      <div class="mn-card mn-wide">
+      <div class="tcard mn-wide">
         <div class="mn-wide-body" id="dash-top-vendidos">
-          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Carregando…</p></div>
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Carregando…</p></div>
         </div>
       </div>
 
       <!-- RUPTURA -->
-      <div class="mn-card mn-wide" id="rupt-wrap" style="display:none">
+      <div class="rupt-wrap mn-wide" id="rupt-wrap" style="display:none">
         <div class="mn-wide-hd">
           <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Risco de ruptura</span>
-          <span style="font-size:11px;color:rgba(255,255,255,.7)" id="rupt-sub"></span>
+          <span style="font-size:11px;color:var(--mu)" id="rupt-sub"></span>
         </div>
         <div id="rupt-list"></div>
-        <span class="rupt-ver-mais" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin*3),50)" style="display:block;text-align:center;padding:10px;color:#fff;position:relative;z-index:1;cursor:pointer">Ver todos os críticos →</span>
+        <span class="rupt-ver-mais" onclick="setView('produtos');setTimeout(()=>filterByStock(1,S.estoqueMin*3),50)" style="display:block;text-align:center;padding:10px;color:var(--acc-t);cursor:pointer">Ver todos os críticos →</span>
       </div>
 
       <!-- CONTAS -->
       <div class="dash-two">
-        <div class="mn-card mn-wide">
+        <div class="tcard mn-wide">
           <div class="mn-wide-hd">
-            <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> A receber</span>
+            <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> A receber</span>
             <span class="mn-wide-tot" id="dash-receber-tot">—</span>
           </div>
-          <div class="mn-wide-body" id="dash-receber-list"><div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.7)">Carregando…</p></div></div>
+          <div class="mn-wide-body" id="dash-receber-list"><div class="st-wrap" style="padding:24px"><p style="color:var(--mu)">Carregando…</p></div></div>
         </div>
-        <div class="mn-card mn-wide">
+        <div class="tcard mn-wide">
           <div class="mn-wide-hd">
-            <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> A pagar</span>
+            <span class="mn-wide-hd-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> A pagar</span>
             <span class="mn-wide-tot" id="dash-pagar-tot">—</span>
           </div>
-          <div class="mn-wide-body" id="dash-pagar-list"><div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.7)">Carregando…</p></div></div>
+          <div class="mn-wide-body" id="dash-pagar-list"><div class="st-wrap" style="padding:24px"><p style="color:var(--mu)">Carregando…</p></div></div>
         </div>
       </div>
 
       <!-- FLUXO DE CAIXA (próximos 7 dias) -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg> Fluxo de caixa (próximos 7 dias)</div>
-      <div class="mn-card mn-wide">
-        <div class="flow-summary" style="position:relative;z-index:1">
-          <div class="flow-item flow-in" style="border-right-color:rgba(255,255,255,.14)">
-            <div class="flow-ico" style="background:rgba(255,255,255,.16);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></div>
-            <div class="flow-lbl" style="color:rgba(255,255,255,.8)">A Receber</div>
-            <div class="flow-val" id="dash-flow-receber" style="color:#fff">—</div>
+      <div class="tcard mn-wide">
+        <div class="flow-summary">
+          <div class="flow-item flow-in">
+            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></div>
+            <div class="flow-lbl">A Receber</div>
+            <div class="flow-val" id="dash-flow-receber">—</div>
           </div>
-          <div class="flow-item flow-out" style="border-right-color:rgba(255,255,255,.14)">
-            <div class="flow-ico" style="background:rgba(255,255,255,.16);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
-            <div class="flow-lbl" style="color:rgba(255,255,255,.8)">A Pagar</div>
-            <div class="flow-val" id="dash-flow-pagar" style="color:#fff">—</div>
+          <div class="flow-item flow-out">
+            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+            <div class="flow-lbl">A Pagar</div>
+            <div class="flow-val" id="dash-flow-pagar">—</div>
           </div>
           <div class="flow-item flow-net">
-            <div class="flow-ico" style="background:rgba(255,255,255,.16);color:#fff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-            <div class="flow-lbl" style="color:rgba(255,255,255,.8)">Saldo Líquido</div>
-            <div class="flow-val" id="dash-flow-liquido" style="color:#fff">—</div>
+            <div class="flow-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+            <div class="flow-lbl">Saldo Líquido</div>
+            <div class="flow-val" id="dash-flow-liquido">—</div>
           </div>
         </div>
-        <div class="flow-timeline" id="dash-flow-timeline" style="border-top-color:rgba(255,255,255,.14);position:relative;z-index:1">
-          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Carregando fluxo de caixa…</p></div>
+        <div class="flow-timeline" id="dash-flow-timeline">
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Carregando fluxo de caixa…</p></div>
         </div>
       </div>
 
       <!-- CONTAS PRÓXIMAS A VENCER -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Contas próximas a vencer</div>
-      <div class="mn-card mn-wide">
+      <div class="tcard mn-wide">
         <div class="mn-wide-body" id="dash-venc-list">
-          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Carregando contas…</p></div>
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Carregando contas…</p></div>
         </div>
       </div>
 
       <!-- PRÓXIMAS DATAS IMPORTANTES (Calendário) -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Próximas datas importantes</div>
-      <div class="mn-card mn-wide">
+      <div class="tcard mn-wide">
         <div class="mn-wide-body" id="dash-cal-preview">
-          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Nenhum evento cadastrado</p></div>
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Nenhum evento cadastrado</p></div>
         </div>
       </div>
 
@@ -1670,9 +1674,9 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- ATUALIZAÇÕES DO SISTEMA -->
       <div class="dash-sec-t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg> Atualizações do sistema</div>
-      <div class="mn-card mn-wide">
+      <div class="tcard mn-wide">
         <div class="mn-wide-body" id="dash-updates-list">
-          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.7)">Carregando…</p></div>
+          <div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Carregando…</p></div>
         </div>
       </div>
 
@@ -3505,25 +3509,25 @@ async function loadEnhancedDashboard(){
     if(!wrap)return;
     const fluxoClass=fluxo>=0?'s-ok':'s-out';
     const fluxoIcon=fluxo>=0?'📈':'📉';
-    wrap.innerHTML=`<div class="mn-card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div style="position:relative;z-index:1">
-        <div class="mn-lbl">Fluxo de Caixa (30 dias)</div>
+    wrap.innerHTML=`<div class="fk-card fk-indigo" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;cursor:default">
+      <div>
+        <div class="fk-label">Fluxo de Caixa (30 dias)</div>
         <div style="display:flex;align-items:baseline;gap:6px">
-          <div class="mn-val" style="font-size:18px">${fmt(fluxo)}</div>
+          <div class="fk-val" style="font-size:18px">${fmt(fluxo)}</div>
           <span>${fluxoIcon}</span>
         </div>
-        <div class="mn-sub">A receber: ${fmt(receber.total||0)} · A pagar: ${fmt(pagar.total||0)}</div>
+        <div class="fk-sub">A receber: ${fmt(receber.total||0)} · A pagar: ${fmt(pagar.total||0)}</div>
       </div>
-      <div style="position:relative;z-index:1;border-left:1px solid rgba(255,255,255,.18);padding-left:12px">
-        <div class="mn-lbl">Contas Vencidas</div>
+      <div style="border-left:1px solid var(--bord-l);padding-left:12px">
+        <div class="fk-label">Contas Vencidas</div>
         <div style="display:flex;gap:8px">
           <div style="flex:1">
-            <div class="mn-val" style="font-size:14px">${receber.vencidas||0}</div>
-            <div class="mn-sub">A receber</div>
+            <div class="fk-val" style="font-size:14px">${receber.vencidas||0}</div>
+            <div class="fk-sub">A receber</div>
           </div>
-          <div style="flex:1;border-left:1px solid rgba(255,255,255,.18)">
-            <div class="mn-val" style="font-size:14px;padding-left:8px">${pagar.vencidas||0}</div>
-            <div class="mn-sub" style="padding-left:8px">A pagar</div>
+          <div style="flex:1;border-left:1px solid var(--bord-l)">
+            <div class="fk-val" style="font-size:14px;padding-left:8px">${pagar.vencidas||0}</div>
+            <div class="fk-sub" style="padding-left:8px">A pagar</div>
           </div>
         </div>
       </div>
@@ -3539,15 +3543,15 @@ async function loadFinanceiroPrevisao(){
     const fluxo=d.proximos30dias?.fluxoLiquido||0;
     const alertas=d.alertas||{};
     const recomendacoes=d.recomendacoes||[];
-    wrap.innerHTML=`<div class="mn-card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="position:relative;z-index:1">
-        <div class="mn-lbl">🔮 Próximos 30 dias</div>
+    wrap.innerHTML=`<div class="fk-card fk-purple" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;cursor:default">
+      <div>
+        <div class="fk-label">🔮 Próximos 30 dias</div>
         <div style="display:flex;justify-content:space-between">
-          <div><div class="mn-sub">A receber</div><div class="mn-val" style="font-size:14px">${fmt(d.proximos30dias?.aReceber||0)}</div></div>
-          <div style="border-left:1px solid rgba(255,255,255,.18);padding-left:12px"><div class="mn-sub">A pagar</div><div class="mn-val" style="font-size:14px">−${fmt(d.proximos30dias?.aPagar||0)}</div></div>
+          <div><div class="fk-sub">A receber</div><div class="fk-val" style="font-size:14px">${fmt(d.proximos30dias?.aReceber||0)}</div></div>
+          <div style="border-left:1px solid var(--bord-l);padding-left:12px"><div class="fk-sub">A pagar</div><div class="fk-val" style="font-size:14px">−${fmt(d.proximos30dias?.aPagar||0)}</div></div>
         </div>
       </div>
-      ${recomendacoes.length?`<div style="position:relative;z-index:1;border-left:1px solid rgba(255,255,255,.18);padding-left:12px"><div class="mn-lbl">⚠️ Alertas</div><div style="font-size:12px;line-height:1.6;color:#fff">${recomendacoes.slice(0,2).map(r=>'· '+esc(r)).join('<br>')}</div></div>`:''}
+      ${recomendacoes.length?`<div style="border-left:1px solid var(--bord-l);padding-left:12px"><div class="fk-label">⚠️ Alertas</div><div style="font-size:12px;line-height:1.6;color:var(--tx)">${recomendacoes.slice(0,2).map(r=>'· '+esc(r)).join('<br>')}</div></div>`:''}
     </div>`;
   }catch(e){console.error('[Previsão]',e.message);}
 }
@@ -3562,12 +3566,12 @@ async function loadDashTaxas(){
     if(sub)sub.textContent=est.exata?'no período':'estimado (amostra) no período';
     const top=d.topVendidos||[];
     if(!topEl)return;
-    if(!top.length){topEl.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Sem pedidos detalhados o suficiente no período pra calcular.</p></div>';return;}
+    if(!top.length){topEl.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Sem pedidos detalhados o suficiente no período pra calcular.</p></div>';return;}
     topEl.innerHTML=top.map((p,i)=>`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${i+1}. ${esc(p.nome)}</div><div class="mn-row-sub">${p.codigo?esc(p.codigo)+' · ':''}${fmtN(p.qtd)} un. vendidas</div></div><div class="mn-row-val">${fmt(p.faturamento)}</div></div>`).join('')
-      +`<div style="padding:8px 16px;font-size:10.5px;color:rgba(255,255,255,.6)">Baseado em uma amostra de ${d.amostra||0} de ${d.dePedidos||0} pedido(s) do período — não é a contagem exata quando há muitos pedidos.</div>`;
+      +`<div style="padding:8px 16px;font-size:10.5px;color:var(--fa)">Baseado em uma amostra de ${d.amostra||0} de ${d.dePedidos||0} pedido(s) do período — não é a contagem exata quando há muitos pedidos.</div>`;
   }catch(e){
     console.error('[Taxas]',e.message);
-    if(topEl)topEl.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Erro ao carregar: ${esc(e.message)}</p></div>`;
+    if(topEl)topEl.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Erro ao carregar: ${esc(e.message)}</p></div>`;
   }
 }
 function filterNotasBySituacao(situ){
@@ -3596,13 +3600,13 @@ async function loadDashUpdates(){
     const r=await fetch('/api/historico'),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     const hist=(d.history||[]).slice(0,6);
-    if(!hist.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhuma atualização registrada ainda.</p></div>';return;}
+    if(!hist.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Nenhuma atualização registrada ainda.</p></div>';return;}
     el.innerHTML=hist.map(h=>{
       const quando=h.timestamp?new Date(h.timestamp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
       const desc=h.descricao||h.acao||`${h.campo||''} alterado`;
       return `<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${esc(String(desc))}</div><div class="mn-row-sub">${esc(quando)}</div></div></div>`;
     }).join('');
-  }catch(e){el.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Erro ao carregar: ${esc(e.message)}</p></div>`;}
+  }catch(e){el.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Erro ao carregar: ${esc(e.message)}</p></div>`;}
 }
 function renderDashSparkline(byDay){
   const svg=$('dash-sparkline');if(!svg)return;
@@ -3663,9 +3667,9 @@ function renderRupturaWidget(){
 }
 function renderContasList(elId,conta,tipo){
   const el=$(elId);if(!el)return;
-  if(!conta.ok){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.8)">Sem acesso a contas a ${tipo} no Bling.<br><span style="font-size:11px">Verifique as permissões do app OAuth (escopo de contas ${tipo}).</span></p></div>`;return;}
+  if(!conta.ok){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p style="color:var(--mu)">Sem acesso a contas a ${tipo} no Bling.<br><span style="font-size:11px">Verifique as permissões do app OAuth (escopo de contas ${tipo}).</span></p></div>`;return;}
   const itens=conta.itens||[];
-  if(!itens.length){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p style="color:rgba(255,255,255,.8)">Nenhuma conta a ${tipo} em aberto. 🎉</p></div>`;return;}
+  if(!itens.length){el.innerHTML=`<div class="st-wrap" style="padding:24px"><p style="color:var(--mu)">Nenhuma conta a ${tipo} em aberto. 🎉</p></div>`;return;}
   el.innerHTML=itens.map(c=>{
     const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
     return `<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${esc(c.contato||'—')}</div><div class="mn-row-sub${c.vencida?' venc':''}">${c.vencida?'⚠ Vencida · ':''}vence ${venc}</div></div><div class="mn-row-val">${fmt(c.valor)}</div></div>`;
@@ -3707,7 +3711,7 @@ function renderContasVencidas(cr={},cp={}){
   const crVals=cr.itens||[];
   const cpVals=cp.itens||[];
   const vencidas=[...crVals.filter(c=>c.vencida).map(c=>({...c,tipo:'receber'})),...cpVals.filter(c=>c.vencida).map(c=>({...c,tipo:'pagar'}))];
-  if(!vencidas.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhuma conta vencida 🎉</p></div>';return;}
+  if(!vencidas.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Nenhuma conta vencida 🎉</p></div>';return;}
   el.innerHTML=vencidas.slice(0,5).map(c=>{
     const venc=c.vencimento?c.vencimento.split('-').reverse().join('/'):'sem data';
     return`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-sub" style="margin-top:0">${c.tipo==='receber'?'A Receber':'A Pagar'}</div><div class="mn-row-nome">${esc(c.contato||'—')}</div></div><div class="mn-row-val">${fmt(c.valor)}<div class="mn-row-sub venc">Vencida ${venc}</div></div></div>`;
@@ -3715,11 +3719,11 @@ function renderContasVencidas(cr={},cp={}){
 }
 function renderCalendarPreview(){
   const el=$('dash-cal-preview');if(!el)return;
-  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhum evento cadastrado. Crie eventos na aba Financeiro.</p></div>';return;}
+  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Nenhum evento cadastrado. Crie eventos na aba Financeiro.</p></div>';return;}
   const hoje=new Date();
   const proximos30=new Date(hoje.getTime()+30*86400000);
   const eventos=_contasCustomCache.filter(c=>c.dataVencimento&&new Date(c.dataVencimento+'T23:59:59')>=hoje&&new Date(c.dataVencimento+'T23:59:59')<=proximos30);
-  if(!eventos.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:rgba(255,255,255,.8)">Nenhum evento nos próximos 30 dias</p></div>';return;}
+  if(!eventos.length){el.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Nenhum evento nos próximos 30 dias</p></div>';return;}
   el.innerHTML=eventos.slice(0,4).map(e=>{
     const d=new Date(e.dataVencimento+'T12:00:00');
     const dia=d.getDate();
