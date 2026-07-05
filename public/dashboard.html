@@ -5634,7 +5634,7 @@ async function openEditor(id){
     const sit=String(p.situacao?.valor||p.situacao||'A');
     const tipo=p.tipo||'P';
     const preco=p.preco||0;
-    const custo=p.precoCusto||0;
+    const custo=p.precoCusto||p.fornecedor?.precoCusto||0;
     const margem=preco&&custo?Math.round(((preco-custo)/preco)*100):null;
     const mCor=margem!==null?(margem<20?'var(--er-t)':margem<40?'var(--wa-t)':'var(--ok-t)'):'';
     const curEstoque=typeof p.estoque==='object'?(p.estoque?.saldoVirtualTotal||0):(p.estoque||0);

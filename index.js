@@ -1202,7 +1202,9 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       nome:       p.nome       || 'Sem nome',
       codigo:     p.codigo     || '',
       preco:      typeof p.preco === 'number' ? p.preco : 0,
-      precoCusto: typeof p.precoCusto === 'number' ? p.precoCusto : 0,
+      // Bling guarda o custo em fornecedor.precoCusto — o campo solto na
+      // raiz nem sempre vem preenchido no GET, então cai pro aninhado.
+      precoCusto: typeof p.precoCusto === 'number' ? p.precoCusto : (typeof p.fornecedor?.precoCusto === 'number' ? p.fornecedor.precoCusto : 0),
       estoque:    typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
       tipo:       p.tipo || 'P',
       unidade:    p.unidade || 'un',
@@ -1328,6 +1330,8 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   try {
     const body = { ...req.body };
     if (body.imagemUrl) { body.midia = { imagens: { externas: [{ link: body.imagemUrl }] } }; delete body.imagemUrl; }
+    // Custo vai em fornecedor.precoCusto — ver stripReadOnlyProdutoFields/PATCH.
+    if (body.precoCusto !== undefined) body.fornecedor = { ...(body.fornecedor || {}), precoCusto: Number(body.precoCusto) };
     const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', body, {
       headers: blingHeaders(token),
     });
@@ -1612,6 +1616,11 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         if (payload.imagemUrl) payload.midia = { imagens: { externas: [{ link: payload.imagemUrl }] } };
         delete payload.imagemUrl;
       }
+      // Mesmo caso do branch de edição rápida: o custo em si tem que ir
+      // dentro de fornecedor.precoCusto pro Bling aceitar a escrita.
+      if (payload.precoCusto !== undefined) {
+        payload.fornecedor = { ...(payload.fornecedor || {}), precoCusto: Number(payload.precoCusto) };
+      }
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
@@ -1666,9 +1675,15 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { headers: blingHeaders(token) }
       );
       const prod = stripReadOnlyProdutoFields(current?.data || {});
+      // O Bling v3 guarda o custo em fornecedor.precoCusto — o campo
+      // precoCusto solto na raiz é aceito na LEITURA (por isso o valor
+      // aparece certo na lista), mas a ESCRITA (PUT) parece ignorar
+      // silenciosamente esse campo solto quando não vem dentro de
+      // "fornecedor". Manda nos dois lugares: cobre o caso de o Bling
+      // aceitar um ou outro, sem custo de mandar os dois.
       await axios.put(
         `https://www.bling.com.br/Api/v3/produtos/${id}`,
-        { ...prod, precoCusto: Number(precoCusto) },
+        { ...prod, precoCusto: Number(precoCusto), fornecedor: { ...(prod.fornecedor || {}), precoCusto: Number(precoCusto) } },
         { headers: blingHeaders(token) }
       );
       changeLog.push({
@@ -2274,7 +2289,7 @@ async function fetchResumoProdutos(token, maxPg = 3) {
   }
   const prods = all.map(p => ({
     preco: typeof p.preco === 'number' ? p.preco : 0,
-    custo: typeof p.precoCusto === 'number' ? p.precoCusto : 0,
+    custo: typeof p.precoCusto === 'number' ? p.precoCusto : (typeof p.fornecedor?.precoCusto === 'number' ? p.fornecedor.precoCusto : 0),
     estoque: typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
   }));
   const comCusto = prods.filter(p => p.preco > 0 && p.custo > 0);
