@@ -1467,23 +1467,27 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
       <!-- HERO: Faturamento + Lucro -->
       <div class="dash-hero">
-        <div class="mn-card mn-hero" onclick="setView('financeiro')">
-          <div class="mn-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento</div>
-          <div class="mn-val" id="dash-faturamento">—</div>
-          <div class="mn-sub" id="dash-fat-sub">no período selecionado</div>
-          <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap;position:relative;z-index:1">
-            <span id="dash-fat-conc" style="color:#d1fae5"></span>
-            <span id="dash-fat-pend" style="color:#fef3c7"></span>
-            <span id="dash-fat-canc" style="color:#fecaca"></span>
+        <div class="fk-card" style="padding:22px 24px" onclick="setView('financeiro')">
+          <div class="fk-top" style="margin-bottom:14px;font-size:12.5px;font-weight:600;opacity:0.92;color:var(--tx);display:flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento
+          </div>
+          <div id="dash-faturamento" style="font-size:32px;letter-spacing:-1.2px;color:var(--tx);font-weight:700">-</div>
+          <div id="dash-fat-sub" style="font-size:12.5px;opacity:0.9;margin-top:8px;color:var(--mu)">no período selecionado</div>
+          <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap;color:var(--mu)">
+            <span id="dash-fat-conc"></span>
+            <span id="dash-fat-pend"></span>
+            <span id="dash-fat-canc"></span>
           </div>
           <div id="dash-fin-break"></div>
           <svg id="dash-sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="position:absolute;bottom:0;left:0;right:0;width:100%;height:52px;opacity:.35;pointer-events:none"></svg>
         </div>
-        <div class="mn-card mn-hero mn-deep" onclick="setView('financeiro')">
-          <div class="mn-top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado</div>
-          <div class="mn-val" id="dash-lucro">—</div>
-          <div class="mn-sub" id="dash-luc-sub">margem média do catálogo</div>
-          <div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.7);position:relative;z-index:1" id="dash-luc-custo"></div>
+        <div class="fk-card" style="padding:22px 24px" onclick="setView('financeiro')">
+          <div class="fk-top" style="margin-bottom:14px;font-size:12.5px;font-weight:600;opacity:0.92;color:var(--tx);display:flex;align-items:center;gap:8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado
+          </div>
+          <div id="dash-lucro" style="font-size:32px;letter-spacing:-1.2px;color:var(--tx);font-weight:700">-</div>
+          <div id="dash-luc-sub" style="font-size:12.5px;opacity:0.9;margin-top:8px;color:var(--mu)">margem média do catálogo</div>
+          <div style="margin-top:8px;font-size:11px;color:var(--mu)" id="dash-luc-custo"></div>
         </div>
       </div>
 
@@ -5684,10 +5688,17 @@ async function openEditor(id){
         <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
         <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
       </div>
-      <div class="edraw-sec">Outros</div>
+            <div class="edraw-sec">Tributação e Outros</div>
       <div class="df-2">
+        <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}"></div>
+        <div class="df"><label>CEST</label><input type="text" id="ed-cest" value="${esc(p.tributacao?.cest||'')}"></div>
+      </div>
+      <div class="df-2">
+        <div class="df"><label>Origem (0-8)</label><input type="number" id="ed-origem" value="${p.tributacao?.origem!==undefined?p.tributacao.origem:''}" min="0" max="8"></div>
         <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
-        <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'—')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
+      </div>
+      <div class="df-2">
+        <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
       </div>
       <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
     `;

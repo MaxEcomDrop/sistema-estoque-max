@@ -1626,12 +1626,16 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
+
+      const promises = [];
       if (estoque !== undefined) {
-        const depositoId = await getDepositoId(token);
-        await axios.post('https://www.bling.com.br/Api/v3/estoques',
-          { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
-          { headers: blingHeaders(token) }
-        );
+        promises.push((async () => {
+          const depositoId = await getDepositoId(token);
+          await axios.post('https://www.bling.com.br/Api/v3/estoques',
+            { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
+            { headers: blingHeaders(token) }
+          );
+        })());
       }
       // Não confia no 200 do PUT pro custo: relê e confirma que o Bling
       // realmente gravou, senão devolve erro específico e acionável em vez
