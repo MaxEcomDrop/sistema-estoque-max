@@ -1618,8 +1618,10 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       }
       // Mesmo caso do branch de edição rápida: o custo em si tem que ir
       // dentro de fornecedor.precoCusto pro Bling aceitar a escrita.
-      if (payload.precoCusto !== undefined) {
-        payload.fornecedor = { ...(payload.fornecedor || {}), precoCusto: Number(payload.precoCusto) };
+      const custoAlvo = payload.precoCusto !== undefined ? Number(payload.precoCusto) : null;
+      const fornecedorOriginal = payload.fornecedor || {};
+      if (custoAlvo !== null) {
+        payload.fornecedor = { ...fornecedorOriginal, precoCusto: custoAlvo };
       }
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
@@ -1630,6 +1632,24 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
           { headers: blingHeaders(token) }
         );
+      }
+      // Não confia no 200 do PUT pro custo: relê e confirma que o Bling
+      // realmente gravou, senão devolve erro específico e acionável em vez
+      // de "sucesso" falso (ver mesmo padrão no branch de edição rápida).
+      if (custoAlvo !== null) {
+        const { data: verif } = await axios.get(
+          `https://www.bling.com.br/Api/v3/produtos/${id}`,
+          { headers: blingHeaders(token) }
+        );
+        const salvo = verif?.data || {};
+        const custoSalvo = typeof salvo.precoCusto === 'number' ? salvo.precoCusto
+          : (typeof salvo.fornecedor?.precoCusto === 'number' ? salvo.fornecedor.precoCusto : null);
+        if (custoSalvo === null || Math.abs(custoSalvo - custoAlvo) > 0.005) {
+          const semFornecedor = !fornecedorOriginal.id;
+          return sendErrorResponse(res, 502, 'Bling aceitou a requisição mas não gravou o custo', semFornecedor
+            ? 'Este produto não tem um fornecedor vinculado no Bling. Cadastre um fornecedor para ele lá (Produto → Fornecedores) antes de editar o custo por aqui — é o Bling que exige isso para saber onde gravar o preço de custo.'
+            : `O Bling devolveu ${custoSalvo === null ? 'nenhum valor' : `R$ ${custoSalvo.toFixed(2)}`} depois da gravação, em vez de R$ ${custoAlvo.toFixed(2)}.`);
+        }
       }
       changeLog.push({
         id: changeLog.length + 1, produto_id: id,
@@ -1675,22 +1695,41 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { headers: blingHeaders(token) }
       );
       const prod = stripReadOnlyProdutoFields(current?.data || {});
+      const custoNum = Number(precoCusto);
+      const fornecedorAtual = prod.fornecedor || {};
       // O Bling v3 guarda o custo em fornecedor.precoCusto — o campo
       // precoCusto solto na raiz é aceito na LEITURA (por isso o valor
-      // aparece certo na lista), mas a ESCRITA (PUT) parece ignorar
-      // silenciosamente esse campo solto quando não vem dentro de
-      // "fornecedor". Manda nos dois lugares: cobre o caso de o Bling
-      // aceitar um ou outro, sem custo de mandar os dois.
+      // aparece certo na lista), mas a ESCRITA (PUT) ignora silenciosamente
+      // esse campo solto quando não vem dentro de "fornecedor". Manda nos
+      // dois lugares.
       await axios.put(
         `https://www.bling.com.br/Api/v3/produtos/${id}`,
-        { ...prod, precoCusto: Number(precoCusto), fornecedor: { ...(prod.fornecedor || {}), precoCusto: Number(precoCusto) } },
+        { ...prod, precoCusto: custoNum, fornecedor: { ...fornecedorAtual, precoCusto: custoNum } },
         { headers: blingHeaders(token) }
       );
+      // Não confia no 200 do PUT: o Bling pode aceitar a requisição e
+      // ignorar o campo (ex.: produto sem fornecedor.id vinculado, então
+      // não sabe em qual fornecedor gravar o custo). Relê o produto e só
+      // reporta sucesso se o valor realmente mudou — caso contrário devolve
+      // um erro específico e acionável em vez de um "sucesso" falso.
+      const { data: verif } = await axios.get(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { headers: blingHeaders(token) }
+      );
+      const salvo = verif?.data || {};
+      const custoSalvo = typeof salvo.precoCusto === 'number' ? salvo.precoCusto
+        : (typeof salvo.fornecedor?.precoCusto === 'number' ? salvo.fornecedor.precoCusto : null);
+      if (custoSalvo === null || Math.abs(custoSalvo - custoNum) > 0.005) {
+        const semFornecedor = !fornecedorAtual.id;
+        return sendErrorResponse(res, 502, 'Bling aceitou a requisição mas não gravou o custo', semFornecedor
+          ? 'Este produto não tem um fornecedor vinculado no Bling. Cadastre um fornecedor para ele lá (Produto → Fornecedores) antes de editar o custo por aqui — é o Bling que exige isso para saber onde gravar o preço de custo.'
+          : `O Bling devolveu ${custoSalvo === null ? 'nenhum valor' : `R$ ${custoSalvo.toFixed(2)}`} depois da gravação, em vez de R$ ${custoNum.toFixed(2)}.`);
+      }
       changeLog.push({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'custo',
         valor_anterior: valor_anterior || '—',
-        valor_novo: `R$ ${Number(precoCusto).toFixed(2)}`,
+        valor_novo: `R$ ${custoNum.toFixed(2)}`,
         timestamp: new Date().toISOString(),
       });
     saveInMemoryData();

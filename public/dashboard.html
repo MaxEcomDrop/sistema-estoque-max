@@ -4707,7 +4707,7 @@ function editCell(span,field,id,current,nomeProd){
       const body={nome_produto:nomeProd,valor_anterior:prevVal!==null?(field==='preco'?fmt(prevVal):`${prevVal} un.`):'—'};
       body[field]=val;
       const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(!r.ok){const d=await r.json();toast(d.error||'Erro ao salvar','err');restore();return;}
+      if(!r.ok){const d=await r.json();toast(d.detail||d.error||'Erro ao salvar','err');restore();return;}
       if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();showUndo(`${field==='preco'?'Preço':'Estoque'} salvo no Bling ✓`);p[field]=val;}
       restore();
       const row=document.querySelector(`tr[data-id="${id}"]`);
@@ -4899,16 +4899,18 @@ function parseCustoCSV(input){
 async function applyCustoImport(){
   if(!_custoImportData.length)return;
   const btn=$('custo-import-btn');btn.disabled=true;btn.textContent='Aplicando…';
-  let ok=0,fail=0;
+  let ok=0,fail=0,firstErr='';
   for(const row of _custoImportData){
     try{
       const r=await fetch('/api/produtos/'+row.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({precoCusto:row.custo,nome_produto:row.nome})});
       if(r.ok){ok++;const p=S.products.find(x=>x.id===row.id);if(p)p.precoCusto=row.custo;}
-      else fail++;
+      else{fail++;if(!firstErr){const d=await r.json().catch(()=>({}));firstErr=d.detail||d.error||'';}}
     }catch{fail++;}
   }
   btn.disabled=false;
-  toast(ok>0?`${ok} custo${ok!==1?'s':''} atualizado${ok!==1?'s':''}${fail>0?' · '+fail+' erro(s)':''}`:'Nenhum custo atualizado, verifique sua conexão com o Bling',ok>0?'ok':'err');
+  const msg=ok>0?`${ok} custo${ok!==1?'s':''} atualizado${ok!==1?'s':''}${fail>0?' · '+fail+' erro(s)':''}`:(firstErr||'Nenhum custo atualizado, verifique sua conexão com o Bling');
+  toast(msg,ok>0?'ok':'err');
+  if(fail>0&&firstErr)toast(firstErr,'err');
   if(ok>0){_custoImportData=[];closeModal('custo-import-modal');applyFilters();}
   else btn.textContent=`Tentar novamente`;
 }
