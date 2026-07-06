@@ -5827,6 +5827,11 @@ async function saveEditorFull(){
     tipo:$('ed-tipo').value,
     descricaoComplementar:$('ed-desc').value,
     imagemUrl:uploadedUrl||undefined,
+    tributacao: {
+      ncm: $('ed-ncm').value.trim(),
+      cest: $('ed-cest').value.trim(),
+      origem: $('ed-origem').value !== '' ? parseInt($('ed-origem').value) : undefined
+    }
   };
   try{
     const body={_fullUpdate:updated};
