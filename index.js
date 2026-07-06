@@ -2022,7 +2022,7 @@ app.get('/api/cron/push', async (req, res) => {
     const tokens = tokSnap.docs.map(d => d.data().token).filter(Boolean);
     let sent = 0;
     const batch = admin.firestore().batch();
-    for (const doc of snap.docs) {
+    await Promise.all(snap.docs.map(async (doc) => {
       const { title, body, url = '/dashboard.html', action } = doc.data();
       try {
         let successCount = 0;
@@ -2037,7 +2037,7 @@ app.get('/api/cron/push', async (req, res) => {
       } catch (e) {
         batch.update(doc.ref, { status: 'error', error: e.message });
       }
-    }
+    }));
     await batch.commit();
     res.json({ ok: true, sent });
   } catch (e) {
