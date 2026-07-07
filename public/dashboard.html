@@ -5675,10 +5675,37 @@ async function openEditor(id){
           <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
         </div>
       </div>
-      <div class="edraw-sec">Preços</div>
+            <div class="edraw-sec">Fornecedor e Custo</div>
+      <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+          <div style="flex:1; margin-right:12px;">
+            <label style="font-size:12px; font-weight:600; color:var(--mu); display:block; margin-bottom:4px">Fornecedor vinculado *</label>
+            <div style="position:relative">
+              <input type="text" id="ed-forn-search" placeholder="Pesquisar..." style="width:100%; box-sizing:border-box" onkeyup="searchFornecedor(this.value)" autocomplete="off">
+              <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
+            </div>
+            <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
+            <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.nome||'')}">
+          </div>
+          <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0">+ Novo fornecedor</button>
+        </div>
+        
+        <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px">
+          <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
+          <div class="df-2" style="margin-top:10px">
+            <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
+            <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
+          </div>
+        </div>
+        
+        <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
+          ⚠ Produto sem fornecedor vinculado.
+        </div>
+      </div>
+      
+      <div class="edraw-sec">Preo de Venda</div>
       <div class="df-2">
-        <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
-        <div class="df"><label>Preço de venda (R$) <span style="font-size:10px;font-weight:400;color:var(--fa)">(opcional)</span></label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
+        <div class="df"><label>Preo de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
       </div>
       <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
         Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
@@ -5827,11 +5854,18 @@ async function saveEditorFull(){
     }
     btn.textContent='Salvando…';
   }
+  const fornId = $('ed-forn-id')?.value;
+  const fornNome = $('ed-forn-nome')?.value;
+  let fornecedorPayload = editorProduct.fornecedor || {};
+  if(fornId) fornecedorPayload = { id: parseInt(fornId), nome: fornNome };
+
   const updated={...editorProduct,nome,
     codigo:$('ed-codigo').value.trim(),
     gtin:$('ed-ean').value.trim(),
     preco:parseFloat($('ed-preco').value)||0,
     precoCusto:parseFloat($('ed-custo').value)||0,
+    garantia:parseInt($('ed-garantia')?.value)||0,
+    fornecedor: fornecedorPayload,
     pesoBruto:parseFloat($('ed-peso').value)||0,
     unidade:$('ed-unidade').value.trim()||'un',
     situacao:$('ed-sit').value,
@@ -7167,7 +7201,111 @@ function startVoiceSearch(){
   }
 })();
 </script>
+
+<div id="forn-modal" class="modal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-top">
+      <h3>Novo Fornecedor</h3>
+      <button class="modal-close" onclick="closeModal('forn-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-bd">
+      <div class="df"><label>Nome do fornecedor *</label><input type="text" id="forn-nome"></div>
+      <div class="df-2">
+        <div class="df"><label>CNPJ / CPF</label><input type="text" id="forn-cnpj"></div>
+        <div class="df"><label>Telefone</label><input type="text" id="forn-tel"></div>
+      </div>
+      <div class="df"><label>E-mail</label><input type="email" id="forn-email"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="bti" onclick="closeModal('forn-modal')">Cancelar</button>
+      <button class="btp" id="forn-save-btn" onclick="saveNewFornecedor()">Salvar fornecedor</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _fornDebounce;
+async function searchFornecedor(q) {
+  clearTimeout(_fornDebounce);
+  if(!q || q.length < 2) {
+    $('ed-forn-results').style.display='none';
+    return;
+  }
+  _fornDebounce = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/fornecedores?pesquisa='+encodeURIComponent(q));
+      if(!res.ok) return;
+      const data = await res.json();
+      const div = $('ed-forn-results');
+      if(data.fornecedores.length === 0) {
+         div.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--mu)">Nenhum fornecedor encontrado</div>';
+      } else {
+         div.innerHTML = data.fornecedores.map(f => 
+           `<div style="padding:10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bord-l)" onclick="selectFornecedor(${f.id}, '${esc(f.nome).replace(/'/g,"\\'")}')">${esc(f.nome)} <br><span style="font-size:10px;color:var(--mu)">${f.numeroDocumento||''}</span></div>`
+         ).join('');
+      }
+      div.style.display = 'block';
+    } catch(e) {}
+  }, 300);
+}
+
+function selectFornecedor(id, nome) {
+  $('ed-forn-id').value = id;
+  $('ed-forn-nome').value = nome;
+  $('forn-nome-display').textContent = nome;
+  $('forn-vinculado').style.display = 'block';
+  $('forn-alerta').style.display = 'none';
+  $('ed-forn-results').style.display = 'none';
+  $('ed-forn-search').value = '';
+}
+
+function openNewFornecedor() {
+  $('forn-nome').value = '';
+  $('forn-cnpj').value = '';
+  $('forn-tel').value = '';
+  $('forn-email').value = '';
+  openModal('forn-modal');
+  setTimeout(()=>$('forn-nome').focus(), 80);
+}
+
+async function saveNewFornecedor() {
+  const btn = $('forn-save-btn');
+  const nome = $('forn-nome').value.trim();
+  if(!nome) return toast('Nome  obrigatrio','err');
+  
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  
+  try {
+    const payload = {
+      nome,
+      numeroDocumento: $('forn-cnpj').value.trim(),
+      telefone: $('forn-tel').value.trim(),
+      email: $('forn-email').value.trim()
+    };
+    const r = await fetch('/api/fornecedores', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok) {
+       const d = await r.json();
+       throw new Error(d.detail || d.error || 'Erro ao criar fornecedor');
+    }
+    const { id, fornecedor } = await r.json();
+    toast('Fornecedor criado!','ok');
+    closeModal('forn-modal');
+    selectFornecedor(id, nome);
+  } catch(e) {
+    toast('Erro: '+e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar fornecedor';
+  }
+}
+</script>
 </body>
+
 </html>
 
 
