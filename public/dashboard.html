@@ -5679,10 +5679,10 @@ async function openEditor(id){
       <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
           <div style="flex:1; margin-right:12px;">
-            <label style="font-size:12px; font-weight:600; color:var(--mu); display:block; margin-bottom:4px">Fornecedor vinculado *</label>
-            <div style="position:relative">
-              <input type="text" id="ed-forn-search" placeholder="Pesquisar..." style="width:100%; box-sizing:border-box" onkeyup="searchFornecedor(this.value)" autocomplete="off">
-              <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
+            <div class="df" style="position:relative">
+              <label>Fornecedor vinculado</label>
+              <input type="text" id="ed-forn-search" placeholder="Pesquisar pelo nome..." onkeyup="searchFornecedor(this.value)" autocomplete="off">
+              <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; margin-top:4px; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
             </div>
             <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
             <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.nome||'')}">
