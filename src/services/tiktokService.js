@@ -133,7 +133,9 @@ exports.verifyWebhookSignature = (rawBody, signatureHeader, secret) => {
     const expected = hmac.digest('hex');
 
     // algumas implementações usam base64; também aceitamos comparação base64
-    const expectedBase64 = Buffer.from(hmac.digest ? hmac.digest() : expected).toString('base64');
+    // Note: hmac.digest() consumes the stream. Cannot call it twice.
+    // We convert the hex string to base64 instead.
+    const expectedBase64 = Buffer.from(expected, 'hex').toString('base64');
 
     return signatureHeader === expected || signatureHeader === expectedBase64;
   } catch (err) {
