@@ -1246,7 +1246,7 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       preco:      typeof p.preco === 'number' ? p.preco : 0,
       // Bling guarda o custo em fornecedor.precoCusto — o campo solto na
       // raiz nem sempre vem preenchido no GET, então cai pro aninhado.
-      precoCusto: typeof p.precoCusto === 'number' ? p.precoCusto : (typeof p.fornecedor?.precoCusto === 'number' ? p.fornecedor.precoCusto : 0),
+      precoCusto: getProductCusto(p),
       estoque:    typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
       tipo:       p.tipo || 'P',
       unidade:    p.unidade || 'un',
@@ -1635,6 +1635,25 @@ function stripReadOnlyProdutoFields(obj) {
   return clean;
 }
 
+function getProductCusto(p) {
+  if (!p) return 0;
+  const fCusto = p.fornecedor?.precoCusto;
+  const rCusto = p.precoCusto;
+  if (p.fornecedor?.id && typeof fCusto === 'number' && fCusto > 0) {
+    return fCusto;
+  }
+  if (typeof rCusto === 'number' && rCusto > 0) {
+    return rCusto;
+  }
+  if (typeof fCusto === 'number') {
+    return fCusto;
+  }
+  if (typeof rCusto === 'number') {
+    return rCusto;
+  }
+  return 0;
+}
+
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
@@ -1688,8 +1707,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           { headers: blingHeaders(token) }
         );
         const salvo = verif?.data || {};
-        const custoSalvo = typeof salvo.precoCusto === 'number' ? salvo.precoCusto
-          : (typeof salvo.fornecedor?.precoCusto === 'number' ? salvo.fornecedor.precoCusto : null);
+        const custoSalvo = getProductCusto(salvo);
         if (custoSalvo === null || Math.abs(custoSalvo - custoAlvo) > 0.005) {
           const semFornecedor = !fornecedorOriginal.id;
           return sendErrorResponse(res, 502, 'Bling aceitou a requisição mas não gravou o custo', semFornecedor
@@ -1763,8 +1781,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         { headers: blingHeaders(token) }
       );
       const salvo = verif?.data || {};
-      const custoSalvo = typeof salvo.precoCusto === 'number' ? salvo.precoCusto
-        : (typeof salvo.fornecedor?.precoCusto === 'number' ? salvo.fornecedor.precoCusto : null);
+      const custoSalvo = getProductCusto(salvo);
       if (custoSalvo === null || Math.abs(custoSalvo - custoNum) > 0.005) {
         const semFornecedor = !fornecedorAtual.id;
         return sendErrorResponse(res, 502, 'Bling aceitou a requisição mas não gravou o custo', semFornecedor
@@ -2396,7 +2413,7 @@ async function fetchResumoProdutos(token, maxPg = 3) {
   }
   const prods = all.map(p => ({
     preco: typeof p.preco === 'number' ? p.preco : 0,
-    custo: typeof p.precoCusto === 'number' ? p.precoCusto : (typeof p.fornecedor?.precoCusto === 'number' ? p.fornecedor.precoCusto : 0),
+    custo: getProductCusto(p),
     estoque: typeof p.estoque === 'object' ? (p.estoque?.saldoVirtualTotal ?? 0) : (p.estoque ?? 0),
   }));
   const comCusto = prods.filter(p => p.preco > 0 && p.custo > 0);
