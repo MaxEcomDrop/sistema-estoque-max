@@ -5690,22 +5690,23 @@ async function openEditor(id){
           <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0">+ Novo fornecedor</button>
         </div>
         
-        <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px">
-          <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
+        <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px; position:relative">
+          <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px; padding-right:60px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
+          <button type="button" class="bts" onclick="unlinkFornecedor()" style="position:absolute; top:8px; right:8px; padding:2px 8px; font-size:11px; height:24px; color:var(--er-t); border-color:rgba(239,68,68,0.2)">Remover</button>
           <div class="df-2" style="margin-top:10px">
             <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
             <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
           </div>
         </div>
         
-        <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
+        <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa-bg); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
           ⚠ Produto sem fornecedor vinculado.
         </div>
       </div>
       
-      <div class="edraw-sec">Preo de Venda</div>
+      <div class="edraw-sec">Preço de Venda</div>
       <div class="df-2">
-        <div class="df"><label>Preo de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
+        <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
       </div>
       <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
         Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
@@ -7202,28 +7203,61 @@ function startVoiceSearch(){
 })();
 </script>
 
-<div id="forn-modal" class="modal">
-  <div class="modal-box" style="max-width:500px">
-    <div class="modal-top">
-      <h3>Novo Fornecedor</h3>
-      <button class="modal-close" onclick="closeModal('forn-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+<div class="modal" id="forn-modal" onclick="if(event.target===this)closeModal('forn-modal')">
+  <div class="mbox" style="width:480px;max-width:92vw">
+    <div class="m-title">Novo Fornecedor</div>
+    <div class="m-desc">Preencha os dados abaixo para cadastrar o fornecedor no Bling ERP.</div>
+    <div class="df"><label>Nome do fornecedor *</label><input type="text" id="forn-nome" placeholder="Ex: Distribuidora Ecom LTDA"></div>
+    <div class="df-2">
+      <div class="df"><label>CNPJ / CPF</label><input type="text" id="forn-cnpj" placeholder="00.000.000/0000-00" oninput="maskCpfCnpj(this)"></div>
+      <div class="df"><label>Telefone</label><input type="text" id="forn-tel" placeholder="(00) 00000-0000" oninput="maskTelefone(this)"></div>
     </div>
-    <div class="modal-bd">
-      <div class="df"><label>Nome do fornecedor *</label><input type="text" id="forn-nome"></div>
-      <div class="df-2">
-        <div class="df"><label>CNPJ / CPF</label><input type="text" id="forn-cnpj"></div>
-        <div class="df"><label>Telefone</label><input type="text" id="forn-tel"></div>
-      </div>
-      <div class="df"><label>E-mail</label><input type="email" id="forn-email"></div>
-    </div>
-    <div class="modal-ft">
-      <button class="bti" onclick="closeModal('forn-modal')">Cancelar</button>
+    <div class="df"><label>E-mail</label><input type="email" id="forn-email" placeholder="fornecedor@email.com"></div>
+    <div class="m-foot">
       <button class="btp" id="forn-save-btn" onclick="saveNewFornecedor()">Salvar fornecedor</button>
+      <button class="bts" onclick="closeModal('forn-modal')">Cancelar</button>
     </div>
   </div>
 </div>
 
 <script>
+function unlinkFornecedor() {
+  $('ed-forn-id').value = '';
+  $('ed-forn-nome').value = '';
+  $('forn-nome-display').textContent = '';
+  $('forn-vinculado').style.display = 'none';
+  $('forn-alerta').style.display = 'flex';
+  $('ed-forn-search').value = '';
+}
+
+function maskCpfCnpj(el) {
+  let v = el.value.replace(/\D/g, '');
+  if (v.length <= 11) {
+    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  } else {
+    v = v.slice(0, 14);
+    v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+    v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+    v = v.replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  el.value = v;
+}
+
+function maskTelefone(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 11);
+  if (v.length <= 10) {
+    v = v.replace(/^(\d{2})(\d)/, '($1) $2');
+    v = v.replace(/(\d{4})(\d)/, '$1-$2');
+  } else {
+    v = v.replace(/^(\d{2})(\d)/, '($1) $2');
+    v = v.replace(/(\d{5})(\d)/, '$1-$2');
+  }
+  el.value = v;
+}
+
 let _fornDebounce;
 async function searchFornecedor(q) {
   clearTimeout(_fornDebounce);
@@ -7271,7 +7305,7 @@ function openNewFornecedor() {
 async function saveNewFornecedor() {
   const btn = $('forn-save-btn');
   const nome = $('forn-nome').value.trim();
-  if(!nome) return toast('Nome  obrigatrio','err');
+  if(!nome) return toast('Nome é obrigatório','err');
   
   btn.disabled = true;
   btn.textContent = 'Salvando...';

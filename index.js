@@ -1173,6 +1173,48 @@ app.get('/api/ml/metricas', requireAuthJson, async (req, res) => {
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar métricas ML', e.message); }
 });
 
+// ==========================================
+// CONTATOS / FORNECEDORES (BLING v3)
+// ==========================================
+
+app.get('/api/fornecedores', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  try {
+    const query = req.query.pesquisa || '';
+    let url = 'https://www.bling.com.br/Api/v3/contatos?criterio=3&tipos=F,J';
+    if (query) url += '&pesquisa=' + encodeURIComponent(query);
+    const { data } = await axios.get(url, { headers: blingHeaders(token) });
+    res.json({ fornecedores: data.data || [] });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    sendErrorResponse(res, 500, 'Erro ao buscar fornecedores', err.message);
+  }
+});
+
+app.post('/api/fornecedores', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  try {
+    const { nome, numeroDocumento, telefone, email } = req.body;
+    if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
+    
+    const isCnpj = numeroDocumento && numeroDocumento.replace(/\D/g, '').length > 11;
+    const tipoContato = isCnpj ? 'J' : 'F';
+    const payload = { nome, tipo: tipoContato };
+    if (numeroDocumento) payload.numeroDocumento = numeroDocumento;
+    if (telefone) payload.telefone = telefone;
+    if (email) payload.email = email;
+    
+    const { data } = await axios.post('https://www.bling.com.br/Api/v3/contatos', payload, { headers: blingHeaders(token) });
+    res.json({ success: true, id: data.data.id, fornecedor: data.data });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    const detail = err.response?.data?.error?.message || err.response?.data || err.message;
+    sendErrorResponse(res, 500, 'Erro ao criar fornecedor', detail);
+  }
+});
+
 // ── Produtos ─────────────────────────────────────────────────────────
 
 app.get('/api/produtos', requireAuthJson, async (req, res) => {
@@ -1805,8 +1847,11 @@ app.post('/api/produtos/:id/duplicar', requireAuthJson, async (req, res) => {
     const payload = { ...prod };
     delete payload.id;
     payload.nome = `${prod.nome || 'Produto'} (cópia)`;
-    payload.codigo = prod.codigo ? `${prod.codigo}-COPIA${Date.now().toString().slice(-5)}` : undefined;
-    const { data: created } = await axios.post('https://www.bling.com.br/Api/v3/produtos', payload, { headers: blingHeaders(token) });
+    payload.codigo = prod.codigo ? `${prod.codigo}-COPIA${Date.now().toString().slice(-5)}` : `COPIA${Date.now().toString().slice(-5)}`;
+    
+    const cleanPayload = stripReadOnlyProdutoFields(payload);
+    
+    const { data: created } = await axios.post('https://www.bling.com.br/Api/v3/produtos', cleanPayload, { headers: blingHeaders(token) });
     changeLog.push({
       id: changeLog.length + 1, produto_id: created?.data?.id || '—',
       produto_nome: payload.nome, campo: 'duplicação',
@@ -1837,38 +1882,57 @@ app.post('/api/produtos/importar', requireAuthJson, async (req, res) => {
 
   let success = 0;
   const errors = [];
+  const depositoId = await getDepositoId(token);
 
   for (const p of produtos) {
     try {
-      if (p.preco !== undefined && p.preco !== '') {
-        await axios.put(`https://www.bling.com.br/Api/v3/produtos/${p.id}`,
-          { preco: Number(p.preco) },
-          { headers: blingHeaders(token) }
-        );
+      const id = Number(p.id);
+      if (isNaN(id) || id <= 0) {
+        errors.push({ id: p.id, nome: p.nome, error: 'ID do produto inválido' });
+        continue;
       }
+
+      // GET-first pattern for price & cost changes to prevent partial PUT side-effects
+      if ((p.preco !== undefined && p.preco !== '') || (p.precoCusto !== undefined && p.precoCusto !== '')) {
+        const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${id}`, { headers: blingHeaders(token) });
+        const prod = stripReadOnlyProdutoFields(data?.data || {});
+        
+        if (p.preco !== undefined && p.preco !== '') {
+          prod.preco = Number(p.preco);
+        }
+        if (p.precoCusto !== undefined && p.precoCusto !== '') {
+          const costoNum = Number(p.precoCusto);
+          prod.precoCusto = costoNum;
+          prod.fornecedor = prod.fornecedor || {};
+          prod.fornecedor.precoCusto = costoNum;
+        }
+
+        await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, prod, { headers: blingHeaders(token) });
+      }
+
       if (p.estoque !== undefined && p.estoque !== '') {
-        const depositoId = await getDepositoId(token);
         await axios.post('https://www.bling.com.br/Api/v3/estoques',
-          { produto: { id: Number(p.id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(p.estoque) },
+          { produto: { id }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(p.estoque) },
           { headers: blingHeaders(token) }
         );
       }
+
       changeLog.push({
-        id: changeLog.length + 1,
-        produto_id: p.id,
-        produto_nome: p.nome || `#${p.id}`,
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        produto_id: id,
+        produto_nome: p.nome || `#${id}`,
         campo: 'importação CSV',
         valor_anterior: '—',
-        valor_novo: `preço=${p.preco ?? '—'}, estoque=${p.estoque ?? '—'}`,
+        valor_novo: `preço=${p.preco ?? '—'}, custo=${p.precoCusto ?? '—'}, estoque=${p.estoque ?? '—'}`,
         timestamp: new Date().toISOString(),
       });
-    saveInMemoryData();
       success++;
     } catch (err) {
       errors.push({ id: p.id, nome: p.nome, error: err.response?.data?.error?.message || err.message });
     }
   }
 
+  saveInMemoryData(); // Save once after the loop
   res.json({ success, errors, total: produtos.length });
 });
 
