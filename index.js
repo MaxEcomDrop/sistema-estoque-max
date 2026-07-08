@@ -1709,22 +1709,22 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         }
       }
 
-      if (custoAlvo !== null) {
+      if (payload.fornecedor === null || (payload.fornecedor && !payload.fornecedor.id)) {
+        payload.fornecedor = null;
+      } else if (custoAlvo !== null) {
         payload.fornecedor = { ...fornecedorOriginal, precoCusto: custoAlvo };
       }
+
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
 
-      const promises = [];
       if (estoque !== undefined) {
-        promises.push((async () => {
-          const depositoId = await getDepositoId(token);
-          await axios.post('https://www.bling.com.br/Api/v3/estoques',
-            { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
-            { headers: blingHeaders(token) }
-          );
-        })());
+        const depositoId = await getDepositoId(token);
+        await axios.post('https://www.bling.com.br/Api/v3/estoques',
+          { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
+          { headers: blingHeaders(token) }
+        );
       }
       // Não confia no 200 do PUT pro custo: relê e confirma que o Bling
       // realmente gravou, senão devolve erro específico e acionável em vez
@@ -2510,7 +2510,7 @@ app.get('/api/cron/resumo', async (req, res) => {
     const { title, body } = montaResumo(slot, { fat, lucro: fat * prod.margem, nv: concl.length, zerados: prod.zerados, brl, temMargem: prod.margem > 0 });
     const sent = await pushParaTodos(admin, { title, body, tipo: 'resumo' });
     res.json({ ok: true, slot, sent, fat, nv: concl.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendErrorResponse(res, 500, 'Erro ao gerar resumo no cron', e.message); }
 });
 
 // Cron: alerta de estoque zerado/crítico
@@ -2526,7 +2526,7 @@ app.get('/api/cron/estoque', async (req, res) => {
     const body = `${prod.zerados} produto(s) zerado(s)` + (prod.criticos ? ` e ${prod.criticos} crítico(s) (≤5)` : '') + '. Toque para repor.';
     const sent = await pushParaTodos(admin, { title: '⚠️ Alerta de estoque', body, tipo: 'estoque' });
     res.json({ ok: true, sent, zerados: prod.zerados, criticos: prod.criticos });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { sendErrorResponse(res, 500, 'Erro ao verificar alerta de estoque no cron', e.message); }
 });
 
 // Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
@@ -2800,7 +2800,7 @@ app.get('/api/clientes', requireAuthJson, async (req, res) => {
       res.clearCookie('bling_token');
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
-    res.status(500).json({ error: 'Erro ao buscar clientes', detail: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar clientes', err.message);
   }
 });
 
@@ -2884,7 +2884,7 @@ app.post('/api/contas/custom', requireAuthJson, (req, res) => {
 
 app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = validateNumericId(req.params.id, 'ID da conta');
     const conta = customContas.find(c => c.id === id);
 
     if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
@@ -2915,13 +2915,14 @@ app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
 
     res.json(conta);
   } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     sendErrorResponse(res, 500, 'Erro ao atualizar conta', err.message);
   }
 });
 
 app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = validateNumericId(req.params.id, 'ID da conta');
     const idx = customContas.findIndex(c => c.id === id);
 
     if (idx === -1) return res.status(404).json({ error: 'Conta não encontrada' });
@@ -2943,6 +2944,7 @@ app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     sendErrorResponse(res, 500, 'Erro ao deletar conta', err.message);
   }
 });
@@ -2987,7 +2989,7 @@ app.post('/api/calendario', requireAuthJson, (req, res) => {
 
 app.put('/api/calendario/:id', requireAuthJson, (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = validateNumericId(req.params.id, 'ID do evento');
     const evento = calendarEvents.find(e => e.id === id);
     if (!evento) return res.status(404).json({ error: 'Evento não encontrado' });
 
@@ -3002,13 +3004,14 @@ app.put('/api/calendario/:id', requireAuthJson, (req, res) => {
     saveInMemoryData();
     res.json(evento);
   } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     sendErrorResponse(res, 500, 'Erro ao atualizar evento', err.message);
   }
 });
 
 app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const id = validateNumericId(req.params.id, 'ID do evento');
     const idx = calendarEvents.findIndex(e => e.id === id);
 
     if (idx === -1) return res.status(404).json({ error: 'Evento não encontrado' });
@@ -3017,6 +3020,7 @@ app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
     saveInMemoryData();
     res.json({ success: true });
   } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     sendErrorResponse(res, 500, 'Erro ao deletar evento', err.message);
   }
 });
@@ -3235,13 +3239,17 @@ app.get('/api/dashboard/enhanced', requireAuthJson, async (req, res) => {
     const pendentes = allPedidos.filter(p => categorizePedido(p.situacao) === 'pendente');
     const cancelados = allPedidos.filter(p => categorizePedido(p.situacao) === 'cancelado');
 
-    const sum = arr => arr.reduce((a, p) => a + valorOf(p), 0);
-    const faturamento = sum(concluidos);
-    const margem = concluidos.reduce((a, p) => a + ((Number(p.totalProdutos) || 0) - (Number(p.totalCusto) || 0)), 0);
-
     const receber = receberRes.status === 'fulfilled' ? receberRes.value : { total: 0, count: 0, vencidas: 0 };
     const pagar = pagarRes.status === 'fulfilled' ? pagarRes.value : { total: 0, count: 0, vencidas: 0 };
     const produtos = prodRes.status === 'fulfilled' ? prodRes.value : { margem: 0, zerados: 0, criticos: 0 };
+
+    const sum = arr => arr.reduce((a, p) => a + valorOf(p), 0);
+    const faturamento = sum(concluidos);
+
+    const hasCusto = concluidos.some(p => p.totalCusto !== undefined && Number(p.totalCusto) > 0);
+    const margem = hasCusto 
+      ? concluidos.reduce((a, p) => a + ((Number(p.totalProdutos) || 0) - (Number(p.totalCusto) || 0)), 0)
+      : faturamento * (produtos.margem || 0);
 
     const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
     const fatAnterior = prevPedidos.filter(p => categorizePedido(p.situacao) === 'concluido').reduce((a, p) => a + valorOf(p), 0);
@@ -3296,7 +3304,7 @@ app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
     const { data: orders } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}`, { headers: mlHeaders(ml.token) });
     res.json(orders.results || []);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendErrorResponse(res, 500, 'Erro ao buscar pedidos do Mercado Livre', err.message);
   }
 });
 
@@ -3345,7 +3353,7 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
       byDay,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendErrorResponse(res, 500, 'Erro ao montar painel do Mercado Livre', err.message);
   }
 });
 

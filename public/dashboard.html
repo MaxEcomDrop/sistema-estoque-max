@@ -5825,8 +5825,10 @@ function updateMargem(){
   if(preco>0&&custo>0){
     const m=Math.round(((preco-custo)/preco)*100);
     const cor=m<20?'var(--er-t)':m<40?'var(--wa-t)':'var(--ok-t)';
+    const lucro=preco-custo;
+    const lucroCor=lucro<0?'var(--er-t)':'var(--ok-t)';
     el.style.display='';
-    el.innerHTML=`Margem: <strong style="color:${cor}">${m}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>`;
+    el.innerHTML=`Margem: <strong style="color:${cor}">${m}%</strong> · Lucro unit.: <strong style="color:${lucroCor}">${fmt(lucro)}</strong>`;
   }else el.style.display='none';
 }
 function closeEditor(){
@@ -5857,7 +5859,7 @@ async function saveEditorFull(){
   }
   const fornId = $('ed-forn-id')?.value;
   const fornNome = $('ed-forn-nome')?.value;
-  let fornecedorPayload = editorProduct.fornecedor || {};
+  let fornecedorPayload = null;
   if(fornId) fornecedorPayload = { id: parseInt(fornId), nome: fornNome };
 
   const updated={...editorProduct,nome,
@@ -5886,7 +5888,21 @@ async function saveEditorFull(){
     if(!isNaN(newEstoque)&&newEstoque!==oldEst)body.estoque=newEstoque;
     const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
-    if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;p.tipo=updated.tipo;p.gtin=updated.gtin;p.unidade=updated.unidade;p.pesoBruto=updated.pesoBruto;p.descricaoComplementar=updated.descricaoComplementar;p.imagemUrl=updated.imagemUrl||p.imagemUrl;if(!isNaN(newEstoque))p.estoque=newEstoque;}
+    if(p){
+      p.nome=nome;
+      p.codigo=updated.codigo;
+      p.preco=updated.preco;
+      p.precoCusto=updated.precoCusto;
+      p.situacao=updated.situacao;
+      p.tipo=updated.tipo;
+      p.gtin=updated.gtin;
+      p.unidade=updated.unidade;
+      p.peso=updated.pesoBruto;
+      p.descricao=updated.descricaoComplementar;
+      p.imagemUrl=updated.imagemUrl||p.imagemUrl;
+      p.fornecedor=updated.fornecedor;
+      if(!isNaN(newEstoque))p.estoque=newEstoque;
+    }
     toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent='Salvar alterações';}
