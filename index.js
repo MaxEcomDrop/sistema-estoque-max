@@ -1681,6 +1681,29 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       // dentro de fornecedor.precoCusto pro Bling aceitar a escrita.
       const custoAlvo = payload.precoCusto !== undefined ? Number(payload.precoCusto) : null;
       const fornecedorOriginal = payload.fornecedor || {};
+      
+      // GET-first to check if supplier is already linked in Bling
+      const { data: current } = await axios.get(
+        `https://www.bling.com.br/Api/v3/produtos/${id}`,
+        { headers: blingHeaders(token) }
+      );
+      const currentProd = current?.data || {};
+      const currentFornId = currentProd.fornecedor?.id;
+      const targetFornId = fornecedorOriginal.id;
+      
+      if (targetFornId && Number(targetFornId) !== Number(currentFornId)) {
+        try {
+          await axios.post('https://www.bling.com.br/Api/v3/produtos/fornecedores', {
+            produto: { id: Number(id) },
+            fornecedor: { id: Number(targetFornId) },
+            precoCusto: custoAlvo !== null ? custoAlvo : 0,
+            padrao: true
+          }, { headers: blingHeaders(token) });
+        } catch (linkErr) {
+          console.error('[Link Supplier Error]', linkErr.response?.data || linkErr.message);
+        }
+      }
+
       if (custoAlvo !== null) {
         payload.fornecedor = { ...fornecedorOriginal, precoCusto: custoAlvo };
       }
