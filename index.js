@@ -1637,18 +1637,23 @@ function stripReadOnlyProdutoFields(obj) {
 
 function getProductCusto(p) {
   if (!p) return 0;
-  const fCusto = p.fornecedor?.precoCusto;
-  const rCusto = p.precoCusto;
-  if (p.fornecedor?.id && typeof fCusto === 'number' && fCusto > 0) {
+  
+  const rawFCusto = p.fornecedor?.precoCusto;
+  const rawRCusto = p.precoCusto;
+  
+  const fCusto = rawFCusto !== undefined && rawFCusto !== null ? Number(rawFCusto) : null;
+  const rCusto = rawRCusto !== undefined && rawRCusto !== null ? Number(rawRCusto) : null;
+  
+  if (p.fornecedor?.id && fCusto !== null && !isNaN(fCusto) && fCusto >= 0) {
     return fCusto;
   }
-  if (typeof rCusto === 'number' && rCusto > 0) {
+  if (rCusto !== null && !isNaN(rCusto) && rCusto >= 0) {
     return rCusto;
   }
-  if (typeof fCusto === 'number') {
+  if (fCusto !== null && !isNaN(fCusto)) {
     return fCusto;
   }
-  if (typeof rCusto === 'number') {
+  if (rCusto !== null && !isNaN(rCusto)) {
     return rCusto;
   }
   return 0;
