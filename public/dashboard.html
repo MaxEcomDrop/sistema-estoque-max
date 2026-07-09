@@ -410,7 +410,7 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 .noti{width:100%;padding:11px 13px;border-radius:10px;background:var(--surf);border:1px solid var(--bord);box-shadow:0 4px 20px rgba(0,0,0,.13);display:flex;align-items:flex-start;gap:9px;animation:nti .22s cubic-bezier(.34,1.56,.64,1) both;font-size:13px;color:var(--tx);line-height:1.4;pointer-events:all}
 .noti.out{animation:nto .16s ease forwards}
 .noti-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.noti.ok .noti-dot{background:var(--ok)}.noti.err .noti-dot{background:var(--er)}.noti.warn .noti-dot{background:var(--wa)}.noti.info .noti-dot{background:var(--acc)}
+.noti.ok .noti-dot{background:var(--ok)}.noti.err .noti-dot{background:var(--er)}.noti.warn .noti-dot,.noti.wa .noti-dot{background:var(--wa)}.noti.info .noti-dot{background:var(--acc)}
 .noti-x{margin-left:auto;background:none;border:none;color:var(--fa);cursor:pointer;font-size:16px;padding:0 0 0 10px;line-height:1;flex-shrink:0;transition:color .1s}
 .noti-x:hover{color:var(--tx)}
 @keyframes nti{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
@@ -1785,7 +1785,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
         <div class="fpanel" id="fpanel">
           <div class="fgrid">
-            <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo" id="flt-lo-opt">Estoque baixo (≤5)</option><option value="out">Sem estoque</option></select></div>
+            <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo" id="flt-lo-opt">Estoque baixo (≤5)</option><option value="out">Sem estoque</option><option value="semcusto">Sem custo cadastrado</option></select></div>
             <div class="fg"><label>Categoria</label><select id="f-cat" onchange="applyFilters()"><option value="">Todas</option></select></div>
             <div class="fg"><label>Estoque mín.</label><input type="number" id="f-st-min" placeholder="0" min="0" oninput="applyFilters()"></div>
             <div class="fg"><label>Estoque máx.</label><input type="number" id="f-st-max" placeholder="999" min="0" oninput="applyFilters()"></div>
@@ -4547,6 +4547,7 @@ function applyFilters(){
     if(status==='out'&&p.estoque!==0)return false;
     if(status==='lo'&&(p.estoque===0||p.estoque>S.estoqueMin))return false;
     if(status==='ok'&&p.estoque<=0)return false;
+    if(status==='semcusto'&&p.precoCusto>0)return false;
     if(cat&&p.categoria!==cat)return false;
     if(p.estoque<stMin||p.estoque>stMax)return false;
     if(p.preco<prMin||p.preco>prMax)return false;
@@ -4619,7 +4620,7 @@ function updateFilterBadge(){
     const hasAdv=cat||$('f-st-min').value||$('f-st-max').value||$('f-pr-min').value||$('f-pr-max').value||q;
     if(hasAdv){
       const parts=[];
-      const st=$('f-status').value;if(st)parts.push({ok:'Em estoque',lo:'Estoque baixo',out:'Sem estoque'}[st]||st);
+      const st=$('f-status').value;if(st)parts.push({ok:'Em estoque',lo:'Estoque baixo',out:'Sem estoque',semcusto:'Sem custo'}[st]||st);
       if(cat)parts.push('Cat: '+cat.substring(0,18));
       if($('f-st-min').value||$('f-st-max').value)parts.push('Est.'+($('f-st-min').value||'0')+'–'+($('f-st-max').value||'∞'));
       if($('f-pr-min').value||$('f-pr-max').value)parts.push('R$'+($('f-pr-min').value||'0')+'–'+($('f-pr-max').value||'∞'));
@@ -4711,8 +4712,11 @@ function editCell(span,field,id,current,nomeProd){
       const body={nome_produto:nomeProd,valor_anterior:prevVal!==null?(field==='preco'?fmt(prevVal):`${prevVal} un.`):'—'};
       body[field]=val;
       const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if(!r.ok){const d=await r.json();toast(d.detail||d.error||'Erro ao salvar','err');restore();return;}
-      if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();showUndo(`${field==='preco'?'Preço':'Estoque'} salvo no Bling ✓`);p[field]=val;}
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok){toast(d.detail||d.error||'Erro ao salvar','err');restore();return;}
+      if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();p[field]=val;}
+      if(d.blingSync===false)toast(d.aviso||'Salvo no sistema — o Bling recusou a gravação','wa');
+      else showUndo(`${field==='preco'?'Preço':'Estoque'} salvo no Bling ✓`);
       restore();
       const row=document.querySelector(`tr[data-id="${id}"]`);
       if(row){row.classList.add('flash');setTimeout(()=>row.classList.remove('flash'),500);}
@@ -4903,17 +4907,22 @@ function parseCustoCSV(input){
 async function applyCustoImport(){
   if(!_custoImportData.length)return;
   const btn=$('custo-import-btn');btn.disabled=true;btn.textContent='Aplicando…';
-  let ok=0,fail=0,firstErr='';
+  let ok=0,soLocal=0,fail=0,firstErr='',firstAviso='';
   for(const row of _custoImportData){
     try{
       const r=await fetch('/api/produtos/'+row.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({precoCusto:row.custo,nome_produto:row.nome})});
-      if(r.ok){ok++;const p=S.products.find(x=>x.id===row.id);if(p)p.precoCusto=row.custo;}
-      else{fail++;if(!firstErr){const d=await r.json().catch(()=>({}));firstErr=d.detail||d.error||'';}}
+      const d=await r.json().catch(()=>({}));
+      if(r.ok){
+        ok++;const p=S.products.find(x=>x.id===row.id);if(p)p.precoCusto=row.custo;
+        if(d.blingSync===false){soLocal++;if(!firstAviso)firstAviso=d.aviso||'';}
+      }
+      else{fail++;if(!firstErr)firstErr=d.detail||d.error||'';}
     }catch{fail++;}
   }
   btn.disabled=false;
-  const msg=ok>0?`${ok} custo${ok!==1?'s':''} atualizado${ok!==1?'s':''}${fail>0?' · '+fail+' erro(s)':''}`:(firstErr||'Nenhum custo atualizado, verifique sua conexão com o Bling');
-  toast(msg,ok>0?'ok':'err');
+  const msg=ok>0?`${ok} custo${ok!==1?'s':''} atualizado${ok!==1?'s':''}${soLocal>0?` · ${soLocal} só no sistema (Bling recusou)`:''}${fail>0?' · '+fail+' erro(s)':''}`:(firstErr||'Nenhum custo atualizado, verifique sua conexão com o Bling');
+  toast(msg,ok>0?(soLocal>0?'wa':'ok'):'err');
+  if(soLocal>0&&firstAviso)toast(firstAviso,'wa');
   if(fail>0&&firstErr)toast(firstErr,'err');
   if(ok>0){_custoImportData=[];closeModal('custo-import-modal');applyFilters();}
   else btn.textContent=`Tentar novamente`;
@@ -5675,37 +5684,31 @@ async function openEditor(id){
           <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
         </div>
       </div>
-            <div class="edraw-sec">Fornecedor e Custo</div>
-      <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-          <div style="flex:1; margin-right:12px;">
-            <div class="df" style="position:relative">
-              <label>Fornecedor vinculado</label>
-              <input type="text" id="ed-forn-search" placeholder="Pesquisar pelo nome..." onkeyup="searchFornecedor(this.value)" autocomplete="off">
-              <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; margin-top:4px; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
-            </div>
-            <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
-            <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.nome||'')}">
-          </div>
-          <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0">+ Novo fornecedor</button>
-        </div>
-        
-        <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px">
-          <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
-          <div class="df-2" style="margin-top:10px">
-            <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
-            <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
-          </div>
-        </div>
-        
-        <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
-          ⚠ Produto sem fornecedor vinculado.
-        </div>
-      </div>
-      
-      <div class="edraw-sec">Preo de Venda</div>
+      <div class="edraw-sec">Fornecedor e custo</div>
       <div class="df-2">
-        <div class="df"><label>Preo de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
+        <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
+        <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:4px">
+        <div class="df" style="flex:1;position:relative;margin-bottom:0">
+          <label>Fornecedor vinculado</label>
+          <input type="text" id="ed-forn-search" placeholder="Pesquisar pelo nome…" onkeyup="searchFornecedor(this.value)" autocomplete="off">
+          <div id="ed-forn-results" style="position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--surf);border:1px solid var(--bord);border-radius:10px;z-index:100;display:none;max-height:200px;overflow-y:auto;box-shadow:var(--sh-md)"></div>
+        </div>
+        <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0;height:40px">+ Novo</button>
+        <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
+        <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.contato?.nome||p.fornecedor?.nome||'')}">
+      </div>
+      <div id="forn-vinculado" style="${p.fornecedor?.id?'':'display:none;'}font-size:12px;color:var(--ok-t);font-weight:600;margin-bottom:8px">
+        ✓ <span id="forn-nome-display">${esc(p.fornecedor?.contato?.nome||p.fornecedor?.nome||'Fornecedor vinculado')}</span>
+      </div>
+      <div id="forn-alerta" style="${p.fornecedor?.id?'display:none;':''}font-size:11.5px;color:var(--mu);margin-bottom:8px">
+        Sem fornecedor vinculado — ao salvar o custo, o sistema vincula o "Fornecedor Padrão" automaticamente no Bling.
+      </div>
+
+      <div class="edraw-sec">Preço de venda</div>
+      <div class="df-2">
+        <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
       </div>
       <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
         Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
@@ -5728,11 +5731,31 @@ async function openEditor(id){
         <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
       </div>
       <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
+      <div class="edraw-sec">Últimas alterações deste produto</div>
+      <div id="ed-hist" style="font-size:12px;color:var(--mu)">Carregando…</div>
     `;
+    loadEditorHistorico(id);
   }catch(e){
     $('edraw-bd').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;
     $('edraw-save').disabled=true;
   }
+}
+// Histórico de alterações do produto aberto no editor — reaproveita o
+// changeLog geral do sistema, filtrado pelo id do produto.
+async function loadEditorHistorico(id){
+  try{
+    const r=await fetch('/api/historico'),d=await r.json();
+    const el=$('ed-hist');if(!el)return;
+    const hist=(d.history||[]).filter(h=>String(h.produto_id)===String(id)).slice(0,6);
+    if(!hist.length){el.textContent='Nenhuma alteração registrada por aqui ainda.';return;}
+    el.innerHTML=hist.map(h=>{
+      const quando=h.timestamp?new Date(h.timestamp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      return`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--bord-l)">
+        <span style="color:var(--tx)"><strong style="text-transform:capitalize">${esc(h.campo||'alteração')}</strong>${h.valor_novo?` → ${esc(String(h.valor_novo))}`:''}</span>
+        <span style="flex-shrink:0">${esc(quando)}</span>
+      </div>`;
+    }).join('');
+  }catch{const el=$('ed-hist');if(el)el.textContent='Não foi possível carregar o histórico.';}
 }
 function updateImgPrev(prevId,inputId){
   const url=$(inputId)?.value.trim();
@@ -5884,9 +5907,12 @@ async function saveEditorFull(){
     const oldEst=p?p.estoque:null;
     if(!isNaN(newEstoque)&&newEstoque!==oldEst)body.estoque=newEstoque;
     const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro');
     if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;p.tipo=updated.tipo;p.gtin=updated.gtin;p.unidade=updated.unidade;p.pesoBruto=updated.pesoBruto;p.descricaoComplementar=updated.descricaoComplementar;p.imagemUrl=updated.imagemUrl||p.imagemUrl;if(!isNaN(newEstoque))p.estoque=newEstoque;}
-    toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
+    if(d.blingSync===false)toast(d.aviso||'Produto salvo — o custo ficou no sistema, mas o Bling recusou a gravação','wa');
+    else toast('Produto atualizado com sucesso','ok');
+    closeEditor();updateKpis();updateLowBadge();applyFilters();
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent='Salvar alterações';}
 }
@@ -7202,23 +7228,19 @@ function startVoiceSearch(){
 })();
 </script>
 
-<div id="forn-modal" class="modal">
-  <div class="modal-box" style="max-width:500px">
-    <div class="modal-top">
-      <h3>Novo Fornecedor</h3>
-      <button class="modal-close" onclick="closeModal('forn-modal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+<div class="modal" id="forn-modal" onclick="if(event.target===this)closeModal('forn-modal')">
+  <div class="mbox" style="max-width:460px">
+    <div class="m-title">Novo fornecedor</div>
+    <div class="m-desc">O fornecedor é criado como contato no Bling e já sai vinculado a este produto ao salvar.</div>
+    <div class="df"><label>Nome do fornecedor *</label><input type="text" id="forn-nome" placeholder="Ex: Distribuidora XYZ"></div>
+    <div class="df-2">
+      <div class="df"><label>CNPJ / CPF</label><input type="text" id="forn-cnpj" placeholder="somente números"></div>
+      <div class="df"><label>Telefone</label><input type="text" id="forn-tel"></div>
     </div>
-    <div class="modal-bd">
-      <div class="df"><label>Nome do fornecedor *</label><input type="text" id="forn-nome"></div>
-      <div class="df-2">
-        <div class="df"><label>CNPJ / CPF</label><input type="text" id="forn-cnpj"></div>
-        <div class="df"><label>Telefone</label><input type="text" id="forn-tel"></div>
-      </div>
-      <div class="df"><label>E-mail</label><input type="email" id="forn-email"></div>
-    </div>
-    <div class="modal-ft">
-      <button class="bti" onclick="closeModal('forn-modal')">Cancelar</button>
+    <div class="df"><label>E-mail</label><input type="email" id="forn-email"></div>
+    <div class="m-foot">
       <button class="btp" id="forn-save-btn" onclick="saveNewFornecedor()">Salvar fornecedor</button>
+      <button class="bts" onclick="closeModal('forn-modal')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -7234,9 +7256,14 @@ async function searchFornecedor(q) {
   _fornDebounce = setTimeout(async () => {
     try {
       const res = await fetch('/api/fornecedores?pesquisa='+encodeURIComponent(q));
-      if(!res.ok) return;
-      const data = await res.json();
       const div = $('ed-forn-results');
+      if(!res.ok){
+        const d=await res.json().catch(()=>({}));
+        div.innerHTML=`<div style="padding:10px;font-size:12px;color:var(--er-t)">${esc(d.detail||d.error||'Erro ao buscar fornecedores')}</div>`;
+        div.style.display='block';
+        return;
+      }
+      const data = await res.json();
       if(data.fornecedores.length === 0) {
          div.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--mu)">Nenhum fornecedor encontrado</div>';
       } else {
@@ -7271,7 +7298,7 @@ function openNewFornecedor() {
 async function saveNewFornecedor() {
   const btn = $('forn-save-btn');
   const nome = $('forn-nome').value.trim();
-  if(!nome) return toast('Nome  obrigatrio','err');
+  if(!nome) return toast('Nome é obrigatório','err');
   
   btn.disabled = true;
   btn.textContent = 'Salvando...';
