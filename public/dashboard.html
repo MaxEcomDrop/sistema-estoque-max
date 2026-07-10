@@ -385,7 +385,8 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 /* EDITOR DRAWER */
 .edraw-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(2px)}
 .edraw-ov.open{opacity:1;pointer-events:all}
-.edraw{position:fixed;right:-100%;top:0;bottom:0;width:480px;max-width:100vw;background:var(--surf);border-left:1px solid var(--bord);z-index:1200;display:flex;flex-direction:column;transition:right .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
+.edraw{position:fixed;right:-100%;top:0;bottom:0;width:800px;max-width:100vw;background:var(--surf);border-left:1px solid var(--bord);z-index:1110;display:flex;flex-direction:column;transition:right .3s cubic-bezier(0,0,0,1);box-shadow:-4px 0 32px rgba(0,0,0,.1)}
+@media(max-width:768px){.edraw-2col{flex-direction:column!important} .edraw-2col > div{flex:none!important;width:100%!important}}
 .edraw.open{right:0}
 .edraw-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bord);flex-shrink:0}
 .edraw-title{font-size:14px;font-weight:600;color:var(--tx);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -5647,88 +5648,109 @@ async function openEditor(id){
     $('edraw-title').textContent=p.nome||'Editar produto';
     $('edraw-save').disabled=false;
     $('edraw-bd').innerHTML=`
-      ${p.imagem?.link?`<img class="edraw-img" src="${esc(p.imagem.link)}" alt="">`:''}
-      <div class="df-2">
-        <div class="df"><label>Situação</label><select id="ed-sit">
-          <option value="A" ${sit==='A'?'selected':''}>Ativo</option>
-          <option value="I" ${sit==='I'?'selected':''}>Inativo</option>
-        </select></div>
-        <div class="df"><label>Tipo</label><select id="ed-tipo">
-          <option value="P" ${tipo==='P'?'selected':''}>Produto</option>
-          <option value="S" ${tipo==='S'?'selected':''}>Serviço</option>
-          <option value="K" ${tipo==='K'?'selected':''}>Kit</option>
-        </select></div>
-      </div>
-      <div class="df"><label>Nome do produto</label><input type="text" id="ed-nome" value="${esc(p.nome||'')}"></div>
-      <div class="df-2">
-        <div class="df"><label>SKU / Código</label><input type="text" id="ed-codigo" value="${esc(p.codigo||'')}"></div>
-        <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
-      </div>
-      <div class="edraw-sec">Imagem</div>
-      <div style="display:flex;gap:14px;align-items:stretch">
-        <div id="ed-img-prev" style="width:96px;height:96px;border-radius:14px;background:var(--bord-l);border:1px solid var(--bord);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center">${p.imagemUrl?`<img src="${esc(p.imagemUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}</div>
-        <div id="ed-img-drop" class="img-drop" onclick="$('ed-img-file').click()"
-          ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
-          ondrop="event.preventDefault();this.classList.remove('over');handleImgFile(event.dataTransfer.files[0])">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div><strong>Enviar imagem</strong><span id="ed-img-drop-sub">arraste aqui ou toque para escolher · JPG, PNG ou WEBP</span></div>
-          <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
-        </div>
-      </div>
-            <div class="edraw-sec">Fornecedor e Custo</div>
-      <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-          <div style="flex:1; margin-right:12px;">
-            <div class="df" style="position:relative">
-              <label>Fornecedor vinculado</label>
-              <input type="text" id="ed-forn-search" placeholder="Pesquisar pelo nome..." onkeyup="searchFornecedor(this.value)" autocomplete="off">
-              <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; margin-top:4px; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
+      <div class="edraw-2col" style="display:flex; gap:24px; align-items:flex-start">
+        <!-- Coluna Esquerda: Imagem maior e Stats -->
+        <div style="flex: 0 0 320px; display:flex; flex-direction:column; gap:16px;">
+          <div id="ed-img-prev" style="width:100%; aspect-ratio:1; border-radius:14px; background:var(--bord-l); border:1px solid var(--bord); overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative;">
+            ${p.imagemUrl?`<img src="${esc(p.imagemUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}
+          </div>
+          <div id="ed-img-drop" class="img-drop" onclick="$('ed-img-file').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');handleImgFile(event.dataTransfer.files[0])" style="text-align:center; padding:12px; cursor:pointer;">
+            <div><strong>Alterar imagem</strong><span id="ed-img-drop-sub" style="display:block;font-size:11px;margin-top:2px;color:var(--mu)">toque ou arraste (JPG/PNG)</span></div>
+            <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
+          </div>
+          
+          <div style="background:var(--bg); border:1px solid var(--bord-l); border-radius:12px; padding:18px; margin-top:8px;">
+            <div style="font-size:12px; font-weight:800; color:var(--mu); text-transform:uppercase; margin-bottom:16px; letter-spacing:0.5px">Desempenho (Simulado)</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center">
+              <span style="color:var(--tx); font-size:14px; font-weight:500">Vendas Totais</span>
+              <strong style="color:var(--ok-t); font-size:16px; background:rgba(34,197,94,0.1); padding:4px 8px; border-radius:6px">+${Math.floor(Math.random()*250)+15} un.</strong>
             </div>
-            <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
-            <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.nome||'')}">
-          </div>
-          <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0">+ Novo fornecedor</button>
-        </div>
-        
-        <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px; position:relative">
-          <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px; padding-right:60px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
-          <button type="button" class="bts" onclick="unlinkFornecedor()" style="position:absolute; top:8px; right:8px; padding:2px 8px; font-size:11px; height:24px; color:var(--er-t); border-color:rgba(239,68,68,0.2)">Remover</button>
-          <div class="df-2" style="margin-top:10px">
-            <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
-            <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center">
+              <span style="color:var(--tx); font-size:14px; font-weight:500">Estoque Atual</span>
+              <strong style="color:var(--tx); font-size:15px;">${curEstoque} un.</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span style="color:var(--tx); font-size:14px; font-weight:500">Clientes únicos</span>
+              <strong style="color:var(--tx); font-size:15px;">${Math.floor(Math.random()*150)+5}</strong>
+            </div>
           </div>
         </div>
         
-        <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa-bg); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
-          ⚠ Produto sem fornecedor vinculado.
+        <!-- Coluna Direita: Formulário Original -->
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div class="df-2">
+            <div class="df"><label>Situação</label><select id="ed-sit">
+              <option value="A" ${sit==='A'?'selected':''}>Ativo</option>
+              <option value="I" ${sit==='I'?'selected':''}>Inativo</option>
+            </select></div>
+            <div class="df"><label>Tipo</label><select id="ed-tipo">
+              <option value="P" ${tipo==='P'?'selected':''}>Produto</option>
+              <option value="S" ${tipo==='S'?'selected':''}>Serviço</option>
+              <option value="K" ${tipo==='K'?'selected':''}>Kit</option>
+            </select></div>
+          </div>
+          <div class="df"><label>Nome do produto</label><input type="text" id="ed-nome" value="${esc(p.nome||'')}"></div>
+          <div class="df-2">
+            <div class="df"><label>SKU / Código</label><input type="text" id="ed-codigo" value="${esc(p.codigo||'')}"></div>
+            <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
+          </div>
+          
+          <div class="edraw-sec">Fornecedor e Custo</div>
+          <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+              <div style="flex:1; margin-right:12px;">
+                <div class="df" style="position:relative">
+                  <label>Fornecedor vinculado</label>
+                  <input type="text" id="ed-forn-search" placeholder="Pesquisar pelo nome..." onkeyup="searchFornecedor(this.value)" autocomplete="off">
+                  <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; margin-top:4px; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
+                </div>
+                <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
+                <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.nome||'')}">
+              </div>
+              <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0">+ Novo fornecedor</button>
+            </div>
+            
+            <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px; position:relative">
+              <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px; padding-right:60px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
+              <button type="button" class="bts" onclick="unlinkFornecedor()" style="position:absolute; top:8px; right:8px; padding:2px 8px; font-size:11px; height:24px; color:var(--er-t); border-color:rgba(239,68,68,0.2)">Remover</button>
+              <div class="df-2" style="margin-top:10px">
+                <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
+                <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
+              </div>
+            </div>
+            
+            <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa-bg); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
+              ⚠ Produto sem fornecedor vinculado.
+            </div>
+          </div>
+          
+          <div class="edraw-sec">Preço de Venda</div>
+          <div class="df-2">
+            <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
+          </div>
+          <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
+            Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
+          </div>
+          <div class="edraw-sec">Estoque</div>
+          <div class="df-2">
+            <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
+            <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
+          </div>
+          <div class="edraw-sec">Tributação e Outros</div>
+          <div class="df-2">
+            <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}"></div>
+            <div class="df"><label>CEST</label><input type="text" id="ed-cest" value="${esc(p.tributacao?.cest||'')}"></div>
+          </div>
+          <div class="df-2">
+            <div class="df"><label>Origem (0-8)</label><input type="number" id="ed-origem" value="${p.tributacao?.origem!==undefined?p.tributacao.origem:''}" min="0" max="8"></div>
+            <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
+          </div>
+          <div class="df-2">
+            <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
+          </div>
+          <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
         </div>
       </div>
-      
-      <div class="edraw-sec">Preço de Venda</div>
-      <div class="df-2">
-        <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
-      </div>
-      <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
-        Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
-      </div>
-      <div class="edraw-sec">Estoque</div>
-      <div class="df-2">
-        <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
-        <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
-      </div>
-            <div class="edraw-sec">Tributação e Outros</div>
-      <div class="df-2">
-        <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}"></div>
-        <div class="df"><label>CEST</label><input type="text" id="ed-cest" value="${esc(p.tributacao?.cest||'')}"></div>
-      </div>
-      <div class="df-2">
-        <div class="df"><label>Origem (0-8)</label><input type="number" id="ed-origem" value="${p.tributacao?.origem!==undefined?p.tributacao.origem:''}" min="0" max="8"></div>
-        <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
-      </div>
-      <div class="df-2">
-        <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
-      </div>
-      <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
     `;
   }catch(e){
     $('edraw-bd').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;
