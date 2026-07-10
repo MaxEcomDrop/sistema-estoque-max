@@ -83,11 +83,12 @@
 
 <div class="hero">
   <div class="hero-badge" id="hero-badge">SISTEMA ERP MAX V2.0</div>
-  <!-- Mascote: 1º tenta o arquivo fixo public/mascote.png; 2º o logo enviado
-       em Configurações (/img/logo); sem os dois, mostra o quadrado com o M. -->
-  <img class="hero-mascote" id="hero-mascote" src="/mascote.png" alt="Mascote do sistema"
+  <!-- Mascote: 1º a imagem enviada pelo usuário (CDN Shopify); 2º o arquivo
+       fixo public/mascote.png; 3º o logo enviado em Configurações (/img/logo);
+       sem nenhum dos três, mostra o quadrado com o M. -->
+  <img class="hero-mascote" id="hero-mascote" src="https://cdn.shopify.com/s/files/1/0725/2502/1322/files/FOTO_PERFIL_MAX_RENOVACAO_b319aedc-4828-4b26-ac23-1eb59d17e7a6.png?v=1783694971" alt="Mascote do sistema"
        onload="this.style.display='block';document.getElementById('hero-fallback').style.display='none'"
-       onerror="if(!this.dataset.try2){this.dataset.try2=1;this.src='/img/logo';}else{this.style.display='none';document.getElementById('hero-fallback').style.display='flex';}">
+       onerror="if(!this.dataset.try2){this.dataset.try2=1;this.src='/mascote.png';}else if(!this.dataset.try3){this.dataset.try3=1;this.src='/img/logo';}else{this.style.display='none';document.getElementById('hero-fallback').style.display='flex';}">
   <div class="hero-fallback" id="hero-fallback">M</div>
   <div class="hero-copy">
     <h2>Gestão completa de<br>Estoque e Vendas</h2>
