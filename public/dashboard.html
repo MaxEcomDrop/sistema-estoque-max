@@ -277,7 +277,7 @@ tr:hover .thumb{box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .qfoot{padding:10px 12px;border-top:1px solid var(--bord);display:flex;gap:8px;flex-shrink:0}
 
 /* MODALS */
-.modal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.modal{position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
 .modal.open{opacity:1;pointer-events:all}
 .mbox{background:var(--surf);border-radius:16px;padding:24px;border:1px solid var(--bord);max-height:85vh;max-width:560px;width:90vw;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.12)}
 .m-title{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:6px}
@@ -1154,11 +1154,14 @@ select,input[type=date],input[type=number],input[type=text],input[type=url],inpu
 .pcard:hover{box-shadow:0 6px 24px rgba(0,0,0,.1);border-color:var(--acc);transform:translateY(-1px)}
 .pcard{transition:box-shadow .15s,border-color .15s,transform .15s}
 .pcard-edit{position:absolute;top:7px;right:7px;width:26px;height:26px;background:var(--surf);border:1px solid var(--bord);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pcard-hide{position:absolute;top:7px;left:7px;width:26px;height:26px;background:var(--surf);border:1px solid var(--bord);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;box-shadow:0 2px 8px rgba(0,0,0,.1)}
 .pcard-sbar{height:3px;width:100%;background:var(--bord-l);flex-shrink:0;overflow:hidden}
 .pcard-sfill{height:100%;transition:width .4s;border-radius:0}
 .pcard-img{position:relative}
-.pcard:hover .pcard-edit{opacity:1}
+.pcard:hover .pcard-edit,.pcard:hover .pcard-hide{opacity:1}
 .pcard-edit svg{width:12px;height:12px;color:var(--acc)}
+.pcard-hide svg{width:12px;height:12px;color:var(--mu)}
+.pcard-hide:hover svg{color:var(--er-t)}
 
 /* ════ POLISH / EFEITOS ════ */
 html{scroll-behavior:smooth}
@@ -1780,6 +1783,11 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
         <div class="srch-hist" id="srch-hist" style="display:none"></div>
 
+        <div class="ped-tab-bar" style="padding:10px 16px 0">
+          <button class="pt-btn on" id="prod-sub-grade" onclick="setProdSubView('grade')">Grade</button>
+          <button class="pt-btn" id="prod-sub-ocultos" onclick="setProdSubView('ocultos')">Ocultos <span id="prod-sub-ocultos-cnt"></span></button>
+        </div>
+
         <div class="qchips-bar" id="qchips-bar">
           <span class="qchip on" data-s="" onclick="setQChip(this,'')">Todos</span>
           <span class="qchip" data-s="ok" onclick="setQChip(this,'ok')">Em estoque</span>
@@ -1831,6 +1839,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
                 <th class="r" onclick="sortBy('preco')" style="width:130px">Preço <span class="si" id="si-preco"></span></th>
                 <th class="r" onclick="sortBy('estoque')" style="width:120px">Estoque <span class="si" id="si-estoque"></span></th>
                 <th style="width:130px">Status <span class="si" id="si-status"></span></th>
+                <th style="width:44px"></th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -2525,6 +2534,14 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           </div>
           <button class="btp" onclick="saveEstoqueMin()">Salvar</button>
         </div>
+        <div class="cfg-row" style="gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--bord-l)">
+          <span class="cfg-row-lbl">Sincronizar com lojas integradas ao salvar estoque</span>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--mu)">
+            <input type="checkbox" id="cfg-sync-estoque" onchange="toggleSyncEstoquePadrao(this.checked)" style="width:17px;height:17px;accent-color:var(--acc);cursor:pointer">
+            Ligado por padrão
+          </label>
+        </div>
+        <div class="cfg-desc" style="margin-top:6px;margin-bottom:0">Esse é o padrão usado ao salvar uma alteração de estoque (movimento ou edição de produto) — dá pra mudar na hora, em cada alteração.</div>
       </div>
       <div class="cfg-card">
         <div class="cfg-title">Metas</div>
@@ -2919,6 +2936,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="df"><label>Motivo</label>
       <input type="text" id="mov-motivo" placeholder="Ex: reposição, perda, avaria, devolução…">
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tx);margin:-4px 0 14px;cursor:pointer">
+      <input type="checkbox" id="mov-sync" checked style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+      Sincronizar com o Bling e lojas integradas
+    </label>
     <div class="m-foot">
       <button class="btp" onclick="confirmMovimento()">Confirmar</button>
       <button class="bts" onclick="closeModal('mov-modal')">Cancelar</button>
@@ -3110,6 +3131,7 @@ const S = {
   estoqueMin:Math.max(0,parseInt(localStorage.getItem('em_min')||'5')),
   compact:localStorage.getItem('compact')!==null?localStorage.getItem('compact')==='1':window.innerWidth<640,
   metaFat:parseFloat(localStorage.getItem('em_meta')||'0'),
+  prodSubView:'grade',
 };
 
 // ── UTILS ──────────────────────────────────────────
@@ -3268,7 +3290,7 @@ async function saveAppConfig(){
     const r=await fetch('/api/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,iniciais,cor})});
     const d=await r.json();
     if(!r.ok)throw new Error(d.detail||d.error||'Erro ao salvar');
-    _appConfig={nome:d.nome,iniciais:d.iniciais,cor:d.cor};
+    _appConfig={..._appConfig,nome:d.nome,iniciais:d.iniciais,cor:d.cor};
     applyBranding();
     toast('Identidade do sistema atualizada','ok');
   }catch(e){errEl.textContent=e.message;errEl.style.display='block';}
@@ -3319,13 +3341,22 @@ function renderCards(){
   if(S.page>0&&S.page*S.pageSize>=S.filtered.length)S.page=0;
   const slice=S.filtered.slice(S.page*S.pageSize,(S.page+1)*S.pageSize);
   renderPagination();
-  if(!slice.length){cc.innerHTML=`<div class="empty-st" style="grid-column:1/-1"><div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div><p class="empty-t">Nenhum produto encontrado</p><p class="empty-d">Tente ajustar os filtros ou termos da busca.</p><button class="empty-btn" onclick="clearFilters();clearSearch()">Limpar filtros e busca</button></div>`;return;}
+  if(!slice.length){
+    const oc=S.prodSubView==='ocultos';
+    cc.innerHTML=`<div class="empty-st" style="grid-column:1/-1"><div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${oc?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>':'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>'}</svg></div><p class="empty-t">${oc?'Nenhum produto oculto':'Nenhum produto encontrado'}</p><p class="empty-d">${oc?'Produtos ocultados da grade aparecem aqui — só voltam pra grade com senha.':'Tente ajustar os filtros ou termos da busca.'}</p>${oc?'':'<button class="empty-btn" onclick="clearFilters();clearSearch()">Limpar filtros e busca</button>'}</div>`;
+    return;
+  }
+  const oc=S.prodSubView==='ocultos';
   cc.innerHTML=slice.map(p=>{
     const isSel=S.selected.has(p.id);
     const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onclick="event.stopPropagation();openImgLbox('${esc(p.imagemUrl)}')" style="cursor:zoom-in" onerror="this.removeAttribute('onclick');this.style.cursor='';this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
     const badge=statusBadge(p.estoque);
+    const hideBtn=oc
+      ?`<button class="pcard-hide" onclick="event.stopPropagation();mostrarProdutoConfirm(${p.id})" title="Voltar pra grade (pede senha)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`
+      :`<button class="pcard-hide" onclick="event.stopPropagation();ocultarProduto(${p.id})" title="Ocultar da grade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>`;
     return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}">
       <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">${thumb}
+        ${hideBtn}
         <button class="pcard-edit" onclick="event.stopPropagation();openEditor(${p.id})" title="Editar produto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       </div>
       <div class="pcard-body">
@@ -4445,6 +4476,16 @@ function renderMetaBar(){
   }
 }
 function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseInt(inp.value)||0);S.estoqueMin=v;localStorage.setItem('em_min',v);updateLowBadge();updateKpis();renderTable();toast(`Alerta de estoque: abaixo de ${v} un.`,'ok');}
+// A escolha vira o padrão do sistema pra próximas alterações de estoque
+// (movimento e editor de produto já nascem com esse valor marcado).
+async function toggleSyncEstoquePadrao(checked){
+  try{
+    const r=await fetch('/api/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({sincronizarEstoque:checked})});
+    if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'Erro ao salvar');
+    _appConfig.sincronizarEstoque=checked;
+    toast(checked?'Sincronização com lojas integradas ativada por padrão':'Sincronização com lojas integradas desativada por padrão','ok');
+  }catch(e){$('cfg-sync-estoque').checked=!checked;toast('Erro: '+e.message,'err');}
+}
 
 // ── CONFIGURAÇÕES · Conta e status das integrações ─
 let _cfgLoaded=false;
@@ -4453,6 +4494,7 @@ async function loadConfig(){
   $('cfg-app-nome').value=_appConfig.nome;
   $('cfg-app-iniciais').value=_appConfig.iniciais;
   $('cfg-app-cor').value=_appConfig.cor;
+  const cfgSync=$('cfg-sync-estoque');if(cfgSync)cfgSync.checked=_appConfig.sincronizarEstoque!==false;
   updateAppConfigPreview();
   renderAssetPreview('icone');
   renderAssetPreview('logo');
@@ -4565,6 +4607,8 @@ function applyFilters(){
   const prMin=parseFloat($('f-pr-min').value)||(-Infinity),prMax=parseFloat($('f-pr-max').value)||Infinity;
   try{localStorage.setItem('flt',JSON.stringify({s:$('f-status').value,c:$('f-cat').value,si:$('f-st-min').value,sx:$('f-st-max').value,pi:$('f-pr-min').value,px:$('f-pr-max').value}));}catch{}
   let filtered=S.products.filter(p=>{
+    if(S.prodSubView==='ocultos'){if(!p.oculto)return false;}
+    else if(p.oculto)return false;
     if(q&&!p.nome.toLowerCase().includes(q)&&!p.codigo.toLowerCase().includes(q))return false;
     if(status==='out'&&p.estoque!==0)return false;
     if(status==='lo'&&(p.estoque===0||p.estoque>S.estoqueMin))return false;
@@ -4592,7 +4636,44 @@ function applyFilters(){
     filtered.sort((a,b)=>{let av=a[field],bv=b[field];if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}if(av<bv)return dir==='asc'?-1:1;if(av>bv)return dir==='asc'?1:-1;return 0;});
   }
   S.filtered=filtered;S.page=0;
-  updateFilterBadge();updateQChips();renderTable();
+  updateFilterBadge();updateQChips();updateOcultosCount();renderTable();
+}
+function updateOcultosCount(){
+  const el=$('prod-sub-ocultos-cnt');if(!el)return;
+  const n=S.products.filter(p=>p.oculto).length;
+  el.textContent=n>0?`(${n})`:'';
+}
+function setProdSubView(v){
+  if(S.prodSubView===v)return;
+  S.prodSubView=v;
+  $('prod-sub-grade')?.classList.toggle('on',v==='grade');
+  $('prod-sub-ocultos')?.classList.toggle('on',v==='ocultos');
+  clearSelection();
+  applyFilters();
+}
+// Ocultar é organização pura (não mexe em nada no Bling) — some da grade na
+// hora, sem pedir senha. Voltar exige senha (mesmo padrão de duplicar/excluir).
+async function ocultarProduto(id){
+  const p=S.products.find(x=>x.id===id);if(!p)return;
+  try{
+    const r=await fetch(`/api/produtos/${id}/ocultar`,{method:'POST'});
+    if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.error||'Erro ao ocultar produto','err');return;}
+    p.oculto=true;
+    toast(`"${p.nome}" foi para Ocultos`,'ok');
+    applyFilters();
+  }catch{toast('Erro de conexão','err');}
+}
+function mostrarProdutoConfirm(id){
+  const p=S.products.find(x=>x.id===id);if(!p)return;
+  requireSenha(async()=>{
+    try{
+      const r=await fetch(`/api/produtos/${id}/mostrar`,{method:'POST'});
+      if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.error||'Erro ao mostrar produto','err');return;}
+      p.oculto=false;
+      toast(`"${p.nome}" voltou pra grade`,'ok');
+      applyFilters();
+    }catch{toast('Erro de conexão','err');}
+  },{title:'Confirmar exibição',desc:`Digite sua senha para tirar "${p.nome}" de Ocultos e voltar pra grade.`,force:true});
 }
 function setSortSelect(val){
   const[field,dir]=val.split(':');
@@ -4685,9 +4766,11 @@ function renderTable(){
   const slice=S.filtered.slice(0,(S.page+1)*S.PAGE);
   const hasMore=S.filtered.length>slice.length;
   if(!slice.length){
-    tb.innerHTML=`<tr><td colspan="6"><div class="empty-st"><div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div><p class="empty-t">Nenhum produto encontrado</p><p class="empty-d">Tente ajustar os filtros ou termos da busca.</p><button class="empty-btn" onclick="clearFilters();clearSearch()">Limpar filtros e busca</button></div></td></tr>`;
+    const oc=S.prodSubView==='ocultos';
+    tb.innerHTML=`<tr><td colspan="7"><div class="empty-st"><div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${oc?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>':'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>'}</svg></div><p class="empty-t">${oc?'Nenhum produto oculto':'Nenhum produto encontrado'}</p><p class="empty-d">${oc?'Produtos ocultados da grade aparecem aqui — só voltam pra grade com senha.':'Tente ajustar os filtros ou termos da busca.'}</p>${oc?'':'<button class="empty-btn" onclick="clearFilters();clearSearch()">Limpar filtros e busca</button>'}</div></td></tr>`;
     $('lm-btn').style.display='none';return;
   }
+  const oc=S.prodSubView==='ocultos';
   let html='',lastCat=null;
   slice.forEach(p=>{
     if(S.grouped&&p.categoria!==lastCat){lastCat=p.categoria;html+=`<tr class="grp-row"><td colspan="8">${esc(p.categoria||'Sem categoria')}</td></tr>`;}
@@ -4698,6 +4781,9 @@ function renderTable(){
     const thumb=p.imagemUrl?`<div class="thumb" onclick="event.stopPropagation();openImgLbox('${esc(p.imagemUrl)}')" style="cursor:zoom-in" title="Ver imagem"><img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onerror="this.parentElement.removeAttribute('onclick');this.parentElement.style.cursor='';this.parentElement.innerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\'/><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'/><polyline points=\\'21 15 16 10 5 21\\'/></svg>'"></div>`:`<div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
     const nameHl=hl(p.nome,q);const skuHl=hl(p.codigo||'—',q);
     const _rowCls=p.estoque<=0?'row-out':p.estoque<=S.estoqueMin?'row-lo':'';
+    const hideBtn=oc
+      ?`<button class="bti" onclick="mostrarProdutoConfirm(${p.id})" title="Voltar pra grade (pede senha)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`
+      :`<button class="bti" onclick="ocultarProduto(${p.id})" title="Ocultar da grade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>`;
     html+=`<tr data-id="${p.id}" class="${isSel?'sel':''} ${isDup?'dup-row':''} ${_rowCls}">
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
       <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="${'pname-sub'+(p.codigo?' pname-sub-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${skuHl}</span></div></div></td>
@@ -4705,6 +4791,7 @@ function renderTable(){
       <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmt(p.preco)}${arr}${editIco}</span></td>
       <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmtN(p.estoque)} un.${editIco}</span></td>
       <td>${statusBadge(p.estoque)}</td>
+      <td>${hideBtn}</td>
     </tr>`;
   });
   tb.innerHTML=html;
@@ -4733,11 +4820,12 @@ function editCell(span,field,id,current,nomeProd){
     try{
       const body={nome_produto:nomeProd,valor_anterior:prevVal!==null?(field==='preco'?fmt(prevVal):`${prevVal} un.`):'—'};
       body[field]=val;
+      if(field==='estoque')body.sincronizarEstoque=_appConfig.sincronizarEstoque!==false;
       const r=await fetch(`/api/produtos/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const d=await r.json().catch(()=>({}));
       if(!r.ok){toast(d.detail||d.error||'Erro ao salvar','err');restore();return;}
       if(p){S.undoStack.push({id,field,prev:prevVal,newVal:val,nome:nomeProd});if(S.undoStack.length>20)S.undoStack.shift();p[field]=val;}
-      if(d.blingSync===false)toast(d.aviso||'Salvo no sistema — o Bling recusou a gravação','wa');
+      if(d.blingSync===false||d.estoqueSync===false)toast(d.aviso||'Salvo no sistema — o Bling recusou a gravação','wa');
       else showUndo(`${field==='preco'?'Preço':'Estoque'} salvo no Bling ✓`);
       restore();
       const row=document.querySelector(`tr[data-id="${id}"]`);
@@ -4830,13 +4918,15 @@ async function cardStockAdj(id,delta){
   const card=document.querySelector(`.pcard[data-id="${id}"]`);
   if(card){card.classList.add("row-flash");setTimeout(()=>card.classList.remove("row-flash"),1000);}
   try{
-    const r=await fetch(`/api/produtos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estoque:nv})});
+    const r=await fetch(`/api/produtos/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estoque:nv,sincronizarEstoque:_appConfig.sincronizarEstoque!==false})});
+    const d=await r.json().catch(()=>({}));
     if(!r.ok){
       // Bling recusou a alteração — desfaz o otimista local, senão o valor
       // "parece salvo" na tela mas some no próximo F5/recarregamento.
-      const d=await r.json().catch(()=>({}));
       p.estoque=prev;renderCardStock(id,prev);
       toast(d.detail||d.error||"Erro ao salvar no Bling","err");
+    }else if(d.estoqueSync===false){
+      toast(d.aviso||"Estoque salvo no sistema — não sincronizado com o Bling","wa");
     }
   }catch{
     p.estoque=prev;renderCardStock(id,prev);
@@ -5753,6 +5843,10 @@ async function openEditor(id){
             <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
             <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
           </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tx);cursor:pointer">
+            <input type="checkbox" id="ed-sync-estoque" ${_appConfig.sincronizarEstoque!==false?'checked':''} style="width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex-shrink:0">
+            Sincronizar com o Bling e lojas integradas
+          </label>
         </div>
         <div class="ed-card">
           <div class="ed-card-t">Tributação e outros</div>
@@ -5946,11 +6040,14 @@ async function saveEditorFull(){
     const p=S.products.find(x=>x.id===editorId);
     const oldEst=p?p.estoque:null;
     if(!isNaN(newEstoque)&&newEstoque!==oldEst)body.estoque=newEstoque;
+    const syncEl=$('ed-sync-estoque');if(syncEl)body.sincronizarEstoque=syncEl.checked;
     const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(d.detail||d.error||'Erro');
+    if(syncEl)_appConfig.sincronizarEstoque=syncEl.checked;
     if(p){p.nome=nome;p.codigo=updated.codigo;p.preco=updated.preco;p.precoCusto=updated.precoCusto;p.situacao=updated.situacao;p.tipo=updated.tipo;p.gtin=updated.gtin;p.unidade=updated.unidade;p.pesoBruto=updated.pesoBruto;p.descricaoComplementar=updated.descricaoComplementar;p.imagemUrl=updated.imagemUrl||p.imagemUrl;if(!isNaN(newEstoque))p.estoque=newEstoque;}
     if(d.blingSync===false)toast(d.aviso||'Produto salvo — o custo ficou no sistema, mas o Bling recusou a gravação','wa');
+    else if(d.estoqueSync===false)toast(d.aviso||'Produto salvo — o estoque ficou só no sistema (sincronização desligada)','wa');
     else toast('Produto atualizado com sucesso','ok');
     closeEditor();updateKpis();updateLowBadge();applyFilters();
   }catch(e){toast('Erro: '+e.message,'err');}
@@ -5967,6 +6064,7 @@ function openMovimento(){
   $('mov-tipo').value='entrada';
   $('mov-qtd').value='';
   $('mov-motivo').value='';
+  $('mov-sync').checked=_appConfig.sincronizarEstoque!==false;
   $('mov-preview').style.display='none';
   openModal('mov-modal');
   setTimeout(()=>$('mov-qtd').focus(),80);
@@ -5996,17 +6094,22 @@ async function confirmMovimento(){
   else novoEst=qtd;
   const tipoLabel=tipo==='entrada'?'Entrada':tipo==='saida'?'Saída':'Ajuste';
   const motivoFull=motivo?`${tipoLabel}: ${motivo}`:tipoLabel;
+  const sincronizar=$('mov-sync').checked;
   const btn=$('mov-modal').querySelector('.btp');btn.disabled=true;btn.textContent='Salvando…';
   try{
     const r=await fetch(`/api/produtos/${editorId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       estoque:novoEst,nome_produto:editorProduct?.nome||`#${editorId}`,
-      valor_anterior:`${fmtN(est)} un.`,motivo:motivoFull
+      valor_anterior:`${fmtN(est)} un.`,motivo:motivoFull,sincronizarEstoque:sincronizar
     })});
-    if(!r.ok){const d=await r.json();throw new Error(d.detail||d.error||'Erro');}
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro');
+    _appConfig.sincronizarEstoque=sincronizar;
     if(p){p.estoque=novoEst;}
     const edEst=$('ed-estoque');if(edEst)edEst.value=novoEst;
+    const edSync=$('ed-sync-estoque');if(edSync)edSync.checked=sincronizar;
     closeModal('mov-modal');
-    toast(`Estoque atualizado: ${fmtN(est)} → ${fmtN(novoEst)} un.`,'ok');
+    if(d.estoqueSync===false)toast(d.aviso||`Estoque atualizado no sistema (${fmtN(est)} → ${fmtN(novoEst)} un.) — não sincronizado com o Bling`,'wa');
+    else toast(`Estoque atualizado: ${fmtN(est)} → ${fmtN(novoEst)} un.`,'ok');
     updateKpis();updateLowBadge();applyFilters();
   }catch(e){toast('Erro: '+e.message,'err');}
   finally{btn.disabled=false;btn.textContent='Confirmar';}

@@ -117,7 +117,7 @@ let eventIdCounter = 1;
 let _persistLoaded = false;
 // Identidade visual do sistema (nome + ícone) — editável em Configurações,
 // refletida na aba do Chrome, no app instalável, no login e no menu lateral.
-let appConfig = { nome: 'Sistema ERP Max', iniciais: 'M', cor: '#1e9bf0' };
+let appConfig = { nome: 'Sistema ERP Max', iniciais: 'M', cor: '#1e9bf0', sincronizarEstoque: true };
 
 async function loadPersistedData() {
   if (_persistLoaded) return;
@@ -196,7 +196,7 @@ app.get('/api/config', async (req, res) => {
 
 app.put('/api/config', requireAuthJson, async (req, res) => {
   await loadPersistedData();
-  const { nome, iniciais, cor } = req.body || {};
+  const { nome, iniciais, cor, sincronizarEstoque } = req.body || {};
   if (nome !== undefined) {
     const n = String(nome).trim().slice(0, 40);
     if (!n) return sendErrorResponse(res, 400, 'Nome não pode ser vazio');
@@ -210,6 +210,9 @@ app.put('/api/config', requireAuthJson, async (req, res) => {
   if (cor !== undefined) {
     if (!/^#[0-9a-fA-F]{6}$/.test(cor)) return sendErrorResponse(res, 400, 'Cor inválida (use #RRGGBB)');
     appConfig.cor = cor;
+  }
+  if (sincronizarEstoque !== undefined) {
+    appConfig.sincronizarEstoque = !!sincronizarEstoque;
   }
   saveInMemoryData();
   res.json(appConfig);
@@ -1243,6 +1246,28 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       }
     } catch (e) { console.error('[produtos] override de custos:', e.message); }
 
+    // Estoque salvo aqui sem ter ido pro Bling (usuário desmarcou "sincronizar
+    // com lojas integradas" ao salvar) — mesmo raciocínio do override de custo.
+    try {
+      const estoquesLocais = await getEstoqueOverrides();
+      if (estoquesLocais.size) {
+        for (const prod of products) {
+          const e = estoquesLocais.get(String(prod.id));
+          if (typeof e === 'number') prod.estoque = e;
+        }
+      }
+    } catch (e) { console.error('[produtos] override de estoque:', e.message); }
+
+    // Produtos ocultados da grade (organização) — a listagem continua trazendo
+    // todos (KPIs e relatórios não podem perder produtos reais), o front-end
+    // que separa pela flag.
+    try {
+      const ocultosIds = await getProdutosOcultosIds();
+      if (ocultosIds.size) {
+        for (const prod of products) prod.oculto = ocultosIds.has(String(prod.id));
+      }
+    } catch (e) { console.error('[produtos] flag de ocultos:', e.message); }
+
     // Imagens enviadas pelo próprio painel têm prioridade (aparecem na hora,
     // sem esperar o Bling processar a URL externa). Só os metadados são
     // lidos (select) — o base64 pesado fica fora desta consulta.
@@ -1662,6 +1687,61 @@ async function clearCustoOverride(id) {
   try { await admin.firestore().collection('custo_overrides').doc(String(id)).delete(); } catch {}
 }
 
+// Quando o usuário desmarca "sincronizar com o Bling" ao salvar um estoque
+// (ex.: contagem manual que ainda não deve ir pras lojas integradas), o
+// valor fica só aqui — mesma lógica dos overrides de custo acima — até
+// alguém salvar de novo com a sincronização ligada.
+async function getEstoqueOverrides() {
+  const admin = getAdmin();
+  if (!admin) return new Map();
+  try {
+    const snap = await admin.firestore().collection('estoque_overrides').get();
+    return new Map(snap.docs.map(d => [d.id, d.data().estoque]));
+  } catch (e) { console.error('[estoque_overrides] leitura', e.message); return new Map(); }
+}
+async function setEstoqueOverride(id, estoque) {
+  const admin = getAdmin();
+  if (!admin) return false;
+  try {
+    await admin.firestore().collection('estoque_overrides').doc(String(id)).set({
+      estoque: Number(estoque), updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return true;
+  } catch (e) { console.error('[estoque_overrides] escrita', e.message); return false; }
+}
+async function clearEstoqueOverride(id) {
+  const admin = getAdmin();
+  if (!admin) return;
+  try { await admin.firestore().collection('estoque_overrides').doc(String(id)).delete(); } catch {}
+}
+
+// Produtos ocultados da grade (organização visual) — voltam a aparecer só
+// com confirmação de senha no front-end (mesmo padrão do requireSenha usado
+// em duplicar/excluir produto e nas ações sensíveis de NF-e).
+async function getProdutosOcultosIds() {
+  const admin = getAdmin();
+  if (!admin) return new Set();
+  try {
+    const snap = await admin.firestore().collection('produtos_ocultos').get();
+    return new Set(snap.docs.map(d => d.id));
+  } catch (e) { console.error('[produtos_ocultos] leitura', e.message); return new Set(); }
+}
+async function setProdutoOculto(id) {
+  const admin = getAdmin();
+  if (!admin) return false;
+  try {
+    await admin.firestore().collection('produtos_ocultos').doc(String(id)).set({
+      ocultoEm: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return true;
+  } catch (e) { console.error('[produtos_ocultos] escrita', e.message); return false; }
+}
+async function clearProdutoOculto(id) {
+  const admin = getAdmin();
+  if (!admin) return false;
+  try { await admin.firestore().collection('produtos_ocultos').doc(String(id)).delete(); return true; } catch { return false; }
+}
+
 // ── Custo de produto no Bling v3 — o jeito CERTO ─────────────────────
 // O custo NÃO é um campo do produto: é um campo do VÍNCULO produto↔fornecedor
 // (recurso /produtos/fornecedores). O PUT /produtos/{id} aceita "precoCusto"
@@ -1745,13 +1825,43 @@ async function persistirCusto(token, produtoId, custo, nomeProduto, contatoPrefe
   return { localOk, blingOk, blingErro };
 }
 
+// Escreve o novo saldo de estoque. Com sincronizar=true (padrão), grava no
+// depósito do Bling via /estoques — é essa gravação que faz o Bling
+// propagar o saldo pras lojas/marketplaces integrados (Mercado Livre,
+// Shopee etc.), automaticamente, para qualquer canal com a integração
+// ativa lá no Bling; não existe um retalho "só a loja X" nesta chamada.
+// Com sincronizar=false, o valor fica só aqui no sistema (estoque_overrides)
+// — pra contagens manuais que ainda não devem valer nas lojas.
+async function persistirEstoque(token, produtoId, novoEstoque, sincronizar) {
+  const estoqueNum = Number(novoEstoque);
+  if (sincronizar) {
+    const depositoId = await getDepositoId(token);
+    await axios.post('https://www.bling.com.br/Api/v3/estoques',
+      { produto: { id: Number(produtoId) }, deposito: { id: depositoId }, operacao: 'B', quantidade: estoqueNum },
+      { headers: blingHeaders(token) }
+    );
+    await clearEstoqueOverride(produtoId);
+    return { blingSync: true };
+  }
+  await setEstoqueOverride(produtoId, estoqueNum);
+  return { blingSync: false, aviso: 'Estoque salvo no sistema — sincronização com o Bling e lojas integradas ficou desligada para esta alteração.' };
+}
+
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
 
   try {
     const id = validateNumericId(req.params.id, 'ID do produto');
-    const { estoque, preco, precoCusto, nome_produto, valor_anterior, _fullUpdate } = req.body;
+    const { estoque, preco, precoCusto, nome_produto, valor_anterior, _fullUpdate, sincronizarEstoque } = req.body;
+    // A escolha do usuário no checkbox vira o novo padrão do sistema — só
+    // quando ele explicitamente marca/desmarca (undefined = não mexeu nisso).
+    if (sincronizarEstoque !== undefined) {
+      await loadPersistedData();
+      appConfig.sincronizarEstoque = !!sincronizarEstoque;
+      saveInMemoryData();
+    }
+    const deveSincronizar = sincronizarEstoque !== undefined ? !!sincronizarEstoque : appConfig.sincronizarEstoque !== false;
 
     // Atualização completa via drawer editor
     if (_fullUpdate) {
@@ -1778,12 +1888,9 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
         headers: blingHeaders(token),
       });
 
+      let estoqueResult = null;
       if (estoque !== undefined) {
-        const depositoId = await getDepositoId(token);
-        await axios.post('https://www.bling.com.br/Api/v3/estoques',
-          { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
-          { headers: blingHeaders(token) }
-        );
+        estoqueResult = await persistirEstoque(token, id, estoque, deveSincronizar);
       }
       let custoResult = null;
       if (custoAlvo !== null) {
@@ -1799,6 +1906,9 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       if (custoResult && !custoResult.blingOk) {
         return res.json({ success: true, blingSync: false,
           aviso: `Produto salvo, e o custo ficou guardado no sistema — mas o Bling recusou a gravação do custo: ${custoResult.blingErro}` });
+      }
+      if (estoqueResult && !estoqueResult.blingSync) {
+        return res.json({ success: true, estoqueSync: false, aviso: estoqueResult.aviso });
       }
       return res.json({ success: true });
     } catch (err) {
@@ -1841,18 +1951,15 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
           custoResult.blingErro || 'Bling e armazenamento local indisponíveis');
       }
     }
+    let estoqueResult = null;
     if (estoque !== undefined) {
-      const depositoId = await getDepositoId(token);
-      await axios.post('https://www.bling.com.br/Api/v3/estoques',
-        { produto: { id: Number(id) }, deposito: { id: depositoId }, operacao: 'B', quantidade: Number(estoque) },
-        { headers: blingHeaders(token) }
-      );
+      estoqueResult = await persistirEstoque(token, id, estoque, deveSincronizar);
       const { motivo } = req.body;
       changeLog.push({
         id: changeLog.length + 1, produto_id: id,
         produto_nome: nome_produto || `#${id}`, campo: 'estoque',
         valor_anterior: valor_anterior || '—',
-        valor_novo: `${Number(estoque)} un.${motivo ? ' — ' + motivo : ''}`,
+        valor_novo: `${Number(estoque)} un.${motivo ? ' — ' + motivo : ''}${deveSincronizar ? '' : ' (só no sistema)'}`,
         timestamp: new Date().toISOString(),
       });
     saveInMemoryData();
@@ -1860,6 +1967,9 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     if (custoResult && !custoResult.blingOk) {
       return res.json({ success: true, blingSync: false,
         aviso: `Custo salvo no sistema — mas o Bling recusou a gravação: ${custoResult.blingErro}` });
+    }
+    if (estoqueResult && !estoqueResult.blingSync) {
+      return res.json({ success: true, estoqueSync: false, aviso: estoqueResult.aviso });
     }
     res.json({ success: true });
     } catch (err) {
@@ -1924,6 +2034,31 @@ app.post('/api/fornecedores', requireAuthJson, async (req, res) => {
       || err.response?.data?.error?.fields?.map?.(f => f.msg).join('; ')
       || err.message;
     sendErrorResponse(res, 500, 'Erro ao criar fornecedor', detail);
+  }
+});
+
+// Ocultar/mostrar é só organização da grade (não mexe em nada no Bling) —
+// por isso não passa por ensureBlingToken, só a autenticação do sistema.
+app.post('/api/produtos/:id/ocultar', requireAuthJson, async (req, res) => {
+  try {
+    const id = validateNumericId(req.params.id, 'ID do produto');
+    const ok = await setProdutoOculto(id);
+    if (!ok) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    sendErrorResponse(res, 500, 'Erro ao ocultar produto', err.message);
+  }
+});
+app.post('/api/produtos/:id/mostrar', requireAuthJson, async (req, res) => {
+  try {
+    const id = validateNumericId(req.params.id, 'ID do produto');
+    const ok = await clearProdutoOculto(id);
+    if (!ok) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    sendErrorResponse(res, 500, 'Erro ao mostrar produto', err.message);
   }
 });
 
