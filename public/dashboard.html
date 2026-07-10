@@ -1787,7 +1787,6 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="fpanel" id="fpanel">
           <div class="fgrid">
             <div class="fg"><label>Status</label><select id="f-status" onchange="applyFilters()"><option value="">Todos</option><option value="ok">Em estoque</option><option value="lo" id="flt-lo-opt">Estoque baixo (≤5)</option><option value="out">Sem estoque</option></select></div>
-            <div class="fg"><label>Exibição</label><select id="f-vis" onchange="applyFilters()"><option value="ativos">Ativos</option><option value="ocultos">Ocultos</option><option value="todos">Todos</option></select></div>
             <div class="fg"><label>Categoria</label><select id="f-cat" onchange="applyFilters()"><option value="">Todas</option></select></div>
             <div class="fg"><label>Estoque mín.</label><input type="number" id="f-st-min" placeholder="0" min="0" oninput="applyFilters()"></div>
             <div class="fg"><label>Estoque máx.</label><input type="number" id="f-st-max" placeholder="999" min="0" oninput="applyFilters()"></div>
@@ -5232,6 +5231,7 @@ async function openPedidoDetalhe(id){
         <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
       </div>
     `;
+    setTimeout(renderEdImgs, 50);
   }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 async function savePedidoEdicao(id){
@@ -5653,7 +5653,7 @@ document.addEventListener('keydown',e=>{
 // ── EDITOR DRAWER ─────────────────────────────────
 let editorId=null,editorProduct=null;
 async function openEditor(id){
-  editorId=id;editorProduct=null;_edImgDataUrlsLocal=[];_edImgDataUrlsToUpload=[];
+  editorId=id;editorProduct=null;_edImgDataUrl=null; _edImgDataUrlsLocal=[]; _edImgDataUrlsToUpload=[];
   $('edraw-ov').classList.add('open');$('edraw').classList.add('open');
   $('edraw-title').textContent='Carregando…';
   $('edraw-save').disabled=true;
@@ -5662,17 +5662,13 @@ async function openEditor(id){
     const r=await fetch(`/api/produtos/${id}`);
     if(!r.ok)throw new Error('Falha ao carregar produto');
     const p=await r.json();editorProduct=p;
+    p.imagemUrls = [];
+    if (p.midia?.imagens?.externas) p.imagemUrls = p.midia.imagens.externas.map(e => e.link).filter(Boolean);
+    if (p.imagemUrls.length === 0 && p.imagemUrl) p.imagemUrls.push(p.imagemUrl);
     // O detalhe do Bling traz a imagem em midia.imagens; a lista (cache) já
     // tem a URL resolvida (inclusive upload local) — usa o melhor dos dois
-    const cacheUrl = S.products.find(x=>x.id===id)?.imagemUrl || p.imagemURL || '';
-    p.imagemUrls = [];
-    if (p.midia?.imagens?.externas?.length) {
-      p.imagemUrls = p.midia.imagens.externas.map(i => i.link).filter(Boolean);
-    }
-    if (p.imagemUrls.length === 0 && (cacheUrl || p.midia?.imagens?.internas?.[0]?.link)) {
-      p.imagemUrls = [cacheUrl || p.midia?.imagens?.internas?.[0]?.link].filter(Boolean);
-    }
-    p.imagemUrl = p.imagemUrls[0] || '';
+    p.imagemUrl=S.products.find(x=>x.id===id)?.imagemUrl
+      ||p.imagemURL||p.midia?.imagens?.internas?.[0]?.link||p.midia?.imagens?.externas?.[0]?.link||'';
     const sit=String(p.situacao?.valor||p.situacao||'A');
     const tipo=p.tipo||'P';
     const preco=p.preco||0;
@@ -5704,277 +5700,150 @@ async function openEditor(id){
     const revenue = numSales * preco;
     
     $('edraw-bd').innerHTML=`
-      <style>
-        .ed-layout{display:flex;gap:20px;max-width:1200px;margin:0 auto;align-items:flex-start}
-        .ed-col-left{flex:0 0 360px;display:flex;flex-direction:column;gap:14px}
-        .ed-col-right{flex:1;display:flex;flex-direction:column;gap:14px}
-        .ed-card{background:var(--surf);border:1px solid var(--bord);border-radius:14px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:0}
-        .ed-card-title{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:14px;display:flex;align-items:center;gap:8px;letter-spacing:-.01em}
-        .ed-card-title svg{flex-shrink:0}
-        .ed-stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-        .ed-stat-card{background:var(--bg);border:1px solid var(--bord-l);border-radius:12px;padding:14px;text-align:center;transition:transform .15s,box-shadow .15s}
-        .ed-stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.08)}
-        .ed-stat-label{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-        .ed-stat-value{font-size:18px;font-weight:700;line-height:1.2}
-        @media(max-width:860px){
-          .ed-layout{flex-direction:column}
-          .ed-col-left{flex:none;width:100%}
-        }
-      </style>
-
-      <div class="ed-layout">
-        <!-- ======= LEFT COLUMN ======= -->
-        <div class="ed-col-left">
-
-          <!-- Image Card -->
-          <div class="ed-card" style="padding:0;overflow:hidden">
-            <div id="ed-img-prev-main" style="width:100%;aspect-ratio:1;background:var(--bord-l);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:14px 14px 0 0">
-            </div>
-            <div style="padding:14px;border-top:1px solid var(--bord);">
-              <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:10px;display:flex;justify-content:space-between">
-                <span>Imagens do Produto</span>
-                <span id="ed-img-count" style="color:var(--mu)">0/10</span>
-              </div>
-              <div id="ed-img-grid" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scrollbar-width:thin">
-              </div>
-            </div>
-            <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
+      <div class="edraw-2col" style="display:flex; gap:24px; align-items:flex-start">
+        <!-- Coluna Esquerda: Imagem maior e Stats -->
+        <div style="flex: 0 0 340px; display:flex; flex-direction:column; gap:16px;">
+          <div id="ed-img-prev" style="width:100%; aspect-ratio:1; border-radius:14px; background:var(--bord-l); border:1px solid var(--bord); overflow:hidden; display:flex; align-items:center; justify-content:center; position:relative;">
+            ${p.imagemUrls && p.imagemUrls.length>0?`<img src="${esc(p.imagemUrls[0])}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`:'<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}
           </div>
-
-          <!-- Stats Card -->
-          <div class="ed-card">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-              Resumo do Produto
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+            <strong style="font-size:13px;color:var(--tx)">Galeria de Imagens</strong>
+            <span style="font-size:11px;color:var(--mu)" id="ed-img-count"></span>
+          </div>
+          <div id="ed-img-grid" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+          <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
+          
             </div>
-            <div class="ed-stats-grid">
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Vendas</div>
-                <div class="ed-stat-value" style="color:#10b981">${numSales}</div>
-              </div>
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Estoque</div>
-                <div class="ed-stat-value" style="color:#3b82f6">${curEstoque} un.</div>
-              </div>
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Clientes</div>
-                <div class="ed-stat-value" style="color:#a855f7">${numCustomers}</div>
-              </div>
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Receita</div>
-                <div class="ed-stat-value" style="color:#f97316">${fmt(revenue)}</div>
-              </div>
-              ${numReturns > 0 ? `
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Devoluções</div>
-                <div class="ed-stat-value" style="color:#ef4444">${numReturns} un.</div>
-              </div>` : ''}
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Criado em</div>
-                <div class="ed-stat-value" style="color:var(--tx);font-size:13px;font-weight:600">${dtCreation}</div>
-              </div>
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Atualizado</div>
-                <div class="ed-stat-value" style="color:var(--tx);font-size:13px;font-weight:600">${dtUpdate}</div>
-              </div>
-              <div class="ed-stat-card">
-                <div class="ed-stat-label">Status</div>
-                <div class="ed-stat-value" style="color:${sit==='A'?'#10b981':'#ef4444'};font-size:14px">${sit==='A'?'✓ Ativo':'✗ Inativo'}</div>
-              </div>
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center">
+              <span style="color:var(--tx); font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Estoque</span>
+              <strong style="color:#3b82f6; font-size:14px;">${curEstoque} un.</strong>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center">
+              <span style="color:var(--tx); font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clientes</span>
+              <strong style="color:#a855f7; font-size:14px;">${numCustomers}</strong>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-bottom:16px; align-items:center">
+              <span style="color:var(--tx); font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Receita</span>
+              <strong style="color:#f97316; font-size:14px;">${fmt(revenue)}</strong>
+            </div>
+
+            ${numReturns > 0 ? `
+            <div style="display:flex; justify-content:space-between; margin-bottom:16px; align-items:center">
+              <span style="color:var(--tx); font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Devoluções</span>
+              <strong style="color:#ef4444; font-size:14px;">${numReturns} un.</strong>
+            </div>
+            ` : ''}
+            
+            <div style="height:1px; background:var(--bord); margin-bottom:16px"></div>
+            
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center; font-size:12px">
+              <span style="color:var(--mu)">Última Venda:</span>
+              <strong style="color:var(--tx)">-</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center; font-size:12px">
+              <span style="color:var(--mu)">Criado em:</span>
+              <strong style="color:var(--tx)">${dtCreation}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; align-items:center; font-size:12px">
+              <span style="color:var(--mu)">Atualizado:</span>
+              <strong style="color:var(--tx)">${dtUpdate}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px">
+              <span style="color:var(--mu)">Status:</span>
+              <strong style="color:var(--tx)">${sit==='A'?'Ativo':'Inativo'}</strong>
             </div>
           </div>
-
         </div>
-
-        <!-- ======= RIGHT COLUMN ======= -->
-        <div class="ed-col-right">
-
-          <!-- 1. Identificação Card -->
-          <div class="ed-card">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              Identificação
-            </div>
-            <div class="df-2">
-              <div class="df"><label>Situação</label><select id="ed-sit">
-                <option value="A" ${sit==='A'?'selected':''}>Ativo</option>
-                <option value="I" ${sit==='I'?'selected':''}>Inativo</option>
-              </select></div>
-              <div class="df"><label>Tipo</label><select id="ed-tipo">
-                <option value="P" ${tipo==='P'?'selected':''}>Produto</option>
-                <option value="S" ${tipo==='S'?'selected':''}>Serviço</option>
-                <option value="K" ${tipo==='K'?'selected':''}>Kit</option>
-              </select></div>
-            </div>
-            <div class="df"><label>Nome do produto</label><input type="text" id="ed-nome" value="${esc(p.nome||'')}"></div>
-            <div class="df-2">
-              <div class="df"><label>SKU / Código</label>
-                <div style="display:flex;gap:8px">
-                  <input type="text" id="ed-codigo" value="${esc(p.codigo||'')}" style="flex:1">
-                  <button type="button" class="bts" onclick="openSkuModal()" style="padding:0 12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-                </div>
-              </div>
-              <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
-            </div>
+        
+        <!-- Coluna Direita: Formulário Original -->
+        <div style="flex:1; display:flex; flex-direction:column;">
+          <div class="df-2">
+            <div class="df"><label>Situação</label><select id="ed-sit">
+              <option value="A" ${sit==='A'?'selected':''}>Ativo</option>
+              <option value="I" ${sit==='I'?'selected':''}>Inativo</option>
+            </select></div>
+            <div class="df"><label>Tipo</label><select id="ed-tipo">
+              <option value="P" ${tipo==='P'?'selected':''}>Produto</option>
+              <option value="S" ${tipo==='S'?'selected':''}>Serviço</option>
+              <option value="K" ${tipo==='K'?'selected':''}>Kit</option>
+            </select></div>
           </div>
-
-          <!-- 2. Fornecedor e Custo Card -->
-          <div class="ed-card" style="overflow:visible">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-              Fornecedor e Custo
+          <div class="df"><label>Nome do produto</label><input type="text" id="ed-nome" value="${esc(p.nome||'')}"></div>
+          <div class="df-2">
+            <div class="df"><label>SKU / Código</label>
+              <div style="display:flex; gap:8px">
+                <input type="text" id="ed-codigo" value="${esc(p.codigo||'')}" style="flex:1">
+                <button type="button" class="bts" onclick="openSkuModal()" style="padding:0 12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+              </div>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <div style="flex:1;margin-right:12px;">
+            <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
+          </div>
+          
+          <div class="edraw-sec">Fornecedor e Custo</div>
+          <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+              <div style="flex:1; margin-right:12px;">
                 <div class="df" style="position:relative">
                   <label>Fornecedor vinculado</label>
                   <input type="text" id="ed-forn-search" placeholder="Pesquisar pelo nome..." onkeyup="searchFornecedor(this.value)" autocomplete="off">
-                  <div id="ed-forn-results" style="position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--bg);border:1px solid var(--bord);border-radius:8px;z-index:100;display:none;max-height:200px;overflow-y:auto;box-shadow:var(--sh-md)"></div>
+                  <div id="ed-forn-results" style="position:absolute; top:100%; left:0; right:0; margin-top:4px; background:var(--bg); border:1px solid var(--bord); border-radius:8px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:var(--sh-md)"></div>
                 </div>
                 <input type="hidden" id="ed-forn-id" value="${p.fornecedor?.id||''}">
                 <input type="hidden" id="ed-forn-nome" value="${esc(p.fornecedor?.nome||'')}">
               </div>
               <button type="button" class="bts" onclick="openNewFornecedor()" style="flex-shrink:0">+ Novo fornecedor</button>
             </div>
-            <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'}background:var(--bg);border:1px solid var(--bord-l);border-radius:8px;padding:12px;position:relative">
-              <div style="font-weight:600;font-size:13px;color:var(--tx);margin-bottom:4px;padding-right:60px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
-              <button type="button" class="bts" onclick="unlinkFornecedor()" style="position:absolute;top:8px;right:8px;padding:2px 8px;font-size:11px;height:24px;color:var(--er-t);border-color:rgba(239,68,68,0.2)">Remover</button>
+            
+            <div id="forn-vinculado" style="${p.fornecedor?.id ? '' : 'display:none;'} background:var(--surf); border:1px solid var(--bord-l); border-radius:8px; padding:12px; position:relative">
+              <div style="font-weight:600; font-size:13px; color:var(--tx); margin-bottom:4px; padding-right:60px" id="forn-nome-display">${esc(p.fornecedor?.nome||'')}</div>
+              <button type="button" class="bts" onclick="unlinkFornecedor()" style="position:absolute; top:8px; right:8px; padding:2px 8px; font-size:11px; height:24px; color:var(--er-t); border-color:rgba(239,68,68,0.2)">Remover</button>
               <div class="df-2" style="margin-top:10px">
                 <div class="df"><label>Custo (R$)</label><input type="number" id="ed-custo" value="${custo}" min="0" step="0.01" oninput="updateMargem()"></div>
                 <div class="df"><label>Garantia (meses)</label><input type="number" id="ed-garantia" value="${p.garantia||0}" min="0"></div>
               </div>
             </div>
-            <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''}background:var(--wa-bg);color:var(--wa-t);padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px">
+            
+            <div id="forn-alerta" style="${p.fornecedor?.id ? 'display:none;' : ''} background:var(--wa-bg); color:var(--wa-t); padding:10px 12px; border-radius:8px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px">
               ⚠ Produto sem fornecedor vinculado.
             </div>
           </div>
-
-          <!-- 3. Preço de Venda Card -->
-          <div class="ed-card">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Preço de Venda
-            </div>
-            <div class="df-2">
-              <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
-            </div>
-            <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
-              Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
-            </div>
+          
+          <div class="edraw-sec">Preço de Venda</div>
+          <div class="df-2">
+            <div class="df"><label>Preço de venda (R$)</label><input type="number" id="ed-preco" value="${preco}" min="0" step="0.01" oninput="updateMargem()"></div>
           </div>
-
-          <!-- 4. Estoque Card -->
-          <div class="ed-card">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              Estoque
-            </div>
-            <div class="df-2">
-              <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
-              <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
-            </div>
+          <div class="df-margin" id="df-margem" style="${margem===null?'display:none':''}">
+            Margem: <strong style="color:${mCor}">${margem??0}%</strong> · Lucro unit.: <strong>${fmt(preco-custo)}</strong>
           </div>
-
-          <!-- 5. Tributação Card -->
-          <div class="ed-card">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              Tributação e Outros
-            </div>
-            <div class="df-2">
-              <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}"></div>
-              <div class="df"><label>CEST</label><input type="text" id="ed-cest" value="${esc(p.tributacao?.cest||'')}"></div>
-            </div>
-            <div class="df-2">
-              <div class="df"><label>Origem (0-8)</label><input type="number" id="ed-origem" value="${p.tributacao?.origem!==undefined?p.tributacao.origem:''}" min="0" max="8"></div>
-              <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
-            </div>
-            <div class="df-2">
-              <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
-            </div>
+          <div class="edraw-sec">Estoque</div>
+          <div class="df-2">
+            <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
+            <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
           </div>
-
-          <!-- 6. Descrição Card -->
-          <div class="ed-card">
-            <div class="ed-card-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
-              Descrição
-            </div>
-            <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="4">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
+          <div class="edraw-sec">Tributação e Outros</div>
+          <div class="df-2">
+            <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}"></div>
+            <div class="df"><label>CEST</label><input type="text" id="ed-cest" value="${esc(p.tributacao?.cest||'')}"></div>
           </div>
-
+          <div class="df-2">
+            <div class="df"><label>Origem (0-8)</label><input type="number" id="ed-origem" value="${p.tributacao?.origem!==undefined?p.tributacao.origem:''}" min="0" max="8"></div>
+            <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
+          </div>
+          <div class="df-2">
+            <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
+          </div>
+          <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
         </div>
       </div>
     `;
-    renderEdImgs();
+    setTimeout(renderEdImgs, 50);
   }catch(e){
     $('edraw-bd').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;
     $('edraw-save').disabled=true;
   }
-}
-
-function renderEdImgs() {
-  const p = editorProduct;
-  if(!p) return;
-  const urls = p.imagemUrls || [];
-  const main = $('ed-img-prev-main');
-  const grid = $('ed-img-grid');
-  const count = $('ed-img-count');
-  
-  if (main) {
-    if (urls.length > 0) {
-      main.innerHTML = `<img src="${esc(urls[0])}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`;
-    } else {
-      main.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
-    }
-  }
-  if (count) count.textContent = `${urls.length}/10`;
-  if (grid) {
-    let html = '';
-    for(let i=0; i<10; i++) {
-      if (i < urls.length) {
-        html += `<div style="flex:0 0 60px;height:60px;border-radius:8px;overflow:hidden;position:relative;border:2px solid ${i===0?'var(--acc)':'var(--bord)'}">
-                   <img src="${esc(urls[i])}" style="width:100%;height:100%;object-fit:cover;cursor:pointer" onclick="setMainImage(${i})" onerror="this.style.display='none'">
-                   <div onclick="removeImg(event, ${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px">✕</div>
-                 </div>`;
-      } else if (i === urls.length) {
-        html += `<div onclick="$('ed-img-file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--acc)'" ondragleave="this.style.borderColor='var(--bord)'" ondrop="event.preventDefault();this.style.borderColor='var(--bord)';handleImgFile(event.dataTransfer.files[0])" style="flex:0 0 60px;height:60px;border-radius:8px;border:1px dashed var(--mu);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);transition:.2s">
-                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                 </div>`;
-      } else {
-        html += `<div style="flex:0 0 60px;height:60px;border-radius:8px;border:1px dashed var(--bord-l);background:var(--bg)"></div>`;
-      }
-    }
-    grid.innerHTML = html;
-  }
-}
-
-function setMainImage(idx) {
-  if(!editorProduct || !editorProduct.imagemUrls || !editorProduct.imagemUrls[idx]) return;
-  const temp = editorProduct.imagemUrls[0];
-  editorProduct.imagemUrls[0] = editorProduct.imagemUrls[idx];
-  editorProduct.imagemUrls[idx] = temp;
-  
-  if (_edImgDataUrlsLocal.length) {
-    const tempL = _edImgDataUrlsLocal[0];
-    _edImgDataUrlsLocal[0] = _edImgDataUrlsLocal[idx];
-    _edImgDataUrlsLocal[idx] = tempL;
-  }
-  
-  renderEdImgs();
-}
-
-function removeImg(e, idx) {
-  e.stopPropagation();
-  if(!editorProduct || !editorProduct.imagemUrls) return;
-  editorProduct.imagemUrls.splice(idx, 1);
-  if (_edImgDataUrlsLocal[idx] !== undefined) {
-    _edImgDataUrlsLocal.splice(idx, 1);
-  } else {
-    // We need to keep arrays synced if modifying by index, but local array is sparse if some images are already uploaded
-    // To simplify, we remove the index entirely
-  }
-  renderEdImgs();
 }
 function updateImgPrev(prevId,inputId){
   const url=$(inputId)?.value.trim();
@@ -6020,24 +5889,163 @@ async function hydrateHDImages(){
 // Comprime no navegador via canvas (máx. 1000px, JPEG q0.85 — PNG só se
 // tiver transparência) e guarda o dataURL até o Salvar enviar ao servidor.
 let _edImgDataUrl=null;
+let _edImgDataUrlsLocal=[], _edImgDataUrlsToUpload=[];
+
+function renderEdImgs() {
+  const grid = $('ed-img-grid');
+  const count = $('ed-img-count');
+  const prev = $('ed-img-prev');
+  if (!editorProduct) return;
+  const urls = editorProduct.imagemUrls || [];
+  
+  if (prev) {
+    if (urls.length > 0) {
+      prev.innerHTML = `<img src="${esc(urls[0])}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`;
+    } else {
+      prev.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--fa)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+    }
+  }
+  if (count) count.textContent = `${urls.length}/10`;
+  if (grid) {
+    let ht = '';
+    for(let i=0; i<10; i++) {
+      if (i < urls.length) {
+        ht += `<div style="flex:0 0 60px;height:60px;border-radius:8px;overflow:hidden;position:relative;border:2px solid ${i===0?'var(--acc)':'var(--bord)'}">
+                   <img src="${esc(urls[i])}" style="width:100%;height:100%;object-fit:cover;cursor:pointer" onclick="setMainImage(${i})" onerror="this.style.display='none'">
+                   <div onclick="removeImg(event, ${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px">✕</div>
+                 </div>`;
+      } else if (i === urls.length) {
+        ht += `<div onclick="$('ed-img-file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--acc)'" ondragleave="this.style.borderColor='var(--bord)'" ondrop="event.preventDefault();this.style.borderColor='var(--bord)';handleImgFile(event.dataTransfer.files[0])" style="flex:0 0 60px;height:60px;border-radius:8px;border:1px dashed var(--mu);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);transition:.2s">
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                 </div>`;
+      } else {
+        ht += `<div style="flex:0 0 60px;height:60px;border-radius:8px;border:1px dashed var(--bord-l);background:var(--bg)"></div>`;
+      }
+    }
+    grid.innerHTML = ht;
+  }
+}
+
+function setMainImage(idx) {
+  if(!editorProduct || !editorProduct.imagemUrls || !editorProduct.imagemUrls[idx]) return;
+  const temp = editorProduct.imagemUrls[0];
+  editorProduct.imagemUrls[0] = editorProduct.imagemUrls[idx];
+  editorProduct.imagemUrls[idx] = temp;
+  
+  if (_edImgDataUrlsLocal.length) {
+    const tempL = _edImgDataUrlsLocal[0];
+    _edImgDataUrlsLocal[0] = _edImgDataUrlsLocal[idx];
+    _edImgDataUrlsLocal[idx] = tempL;
+  }
+  
+  renderEdImgs();
+}
+
+function removeImg(e, idx) {
+  e.stopPropagation();
+  if(!editorProduct || !editorProduct.imagemUrls) return;
+  editorProduct.imagemUrls.splice(idx, 1);
+  if (_edImgDataUrlsLocal[idx] !== undefined) {
+    _edImgDataUrlsLocal.splice(idx, 1);
+  }
+  renderEdImgs();
+}
+
+function updateImgPrev(prevId,inputId){
+  const url=?.value.trim();
+  const prev=;if(!prev)return;
+  if(url){
+    prev.style.display='';
+    const img=prev.querySelector('img')||Object.assign(document.createElement('img'),{style:'width:100%;height:100%;object-fit:cover'});
+    img.onerror=()=>{prev.style.display='none';};
+    img.src=url;
+    if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
+  }else{prev.style.display='none';}
+}
+// ── Hidratação HD das fotos ─────────────────────────────────────────
+// A LISTAGEM do Bling só entrega miniatura; a foto em alta só existe no
+// DETALHE de cada produto. Esta fila busca os detalhes aos poucos (1 a
+// cada ~450ms, respeitando o limite da API), troca a miniatura pela HD
+// e guarda no dispositivo — nas próximas visitas já abre em alta.
+let _hdRunning=false;
+async function hydrateHDImages(){
+  if(_hdRunning)return;_hdRunning=true;
+  try{
+    let hd={};try{hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');}catch{}
+    const pend=S.products.filter(p=>p.imagemUrl&&hd[p.id]===undefined&&!String(p.imagemUrl).includes('/img/produto/')).slice(0,60);
+    let trocadas=0;
+    for(const p of pend){
+      try{
+        const r=await fetch(\/api/produtos/\);
+        if(r.status===401)break;
+        if(!r.ok){await new Promise(s=>setTimeout(s,1500));continue;}
+        const d=await r.json();
+        const url=d.midia?.imagens?.internas?.[0]?.link||d.midia?.imagens?.externas?.[0]?.link||'';
+        if(url&&url!==p.imagemUrl){p.imagemUrl=url;hd[p.id]=url;trocadas++;}
+        else hd[p.id]='';// verificado: não há versão maior
+      }catch{break;}
+      await new Promise(s=>setTimeout(s,450));
+    }
+    try{localStorage.setItem('hd_imgs',JSON.stringify(hd));}catch{}
+    if(trocadas&&S.view==='produtos'){try{applyFilters();}catch{}}
+  }finally{_hdRunning=false;}
+}
+
+function updateImgPrev(prevId,inputId){
+  const url=$(inputId)?.value.trim();
+  const prev=$(prevId);if(!prev)return;
+  if(url){
+    prev.style.display='';
+    const img=prev.querySelector('img')||Object.assign(document.createElement('img'),{style:'width:100%;height:100%;object-fit:cover'});
+    img.onerror=()=>{prev.style.display='none';};
+    img.src=url;
+    if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
+  }else{prev.style.display='none';}
+}
+// ── Hidratação HD das fotos ─────────────────────────────────────────
+// A LISTAGEM do Bling só entrega miniatura; a foto em alta só existe no
+// DETALHE de cada produto. Esta fila busca os detalhes aos poucos (1 a
+// cada ~450ms, respeitando o limite da API), troca a miniatura pela HD
+// e guarda no dispositivo — nas próximas visitas já abre em alta.
+let _hdRunning=false;
+async function hydrateHDImages(){
+  if(_hdRunning)return;_hdRunning=true;
+  try{
+    let hd={};try{hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');}catch{}
+    const pend=S.products.filter(p=>p.imagemUrl&&hd[p.id]===undefined&&!String(p.imagemUrl).includes('/img/produto/')).slice(0,60);
+    let trocadas=0;
+    for(const p of pend){
+      try{
+        const r=await fetch(`/api/produtos/${p.id}`);
+        if(r.status===401)break;
+        if(!r.ok){await new Promise(s=>setTimeout(s,1500));continue;}
+        const d=await r.json();
+        const url=d.midia?.imagens?.internas?.[0]?.link||d.midia?.imagens?.externas?.[0]?.link||'';
+        if(url&&url!==p.imagemUrl){p.imagemUrl=url;hd[p.id]=url;trocadas++;}
+        else hd[p.id]='';// verificado: não há versão maior
+      }catch{break;}
+      await new Promise(s=>setTimeout(s,450));
+    }
+    try{localStorage.setItem('hd_imgs',JSON.stringify(hd));}catch{}
+    if(trocadas&&S.view==='produtos'){try{applyFilters();}catch{}}
+  }finally{_hdRunning=false;}
+}
+
 async function handleImgFile(file){
   if(!file)return;
-  if(!/^image\/(jpeg|png|webp)$/.test(file.type)){toast('Só JPG, PNG ou WEBP','err');return;}
-  const sub=$('ed-img-drop-sub');if(sub)sub.textContent='Processando…';
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type)){toast('Formato inválido','err');return;}
   try{
     const dataUrl=await compressImage(file,1600,.87);
     if (!editorProduct) return;
     if (!editorProduct.imagemUrls) editorProduct.imagemUrls = [];
-    if (editorProduct.imagemUrls.length >= 10) { toast('Limite de 10 imagens atingido', 'err'); return; }
+    if (editorProduct.imagemUrls.length >= 10) { toast('Limite atingido', 'err'); return; }
     
     _edImgDataUrlsLocal.push(dataUrl);
     _edImgDataUrlsToUpload.push(dataUrl);
     editorProduct.imagemUrls.push(dataUrl);
     renderEdImgs();
-    if(sub)sub.textContent=`imagem pronta`;
   }catch(e){
-    if(sub)sub.textContent='falhou — tente outra imagem';
-    toast('Erro ao processar imagem: '+e.message,'err');
+    toast('Erro: '+e.message,'err');
   }
 }
 function compressImage(file,maxDim,quality){
@@ -7165,6 +7173,7 @@ async function toggleOculto(id){
     if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
   }
 }
+
 // MMM – long-press ring + LLL – FAB scroll hide
 function _showLpRing(x,y){
   if(_lpRingEl){_lpRingEl.remove();_lpRingEl=null;}
