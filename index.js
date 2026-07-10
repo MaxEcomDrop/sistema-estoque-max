@@ -1391,7 +1391,14 @@ app.post('/api/produtos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
   try {
     const body = { ...req.body };
-    if (body.imagemUrl) { body.midia = { imagens: { externas: [{ link: body.imagemUrl }] } }; delete body.imagemUrl; }
+    if (body.imagemUrls && Array.isArray(body.imagemUrls)) {
+      const externas = body.imagemUrls.filter(Boolean).map(link => ({ link }));
+      if (externas.length > 0) body.midia = { imagens: { externas } };
+      delete body.imagemUrls;
+    } else if (body.imagemUrl) { 
+      body.midia = { imagens: { externas: [{ link: body.imagemUrl }] } }; 
+      delete body.imagemUrl; 
+    }
     // Custo vai em fornecedor.precoCusto — ver stripReadOnlyProdutoFields/PATCH.
     if (body.precoCusto !== undefined) body.fornecedor = { ...(body.fornecedor || {}), precoCusto: Number(body.precoCusto) };
     const { data } = await axios.post('https://www.bling.com.br/Api/v3/produtos', body, {
@@ -1424,16 +1431,18 @@ app.post('/api/produtos/:id/imagem', requireAuthJson, async (req, res) => {
   if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
   try {
     const produtoId = validateNumericId(req.params.id, 'ID do produto');
+    const index = req.body.index !== undefined ? Number(req.body.index) : 0;
+    const docId = index === 0 ? String(produtoId) : `${produtoId}_${index}`;
     const m = String(req.body?.dataUrl || '').match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!m) return res.status(400).json({ error: 'Envie um dataURL de imagem JPG, PNG ou WEBP' });
     const [, mime, b64] = m;
     // Firestore limita o documento a ~1MB — o front comprime bem abaixo disso
     if (b64.length > 950_000) return res.status(413).json({ error: 'Imagem grande demais mesmo após compressão (máx ~700KB)' });
-    await admin.firestore().collection('produto_imagens').doc(String(produtoId)).set({
+    await admin.firestore().collection('produto_imagens').doc(docId).set({
       data: b64, mime, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     // URL pública (com cache-buster) que o navegador e o Bling vão usar
-    const url = `${req.protocol}://${req.get('host')}/img/produto/${produtoId}.jpg?v=${Date.now()}`;
+    const url = `${req.protocol}://${req.get('host')}/img/produto/${docId}.jpg?v=${Date.now()}`;
     res.json({ url });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -1449,7 +1458,7 @@ app.get('/img/produto/:id', async (req, res) => {
   try {
     const rawId = req.params.id;
     const cleanId = rawId.includes('.') ? rawId.split('.')[0] : rawId;
-    if (!isValidNumericId(cleanId)) return res.status(400).end();
+    if (!/^\d+(_\d+)?$/.test(cleanId)) return res.status(400).end();
     const doc = await admin.firestore().collection('produto_imagens').doc(String(cleanId)).get();
     if (!doc.exists) return res.status(404).end();
     const { data, mime } = doc.data();
@@ -1726,7 +1735,12 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       // Converte imagemUrl (campo frontend) para o formato do Bling v3:
       // imagens ficam em midia.imagens.externas[].link ("imagem.link" não existe)
       const payload = stripReadOnlyProdutoFields(_fullUpdate);
-      if (payload.imagemUrl !== undefined) {
+      if (payload.imagemUrls && Array.isArray(payload.imagemUrls)) {
+        const externas = payload.imagemUrls.filter(Boolean).map(link => ({ link }));
+        if (externas.length > 0) payload.midia = { imagens: { externas } };
+        else payload.midia = { imagens: { externas: [] } };
+        delete payload.imagemUrls;
+      } else if (payload.imagemUrl !== undefined) {
         if (payload.imagemUrl) payload.midia = { imagens: { externas: [{ link: payload.imagemUrl }] } };
         delete payload.imagemUrl;
       }
