@@ -1276,10 +1276,18 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
           const base = `${req.protocol}://${req.get('host')}`;
           for (const prod of products) {
             const v = overrides.get(String(prod.id));
-            if (v) prod.imagemUrl = `${base}/img/produto/${prod.id}?v=${v}`;
+            if (v) prod.imagemUrl = `${base}/img/produto/${prod.id}.jpg?v=${v}`;
           }
         }
       } catch (e) { console.error('[produtos] override de imagens:', e.message); }
+      
+      try {
+        const snapOcultos = await admin.firestore().collection('produtos_ocultos').get();
+        const ocultosSet = new Set(snapOcultos.docs.map(d => d.id));
+        for (const prod of products) {
+          if (ocultosSet.has(String(prod.id))) prod.oculto = true;
+        }
+      } catch (e) { console.error('[produtos] override de ocultos:', e.message); }
     }
 
     res.json({ total: products.length, products });
@@ -1413,7 +1421,7 @@ app.post('/api/produtos/:id/imagem', requireAuthJson, async (req, res) => {
       data: b64, mime, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     // URL pública (com cache-buster) que o navegador e o Bling vão usar
-    const url = `${req.protocol}://${req.get('host')}/img/produto/${produtoId}?v=${Date.now()}`;
+    const url = `${req.protocol}://${req.get('host')}/img/produto/${produtoId}.jpg?v=${Date.now()}`;
     res.json({ url });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -1427,14 +1435,42 @@ app.get('/img/produto/:id', async (req, res) => {
   const admin = getAdmin();
   if (!admin) return res.status(404).end();
   try {
-    if (!isValidNumericId(req.params.id)) return res.status(400).end();
-    const doc = await admin.firestore().collection('produto_imagens').doc(String(req.params.id)).get();
+    const rawId = req.params.id;
+    const cleanId = rawId.includes('.') ? rawId.split('.')[0] : rawId;
+    if (!isValidNumericId(cleanId)) return res.status(400).end();
+    const doc = await admin.firestore().collection('produto_imagens').doc(String(cleanId)).get();
     if (!doc.exists) return res.status(404).end();
     const { data, mime } = doc.data();
     res.set('Content-Type', mime || 'image/jpeg');
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(Buffer.from(data, 'base64'));
   } catch { res.status(500).end(); }
+});
+
+// Ocultar / Restaurar Produtos
+app.post('/api/produtos/:id/ocultar', requireAuthJson, async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível' });
+  try {
+    const produtoId = validateNumericId(req.params.id, 'ID do produto');
+    await admin.firestore().collection('produtos_ocultos').doc(String(produtoId)).set({
+      oculto: true, updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao ocultar', err.message);
+  }
+});
+app.delete('/api/produtos/:id/ocultar', requireAuthJson, async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível' });
+  try {
+    const produtoId = validateNumericId(req.params.id, 'ID do produto');
+    await admin.firestore().collection('produtos_ocultos').doc(String(produtoId)).delete();
+    res.json({ ok: true });
+  } catch (err) {
+    sendErrorResponse(res, 500, 'Erro ao restaurar', err.message);
+  }
 });
 
 // Busca pedidos de venda num intervalo (paginado)
