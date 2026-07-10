@@ -1320,11 +1320,17 @@ app.get('/api/produtos/vendas-ranking', requireAuthJson, async (req, res) => {
   try {
     const lista = await fetchPedidos(token, inicio, fim, 3);
     const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
-    const amostra = validos.slice(0, VENDAS_RANKING_AMOSTRA_MAX);
+    const devolvidos = lista.filter(p => situacaoPT(p.situacao).toLowerCase().includes('devolv'));
+    
+    // Mesclar amostra de válidos e devolvidos, limitando para não estourar o tempo de request
+    const amostra = [...validos.slice(0, VENDAS_RANKING_AMOSTRA_MAX), ...devolvidos.slice(0, 15)];
     const porCodigo = {};
+    const devolucoesPorCodigo = {};
     let detalhados = 0;
+    
     for (const p of amostra) {
       try {
+        const isReturn = situacaoPT(p.situacao).toLowerCase().includes('devolv');
         const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${p.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -1333,14 +1339,20 @@ app.get('/api/produtos/vendas-ranking', requireAuthJson, async (req, res) => {
         for (const it of itens) {
           const codigo = it.codigo || it.produto?.codigo || '';
           if (!codigo) continue;
-          porCodigo[codigo] = (porCodigo[codigo] || 0) + (Number(it.quantidade) || 0);
+          if (isReturn) {
+            devolucoesPorCodigo[codigo] = (devolucoesPorCodigo[codigo] || 0) + (Number(it.quantidade) || 0);
+          } else {
+            porCodigo[codigo] = (porCodigo[codigo] || 0) + (Number(it.quantidade) || 0);
+          }
         }
         detalhados++;
       } catch { /* um pedido falhou; os demais seguem */ }
     }
+    
     const payload = {
       periodo: { inicio, fim, dias },
       vendasPorCodigo: porCodigo,
+      devolucoesPorCodigo,
       amostra: detalhados,
       dePedidos: validos.length,
       exata: detalhados >= validos.length,
