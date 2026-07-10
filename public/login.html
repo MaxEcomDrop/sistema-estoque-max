@@ -6,93 +6,109 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#4f46e5">
-  <title>Entrar — Estoque Max</title>
+  <meta name="theme-color" content="#1e9bf0">
+  <title>Entrar — Sistema ERP Max</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="manifest" href="/manifest.json">
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;background:#f8fafc;color:#0f172a}
-    /* LEFT PANEL */
-    .left{flex:0 0 460px;display:flex;flex-direction:column;justify-content:center;padding:48px 56px;background:#fff;position:relative;z-index:1;min-height:100vh;min-height:100dvh}
-    .logo{display:flex;align-items:center;gap:10px;margin-bottom:40px}
-    .logo-mark{width:38px;height:38px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.4)}
-    .logo-name{font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-.3px}
-    h1{font-size:27px;font-weight:800;color:#0f172a;letter-spacing:-.6px;margin-bottom:8px}
-    .sub{font-size:14px;color:#64748b;margin-bottom:32px;line-height:1.6}
+    :root{--az:#1e9bf0;--az-h:#0d86d8;--az-esc:#0b6db3;--az-bg:#e8f5fe;--tx:#16324a;--mu:#64748b}
+    /* Tela fixa: o login nunca rola — se faltar altura, só o painel do
+       cartão rola por dentro, a página em si fica travada. */
+    html,body{height:100vh;height:100dvh;overflow:hidden}
+    body{font-family:'Inter',system-ui,sans-serif;display:flex;background:#fff;color:var(--tx)}
+    /* HERO (mascote) */
+    .hero{flex:1;background:linear-gradient(160deg,#39acf5 0%,var(--az) 45%,#0b7fd4 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:56px;height:100vh;height:100dvh}
+    .hero::before{content:'';position:absolute;width:560px;height:560px;background:rgba(255,255,255,.07);border-radius:50%;top:-160px;right:-140px}
+    .hero::after{content:'';position:absolute;width:400px;height:400px;background:rgba(255,255,255,.05);border-radius:50%;bottom:-120px;left:-90px}
+    .hero-badge{position:absolute;top:34px;left:38px;z-index:2;display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:10px 20px;font-size:12.5px;font-weight:800;letter-spacing:.8px;color:var(--tx);box-shadow:0 8px 24px rgba(6,60,105,.22)}
+    .hero-badge::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--az);flex-shrink:0}
+    .hero-mascote{position:relative;z-index:1;max-width:min(560px,82%);max-height:66vh;object-fit:contain;border-radius:30px;box-shadow:0 30px 70px rgba(4,48,86,.35);display:none}
+    .hero-fallback{position:relative;z-index:1;width:min(420px,70%);aspect-ratio:1;border-radius:34px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:170px;font-weight:900;color:var(--az);letter-spacing:-8px;box-shadow:0 30px 70px rgba(4,48,86,.3)}
+    .hero-copy{position:absolute;left:38px;bottom:40px;right:38px;z-index:2;max-width:640px}
+    .hero-copy h2{font-size:clamp(28px,3.4vw,44px);font-weight:800;color:#fff;letter-spacing:-1px;line-height:1.12;margin-bottom:14px;text-shadow:0 2px 18px rgba(4,48,86,.25)}
+    .hero-copy p{font-size:15.5px;color:rgba(255,255,255,.88);line-height:1.65;max-width:560px}
+    /* PAINEL DO CARTÃO */
+    .left{flex:0 0 520px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:36px 56px;background:#f6fafd;position:relative;z-index:1;height:100vh;height:100dvh;overflow-y:auto;scrollbar-width:none}
+    .left::-webkit-scrollbar{display:none}
+    .card{width:100%;max-width:400px;background:#fff;border-radius:22px;padding:38px 34px 30px;box-shadow:0 18px 50px rgba(9,66,112,.10),0 2px 8px rgba(9,66,112,.05)}
+    .logo{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:26px;text-align:center}
+    .logo-mark{width:64px;height:64px;background:#fff;border:1px solid #e3eef7;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;color:var(--az);box-shadow:0 10px 26px rgba(30,155,240,.22);margin-bottom:16px;overflow:hidden}
+    .logo-mark img{width:100%;height:100%;object-fit:contain}
+    .logo-name{font-size:24px;font-weight:800;color:var(--tx);letter-spacing:.5px;text-transform:uppercase}
+    .logo-tag{font-size:12px;font-weight:800;color:var(--az);letter-spacing:3px;margin-top:3px;text-transform:uppercase}
+    h1{font-size:19px;font-weight:800;color:var(--tx);letter-spacing:-.3px;margin-bottom:6px;text-align:center}
+    .sub{font-size:13px;color:var(--mu);margin-bottom:24px;line-height:1.6;text-align:center}
     .err-box{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;display:none;align-items:center;gap:8px;animation:shake .4s}
     @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
     .field{margin-bottom:16px}
-    .field label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:7px;letter-spacing:.2px}
+    .field label{display:block;font-size:11px;font-weight:700;color:#5a7184;margin-bottom:7px;letter-spacing:.8px;text-transform:uppercase}
     .input-wrap{position:relative}
-    .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#94a3b8;pointer-events:none}
-    .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14.5px;font-family:inherit;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
-    .field input:focus{border-color:#6366f1;background:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.12)}
-    .field input::placeholder{color:#cbd5e1}
-    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:8px;display:flex;border-radius:8px;transition:color .12s}
-    .pw-toggle:hover{color:#475569}
+    .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#9db4c6;pointer-events:none}
+    .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#f8fbfd;border:1.5px solid #dfeaf3;border-radius:12px;font-size:14.5px;font-family:inherit;color:var(--tx);outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+    .field input:focus{border-color:var(--az);background:#fff;box-shadow:0 0 0 4px rgba(30,155,240,.14)}
+    .field input::placeholder{color:#b6c8d8}
+    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9db4c6;padding:8px;display:flex;border-radius:8px;transition:color .12s}
+    .pw-toggle:hover{color:#5a7184}
     .pw-toggle svg{position:static;transform:none;width:18px;height:18px}
-    .btn-main{width:100%;height:52px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(99,102,241,.4);margin-top:8px;-webkit-tap-highlight-color:transparent}
-    .btn-main:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 6px 22px rgba(99,102,241,.48)}
+    .btn-main{width:100%;height:52px;background:linear-gradient(135deg,var(--az),var(--az-h));color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 18px rgba(30,155,240,.38);margin-top:8px;-webkit-tap-highlight-color:transparent}
+    .btn-main:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 8px 24px rgba(30,155,240,.46)}
     .btn-main:active{transform:translateY(0)}
     .btn-main:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+    .divisor{display:flex;align-items:center;gap:12px;margin:18px 0 2px;color:#9db4c6;font-size:11px;font-weight:700;letter-spacing:1.5px}
+    .divisor::before,.divisor::after{content:'';flex:1;height:1px;background:#e3eef7}
     .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .foot-note{font-size:12.5px;color:#94a3b8;margin-top:24px;text-align:center;line-height:1.6}
-    .pwa-bar{margin-top:20px;padding:13px 16px;background:#ede9fe;border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s;border:1px solid #ddd6fe}
-    .pwa-bar:hover{background:#ddd6fe}
-    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .foot-note{font-size:11px;font-weight:700;color:#9db4c6;margin-top:22px;text-align:center;line-height:1.6;letter-spacing:1.2px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:6px}
+    .foot-note svg{width:13px;height:13px}
+    .pwa-bar{margin-top:18px;padding:13px 16px;background:var(--az-bg);border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s;border:1px solid #cfeafd}
+    .pwa-bar:hover{background:#d8eefc}
+    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--az),var(--az-h));border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .pwa-icon svg{width:16px;height:16px;color:#fff}
-    .pwa-text strong{display:block;font-size:13px;font-weight:600;color:#3730a3}
-    .pwa-text span{font-size:12px;color:#6d28d9}
-    /* RIGHT PANEL */
-    .right{flex:1;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 60%,#6366f1 100%);display:flex;align-items:center;justify-content:center;padding:48px;position:relative;overflow:hidden}
-    .right::before{content:'';position:absolute;width:520px;height:520px;background:rgba(255,255,255,.05);border-radius:50%;top:-130px;right:-130px}
-    .right::after{content:'';position:absolute;width:360px;height:360px;background:rgba(255,255,255,.04);border-radius:50%;bottom:-90px;left:-70px}
-    .right-content{position:relative;z-index:1;text-align:center;max-width:420px}
-    .right-content h2{font-size:36px;font-weight:800;color:#fff;letter-spacing:-.8px;margin-bottom:14px;line-height:1.15}
-    .right-content h2 em{font-style:normal;color:#c4b5fd}
-    .right-content p{font-size:15px;color:rgba(255,255,255,.72);line-height:1.7;margin-bottom:40px}
-    .feat-list{display:flex;flex-direction:column;gap:12px;text-align:left}
-    .feat{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 18px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:background .15s,transform .15s}
-    .feat:hover{background:rgba(255,255,255,.16);transform:translateX(4px)}
-    .feat-ico{width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .feat-ico svg{width:19px;height:19px;color:#fff}
-    .feat-txt{font-size:14px;color:rgba(255,255,255,.92);font-weight:500;line-height:1.3}
-    .feat-sub{font-size:12px;color:rgba(255,255,255,.55);margin-top:2px}
-    @media(max-width:860px){
+    .pwa-text strong{display:block;font-size:13px;font-weight:600;color:var(--az-esc)}
+    .pwa-text span{font-size:12px;color:var(--az-h)}
+    @media(max-width:900px){
       body{flex-direction:column}
-      .left{flex:none;min-height:100vh;min-height:100dvh;padding:max(36px,env(safe-area-inset-top)) 24px 32px;justify-content:center}
-      .right{display:none}
+      .hero{display:none}
+      .left{flex:none;width:100%;height:100vh;height:100dvh;padding:max(24px,env(safe-area-inset-top)) 20px 24px}
+      .card{padding:28px 24px 24px}
+      .logo-mark{width:56px;height:56px;font-size:30px;margin-bottom:12px}
+      .logo{margin-bottom:18px}
+      .sub{margin-bottom:18px}
     }
   </style>
 </head>
 <body>
 
+<div class="hero">
+  <div class="hero-badge" id="hero-badge">SISTEMA ERP MAX V2.0</div>
+  <!-- Mascote: 1º tenta o arquivo fixo public/mascote.png; 2º o logo enviado
+       em Configurações (/img/logo); sem os dois, mostra o quadrado com o M. -->
+  <img class="hero-mascote" id="hero-mascote" src="/mascote.png" alt="Mascote do sistema"
+       onload="this.style.display='block';document.getElementById('hero-fallback').style.display='none'"
+       onerror="if(!this.dataset.try2){this.dataset.try2=1;this.src='/img/logo';}else{this.style.display='none';document.getElementById('hero-fallback').style.display='flex';}">
+  <div class="hero-fallback" id="hero-fallback">M</div>
+  <div class="hero-copy">
+    <h2>Gestão completa de<br>Estoque e Vendas</h2>
+    <p>Produtos, pedidos, NF-e e financeiro num só painel — conectado ao Bling e ao Mercado Livre em tempo real.</p>
+  </div>
+</div>
+
 <div class="left">
+ <div class="card">
   <div class="logo">
-    <div class="logo-mark" id="app-bmark">EM</div>
-    <span class="logo-name" id="app-bname">Estoque Max</span>
+    <div class="logo-mark" id="app-bmark">M</div>
+    <span class="logo-name" id="app-bname">Sistema ERP Max</span>
+    <span class="logo-tag">Gestão &amp; Estoque</span>
   </div>
 
-  <h1>Entrar na sua conta</h1>
-  <p class="sub">Acesse o painel de controle do seu estoque, vendas e finanças.</p>
+  <h1>Acesse sua conta</h1>
+  <p class="sub">Insira suas credenciais para gerenciar a plataforma.</p>
 
   <div class="err-box" id="errBox">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     <span id="errMsg"></span>
-  </div>
-
-  <button type="button" class="btn-main" id="googleLoginBtn" onclick="loginWithGoogle()" style="background:linear-gradient(135deg,#fff 0%,#f8fafc 100%);color:#0f172a;border:1.5px solid #e2e8f0;box-shadow:0 2px 8px rgba(15,23,42,.08);margin-bottom:16px">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-    <span>Entrar com Google</span>
-  </button>
-
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;color:#cbd5e1">
-    <div style="flex:1;height:1px;background:#e2e8f0"></div>
-    <span style="font-size:12px;font-weight:500">OU</span>
-    <div style="flex:1;height:1px;background:#e2e8f0"></div>
   </div>
 
   <form id="loginForm" onsubmit="doLogin(event)">
@@ -115,9 +131,16 @@
     </div>
     <button class="btn-main" id="btnSubmit" type="submit">
       <div class="spin" id="spin"></div>
-      <span id="btnTxt">Entrar</span>
+      <span id="btnTxt">Entrar no Painel</span>
     </button>
   </form>
+
+  <div class="divisor">OU</div>
+
+  <button type="button" class="btn-main" id="googleLoginBtn" onclick="loginWithGoogle()" style="background:linear-gradient(135deg,#fff 0%,#f8fbfd 100%);color:#16324a;border:1.5px solid #dfeaf3;box-shadow:0 2px 8px rgba(9,66,112,.08);margin-top:16px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    <span>Entrar com o Google</span>
+  </button>
 
   <div class="pwa-bar" id="pwa-install" onclick="installPWA()">
     <div class="pwa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg></div>
@@ -127,32 +150,8 @@
     </div>
   </div>
 
-  <p class="foot-note">Conexão segura · <span id="app-bname-inline">Estoque Max</span> integrado ao Bling ERP</p>
-</div>
-
-<div class="right">
-  <div class="right-content">
-    <h2>Seu ERP na<br><em>Palma da Mão</em></h2>
-    <p>Gerencie produtos, pedidos e finanças direto do celular — conectado ao Bling em tempo real, sem precisar do computador.</p>
-    <div class="feat-list">
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-        <div><div class="feat-txt">Painel com faturamento e lucro</div><div class="feat-sub">Vendas, contas a pagar e a receber num só lugar</div></div>
-      </div>
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg></div>
-        <div><div class="feat-txt">Catálogo de produtos completo</div><div class="feat-sub">Edição, imagens, SKU, custo e preço</div></div>
-      </div>
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-        <div><div class="feat-txt">Gráficos de vendas por período</div><div class="feat-sub">Hoje, 7 dias, 30 dias ou personalizado</div></div>
-      </div>
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-        <div><div class="feat-txt">Alertas e notificações push</div><div class="feat-sub">Estoque crítico e pedidos em tempo real</div></div>
-      </div>
-    </div>
-  </div>
+  <p class="foot-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Criptografia SSL protegida<span id="app-bname-inline" style="display:none"></span></p>
+ </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -168,26 +167,35 @@
       const r=await fetch('/api/config'),d=await r.json();
       if(!r.ok||!d)return;
       document.title=`Entrar — ${d.nome}`;
+      // Marca do cartão: ícone enviado em Configurações; senão a inicial em
+      // azul sobre fundo branco (padrão da identidade "M").
       const bmark=document.getElementById('app-bmark');
       if(bmark){
-        if(d.temLogo){bmark.innerHTML=`<img src="/img/logo?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`;bmark.style.background='transparent';bmark.style.boxShadow='none';}
-        else{bmark.textContent=d.iniciais;bmark.style.background=d.cor;}
+        if(d.temIcone)bmark.innerHTML=`<img src="/img/icone?v=${Date.now()}" alt="">`;
+        else{bmark.textContent=d.iniciais;bmark.style.color=d.cor;}
       }
       const bname=document.getElementById('app-bname');if(bname)bname.textContent=d.nome;
-      const bnameInline=document.getElementById('app-bname-inline');if(bnameInline)bnameInline.textContent=d.nome;
+      const badge=document.getElementById('hero-badge');if(badge)badge.textContent=`${d.nome} V2.0`.toUpperCase();
+      // Mascote do herói: se o arquivo fixo /mascote.png não existir, o
+      // onerror da própria <img> já cai para /img/logo (upload) e depois
+      // para o quadrado com o M — nada a fazer aqui.
       let link=document.querySelector("link[rel~='icon']");
       if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
-      link.href=d.temIcone?`/img/icone?v=${Date.now()}`:`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='${d.cor}'/><text x='50' y='68' text-anchor='middle' font-size='55' font-weight='700' fill='white' font-family='Inter,sans-serif'>${d.iniciais}</text></svg>`)}`;
-      // Cor global — sobrescreve os hex fixos do tema roxo original nos
-      // pontos-chave (marca, foco de campo, botão principal, painel direito).
-      const cor2=mixColor(d.cor,[255,255,255],.28);
-      const style=document.createElement('style');
-      style.textContent=`.logo-mark{background:linear-gradient(135deg,${d.cor},${cor2}) !important}
-.field input:focus{border-color:${d.cor} !important}
+      link.href=d.temIcone?`/img/icone?v=${Date.now()}`:`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='white' stroke='%23e3eef7' stroke-width='2'/><text x='50' y='70' text-anchor='middle' font-size='58' font-weight='800' fill='${d.cor}' font-family='Inter,sans-serif'>${d.iniciais}</text></svg>`)}`;
+      // Cor global configurável — só injeta overrides se fugir do azul padrão.
+      if(d.cor&&d.cor.toLowerCase()!=='#1e9bf0'){
+        const cor2=mixColor(d.cor,[255,255,255],.28);
+        const style=document.createElement('style');
+        style.textContent=`.logo-mark{color:${d.cor} !important}
+.logo-tag{color:${d.cor} !important}
+.field input:focus{border-color:${d.cor} !important;box-shadow:0 0 0 4px ${d.cor}22 !important}
 .btn-main:not(#googleLoginBtn){background:linear-gradient(135deg,${d.cor},${cor2}) !important}
 .pwa-icon{background:linear-gradient(135deg,${d.cor},${cor2}) !important}
-.right{background:linear-gradient(135deg,${mixColor(d.cor,[0,0,0],.12)} 0%,${d.cor} 60%,${cor2} 100%) !important}`;
-      document.head.appendChild(style);
+.hero{background:linear-gradient(160deg,${cor2} 0%,${d.cor} 45%,${mixColor(d.cor,[0,0,0],.18)} 100%) !important}
+.hero-badge::before,.hero-fallback{color:${d.cor} !important;background-color:#fff}
+.hero-badge::before{background:${d.cor} !important}`;
+        document.head.appendChild(style);
+      }
     }catch(e){console.error('[config]',e);}
   })();
   // Initialize Firebase with config from project

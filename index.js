@@ -117,7 +117,7 @@ let eventIdCounter = 1;
 let _persistLoaded = false;
 // Identidade visual do sistema (nome + ícone) — editável em Configurações,
 // refletida na aba do Chrome, no app instalável, no login e no menu lateral.
-let appConfig = { nome: 'Estoque Max', iniciais: 'EM', cor: '#4f46e5' };
+let appConfig = { nome: 'Sistema ERP Max', iniciais: 'M', cor: '#1e9bf0' };
 
 async function loadPersistedData() {
   if (_persistLoaded) return;
@@ -132,6 +132,13 @@ async function loadPersistedData() {
     if (Array.isArray(d.calendarEvents)) calendarEvents = d.calendarEvents;
     if (Array.isArray(d.changeLog)) changeLog = d.changeLog;
     if (d.appConfig && typeof d.appConfig === 'object') appConfig = { ...appConfig, ...d.appConfig };
+    // Migração da identidade antiga: quem nunca personalizou ficou com os
+    // DEFAULTS antigos salvos no Firestore ("Estoque Max"/EM/roxo) — esses
+    // valores nunca foram uma escolha do usuário, então acompanham a nova
+    // identidade azul "Sistema ERP Max". Valores personalizados não mudam.
+    if (appConfig.cor === '#4f46e5') appConfig.cor = '#1e9bf0';
+    if (appConfig.nome === 'Estoque Max') appConfig.nome = 'Sistema ERP Max';
+    if (appConfig.iniciais === 'EM') appConfig.iniciais = 'M';
     contaIdCounter = customContas.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
     eventIdCounter = calendarEvents.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0) + 1;
     console.log(`[Persistência] ${customContas.length} conta(s), ${calendarEvents.length} evento(s) e ${changeLog.length} log(s) restaurados do Firestore`);
@@ -160,10 +167,12 @@ function saveInMemoryData() {
 }
 
 function manifestIconSvg(size, iniciais, cor) {
-  const fontSize = Math.round(size * 0.47);
-  const y = Math.round(size * 0.68);
-  const rx = Math.round(size * 0.2);
-  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${size} ${size}'><rect width='${size}' height='${size}' rx='${rx}' fill='${cor}'/><text x='${size / 2}' y='${y}' text-anchor='middle' font-size='${fontSize}' font-weight='700' fill='white' font-family='Inter,sans-serif'>${iniciais}</text></svg>`)}`;
+  // Identidade "M": letra na cor global sobre fundo branco (mesma regra do
+  // favicon no dashboard/login).
+  const fontSize = Math.round(size * 0.5);
+  const y = Math.round(size * 0.69);
+  const rx = Math.round(size * 0.22);
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${size} ${size}'><rect width='${size}' height='${size}' rx='${rx}' fill='white'/><text x='${size / 2}' y='${y}' text-anchor='middle' font-size='${fontSize}' font-weight='800' fill='${cor}' font-family='Inter,sans-serif'>${iniciais}</text></svg>`)}`;
 }
 
 // Config pública (sem autenticação) — o login precisa da identidade visual
