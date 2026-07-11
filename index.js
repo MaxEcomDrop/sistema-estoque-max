@@ -72,10 +72,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Cabeçalhos de segurança. A app é same-origin (frontend e API no mesmo
-// domínio), então não há CORS aberto — a API deixa de ser invocável por
-// qualquer site de terceiros com Access-Control-Allow-Origin: *.
+// domínio) — CORS continua fechado para qualquer site de terceiros. A ÚNICA
+// exceção é a extensão Chrome oficial do MAX ERP (extension/manifest.json
+// fixa o "key" pra o ID nunca mudar): só o origin exato dela é liberado,
+// nunca "*". Qualquer outro chrome-extension://<id> ou site cai fora.
 app.disable('x-powered-by');
+const EXTENSION_ORIGIN = 'chrome-extension://ggoanbhfaciiaimcihblophnjenclohp';
 app.use((req, res, next) => {
+  if (req.headers.origin === EXTENSION_ORIGIN) {
+    res.set('Access-Control-Allow-Origin', EXTENSION_ORIGIN);
+    res.set('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Vary', 'Origin');
+    if (req.method === 'OPTIONS') return res.status(204).end();
+  }
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -390,8 +400,17 @@ function requireAuth(req, res, next) {
   catch { res.clearCookie('system_token'); res.redirect('/login'); }
 }
 
+// O painel (browser) autentica por cookie httpOnly. Clientes que não têm
+// cookie jar de navegador — a extensão Chrome, em especial — mandam o mesmo
+// JWT via "Authorization: Bearer": aceitar os dois aqui evita duplicar cada
+// rota da API só pra servir a extensão.
+function extractBearerToken(req) {
+  const m = /^Bearer\s+(.+)$/i.exec(req.headers?.authorization || '');
+  return m ? m[1] : null;
+}
 function requireAuthJson(req, res, next) {
-  try { jwt.verify(req.cookies?.system_token || '', JWT_SECRET); next(); }
+  const tok = req.cookies?.system_token || extractBearerToken(req) || '';
+  try { jwt.verify(tok, JWT_SECRET); next(); }
   catch { res.clearCookie('system_token'); res.status(401).json({ error: 'Não autenticado' }); }
 }
 
@@ -780,6 +799,36 @@ app.post('/api/auth/login', loginRateLimit, (req, res) => {
       maxAge: 7 * 24 * 3600 * 1000,
     });
     res.json({ success: true });
+  } catch (e) {
+    sendErrorResponse(res, 500, 'Erro ao gerar token. Verifique JWT_SECRET nas variáveis de ambiente.', e.message);
+  }
+});
+
+// Login da extensão Chrome: mesma checagem do login do painel, mas devolve
+// o JWT NO CORPO da resposta (a extensão guarda em chrome.storage.local, não
+// tem cookie jar de navegador) em vez de um cookie httpOnly. Por isso é uma
+// rota separada — o painel nunca expõe o token cru pro JS da página, só a
+// extensão (que já é o único outro cliente confiável, com CORS travado só
+// nela) recebe.
+app.post('/api/auth/extension-login', loginRateLimit, (req, res) => {
+  const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    return sendErrorResponse(res, 400, 'Email e senha são obrigatórios');
+  }
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !JWT_SECRET) {
+    return sendErrorResponse(res, 500,
+      'Configuração incompleta: variáveis de ambiente ADMIN_EMAIL, ADMIN_PASSWORD ou JWT_SECRET não definidas.');
+  }
+  if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
+    registerLoginFailure(req);
+    return sendErrorResponse(res, 401, 'Email ou senha incorretos');
+  }
+
+  try {
+    clearLoginFailures(req);
+    const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ success: true, token, email: ADMIN_EMAIL });
   } catch (e) {
     sendErrorResponse(res, 500, 'Erro ao gerar token. Verifique JWT_SECRET nas variáveis de ambiente.', e.message);
   }
@@ -1982,6 +2031,67 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
     console.error('[Update]', err.message);
     sendErrorResponse(res, 500, 'Erro ao processar requisição', err.message);
   }
+});
+
+// Sincronização em lote usada pela extensão Chrome (MAX ERP AI Supplier
+// Intelligence): recebe só {erpId, precoCusto?, estoque?} por item — nome,
+// código, categoria etc. NUNCA vêm do fornecedor, o ERP continua sendo a
+// única fonte de verdade pra identidade do produto. Reaproveita exatamente
+// os mesmos caminhos de gravação do editor (persistirCusto/persistirEstoque:
+// custo pelo vínculo /produtos/fornecedores, nunca um PUT cru que o Bling
+// ignora silenciosamente) — nunca reimplementa a escrita.
+app.post('/api/produtos/sync-batch', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+
+  const { updates } = req.body || {};
+  if (!Array.isArray(updates) || !updates.length) {
+    return sendErrorResponse(res, 400, 'Nenhuma atualização enviada');
+  }
+  if (updates.length > 200) {
+    return sendErrorResponse(res, 400, 'Máximo de 200 produtos por lote');
+  }
+
+  const results = [];
+  for (const item of updates) {
+    let id;
+    try { id = validateNumericId(item?.erpId, 'erpId'); }
+    catch { results.push({ erpId: item?.erpId, ok: false, erro: 'erpId inválido' }); continue; }
+
+    const custoNum = item.precoCusto !== undefined && item.precoCusto !== null ? Number(item.precoCusto) : null;
+    const estoqueNum = item.estoque !== undefined && item.estoque !== null ? Number(item.estoque) : null;
+    if (custoNum === null && estoqueNum === null) {
+      results.push({ erpId: id, ok: false, erro: 'Nada para atualizar (sem custo nem estoque)' });
+      continue;
+    }
+
+    const item_result = { erpId: id, ok: true };
+    try {
+      if (custoNum !== null && !Number.isNaN(custoNum)) {
+        const custoResult = await persistirCusto(token, id, custoNum, `#${id}`);
+        item_result.custo = { blingSync: custoResult.blingOk, aviso: custoResult.blingOk ? null : custoResult.blingErro };
+      }
+      if (estoqueNum !== null && !Number.isNaN(estoqueNum)) {
+        const estoqueResult = await persistirEstoque(token, id, estoqueNum, true);
+        item_result.estoque = { blingSync: estoqueResult.blingSync, aviso: estoqueResult.aviso || null };
+      }
+      changeLog.push({
+        id: changeLog.length + 1, produto_id: id,
+        produto_nome: `#${id}`, campo: 'sincronização (extensão fornecedor)',
+        valor_anterior: '—',
+        valor_novo: [custoNum !== null ? `custo=R$ ${custoNum.toFixed(2)}` : null, estoqueNum !== null ? `estoque=${estoqueNum}` : null].filter(Boolean).join(', '),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      item_result.ok = false;
+      item_result.erro = err.response?.data?.error?.message || err.message;
+    }
+    results.push(item_result);
+  }
+  saveInMemoryData();
+
+  const ok = results.filter(r => r.ok).length;
+  res.json({ success: true, total: results.length, ok, results });
 });
 
 // ── Fornecedores (contatos do Bling) ─────────────────────────────────

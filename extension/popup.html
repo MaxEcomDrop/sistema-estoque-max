@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">M</div>
+      <div class="logo-text">MAX ERP <span>Intelligence</span></div>
+    </div>
+  </div>
+
+  <!-- VIEW: LOGIN -->
+  <div id="view-login" class="view">
+    <h2>Acessar Extensão</h2>
+    <p class="subtitle">Insira suas credenciais do MAX ERP para conectar a extensão.</p>
+    <div class="form-group">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="nome@empresa.com">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••">
+    </div>
+    <div id="login-error" class="error-msg"></div>
+    <button id="btn-login" class="btn btn-primary">Entrar</button>
+  </div>
+
+  <!-- VIEW: MAIN -->
+  <div id="view-main" class="view hidden">
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-scan">Varredura</button>
+      <button class="tab-btn" data-tab="tab-config">Configurações</button>
+    </div>
+
+    <!-- TAB: SCAN -->
+    <div id="tab-scan" class="tab-content">
+      <div class="domain-status">
+        <div class="status-indicator" id="domain-indicator"></div>
+        <div class="domain-info">
+          <div class="domain-name" id="current-domain">Detectando...</div>
+          <div class="domain-badge" id="current-status">Desconhecido</div>
+        </div>
+      </div>
+
+      <div class="action-box">
+        <button id="btn-scan" class="btn btn-primary btn-large" disabled>
+          <svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2A10 10 0 1 0 22 12A10 10 0 0 0 12 2M12 20A8 8 0 1 1 20 12A8 8 0 0 1 12 20M11 7H13V13H11M11 15H13V17H11Z"/></svg>
+          Scan Supplier Catalog
+        </button>
+        <p class="tip-text" id="scan-tip">O site atual não está autorizado. Vá em Configurações para ativá-lo.</p>
+      </div>
+      
+      <div class="user-footer">
+        <span id="user-email">...</span>
+        <button id="btn-logout" class="btn-link">Sair</button>
+      </div>
+    </div>
+
+    <!-- TAB: CONFIG -->
+    <div id="tab-config" class="tab-content hidden">
+      <h3>Autorizar Páginas</h3>
+      <p class="subtitle">Adicione ou remova permissões para a extensão ler catálogos.</p>
+
+      <div class="auth-box">
+        <div class="current-site-box">
+          <span class="site-label">Site Atual:</span>
+          <strong id="config-current-domain">Detectando...</strong>
+        </div>
+        <button id="btn-toggle-auth" class="btn btn-secondary">Autorizar Site</button>
+      </div>
+
+      <div class="sites-list-container">
+        <h4>Sites Autorizados</h4>
+        <ul class="sites-list" id="authorized-list">
+          <li class="empty-list">Nenhum site autorizado ainda.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

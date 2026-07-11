@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MAX ERP · Central de Revisão de Fornecedores</title>
+  <link rel="stylesheet" href="review.css">
+</head>
+<body>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-mark">M</div>
+      <div>
+        <h1>Central de Inteligência de Fornecedores</h1>
+        <p class="subtitle">MAX ERP AI Supplier Intelligence Platform</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="kpi">
+        <span class="kpi-num" id="stat-scanned">0</span>
+        <span class="kpi-label">Varridos</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num text-success" id="stat-matched">0</span>
+        <span class="kpi-label">Vinculados</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num text-warning" id="stat-changed">0</span>
+        <span class="kpi-label">Alterados</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-num text-primary" id="stat-impact">R$ 0,00</span>
+        <span class="kpi-label">Impacto de Lucro</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <!-- FILTERS BAR -->
+    <div class="filters-bar">
+      <div class="filters-left">
+        <select id="filter-changed" class="filter-select">
+          <option value="all">Todas as Mudanças</option>
+          <option value="changed">Apenas com Alterações</option>
+          <option value="cost_changed">Custo Alterado</option>
+          <option value="stock_changed">Estoque Alterado</option>
+          <option value="new_products">Novos no Fornecedor</option>
+          <option value="anomaly">Com Anomalias</option>
+        </select>
+
+        <select id="filter-confidence" class="filter-select">
+          <option value="all">Qualquer Confiança</option>
+          <option value="high">Confiança Alta (>=90%)</option>
+          <option value="medium">Confiança Média (70-89%)</option>
+          <option value="low">Revisão Manual (<70%)</option>
+        </select>
+        
+        <input type="text" id="search-input" placeholder="Pesquisar por SKU ou Nome..." class="search-field">
+      </div>
+      
+      <div class="filters-right">
+        <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;">
+        <button id="btn-upload-pdf" class="btn btn-secondary" style="background: var(--primary); color: white; border: none; margin-right: 8px;">
+          <svg style="width:16px;height:16px" viewBox="0 0 24 24"><path fill="currentColor" d="M20,2H8C6.9,2 6,2.9 6,4V16C6,17.1 6.9,18 8,18H20C21.1,18 22,17.1 22,16V4C22,2.9 21.1,2 20,2M9.5,11.5C9.5,12.3 8.8,13 8,13H7V15.5H5.5V8.5H8C8.8,8.5 9.5,9.2 9.5,10V11.5M14.5,13.5C14.5,14.6 13.6,15.5 12.5,15.5H10V8.5H12.5C13.6,8.5 14.5,9.4 14.5,10.5V13.5M18.5,10H17V11H18.5V12.5H17V15.5H15.5V8.5H18.5V10M7,10V11.5H8V10H7M11.5,10V14H12.5V10H11.5Z"/></svg>
+          Escanear Catálogo em PDF
+        </button>
+        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+        <button id="btn-upload-image" class="btn btn-secondary" style="background: var(--primary); color: white; border: none; margin-right: 8px;">
+          <svg style="width:16px;height:16px" viewBox="0 0 24 24"><path fill="currentColor" d="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z"/></svg>
+          Escanear Foto de Catálogo
+        </button>
+        <button id="btn-reload" class="btn btn-secondary">
+          <svg style="width:16px;height:16px" viewBox="0 0 24 24"><path fill="currentColor" d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>
+          Recarregar ERP
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT GRID -->
+    <div class="grid-content">
+      <!-- TABLE CARD -->
+      <div class="table-card">
+        <table id="products-table">
+          <thead>
+            <tr>
+              <th width="30"><input type="checkbox" id="check-all"></th>
+              <th width="80">Foto</th>
+              <th>Produto (Fornecedor / ERP)</th>
+              <th>SKU / Código</th>
+              <th>Custo Forn. / ERP</th>
+              <th>Margem & Lucro</th>
+              <th>Confiança</th>
+              <th>Status</th>
+              <th width="100">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <tr>
+              <td colspan="9" class="loading-state">Carregando dados da varredura...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- BULK ACTION BAR (FLOAT) -->
+  <div class="bulk-bar hidden" id="bulk-bar">
+    <div class="bulk-info">
+      <span id="selected-count">0</span> produtos selecionados
+    </div>
+    <div class="bulk-actions">
+      <button id="bulk-sync-all" class="btn btn-primary">Sincronizar Selecionados</button>
+      <button id="bulk-sync-cost" class="btn btn-secondary">Atualizar Apenas Custos</button>
+      <button id="bulk-sync-stock" class="btn btn-secondary">Atualizar Apenas Estoques</button>
+    </div>
+  </div>
+
+  <!-- ANOMALY ALERT MODAL -->
+  <div class="modal-overlay hidden" id="modal-anomaly">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Alerta de Anomalia Encontrado</h3>
+        <button class="modal-close" id="btn-close-anomaly">&times;</button>
+      </div>
+      <div class="modal-body" id="anomaly-details">
+        <!-- Injetado via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- OCR PROGRESS MODAL -->
+  <div class="modal-overlay hidden" id="modal-ocr">
+    <div class="modal" style="width: 400px; text-align: center;">
+      <div class="modal-body" style="padding: 30px;">
+        <div class="logo-mark" style="margin: 0 auto 16px;">OCR</div>
+        <h3 id="ocr-status-title" style="margin-bottom: 8px;">Processando Imagem...</h3>
+        <p class="subtitle" id="ocr-status-subtitle" style="margin-bottom: 12px;">Aguarde, extraindo dados do catálogo.</p>
+        <div class="progress-container" style="background:#E2E8F0; height:8px; border-radius:4px; overflow:hidden; margin: 16px 0;">
+          <div id="ocr-progress-bar" style="background:var(--primary); height:100%; width:0%; transition: width 0.1s;"></div>
+        </div>
+        <span id="ocr-progress-percent" style="font-weight:700; font-size:14px; color:var(--primary)">0%</span>
+      </div>
+    </div>
+  </div>
+  
+  <script src="tesseract.min.js"></script>
+  <script src="pdf.min.js"></script>
+  <script src="review.js"></script>
+</body>
+</html>

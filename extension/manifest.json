@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "MAX ERP AI Supplier Intelligence",
+  "version": "1.1.0",
+  "description": "Monitoramento de fornecedores, detecção de alterações e integração inteligente com o MAX ERP.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqInDMqlw8fYNzFDKPSHyUvL6L0r1QcYB5Sl885oXJ016M3Tfq4nc2DEp5m9KVv1L1/tggzBzUa0RDtfObMPwvUOm/bsfDt2j/YkmEOj34AmF8tw6Bg76pTiUzRJhkciBn9cM962E692j4+MXHCVYS1qp2JxUY02JyhCMmi0Zuyx/m4+14NmOcCVt6xg8uLMcSzUHjS1PXfOXfCHIt5xnpaeqvgi4ft2snpfEhnePNDnZW1StBwD2lwd5uFKBuPfZ92fmAthBLOvTz7O/DFM1mTNZq/g+Myk2SMSyiSdtjirsnb9bV25Y/ZuRXGDAoyvrR+tb/YH/85p/6AuOEi2/RwIDAQAB",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
