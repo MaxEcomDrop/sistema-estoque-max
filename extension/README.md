@@ -38,10 +38,21 @@ apague o campo `"key"` sem atualizar o backend junto, senão a extensão perde a
 - `popup.html/js/css` — login e autorização de domínios (só sites autorizados pelo usuário
   podem ser escaneados).
 - `review.html/js/css` — dashboard de revisão: busca produtos do ERP (`GET /api/produtos`),
-  casa com os produtos escaneados (EAN → SKU → similaridade de nome Jaro-Winkler), calcula
-  impacto de margem/lucro, detecta anomalias, e sincroniza mudanças aprovadas
-  (`POST /api/produtos/sync-batch`). Também escaneia PDF (`pdf.min.js`, todas as páginas,
-  nunca pula nenhuma) e fotos de catálogo (`tesseract.min.js`, OCR).
+  casa com os produtos escaneados (EAN → **SKU exato** → similaridade de nome, sendo que o
+  match semântico só roda para itens SEM código real do fornecedor — se o fornecedor publicou
+  um SKU e ele não está no ERP, o item fica sem vínculo em vez de chutar), calcula impacto de
+  margem/lucro, detecta anomalias, e sincroniza mudanças aprovadas
+  (`POST /api/produtos/sync-batch`).
+- **Varredura de PDF híbrida** (`pdf.min.js` + OCR local): páginas com camada de texto são
+  lidas direto (rápido e exato); páginas 100% imagem — como os catálogos exportados por
+  screenshot via FireShot, que geram UMA página gigante sem nenhum texto — são renderizadas
+  em fatias com sobreposição e lidas por OCR, TODAS as fatias até o fim. O parser espacial
+  reconstrói o grid de cards por geometria (âncora `(SKU)` → preço `R$` e `Estoque: N pcs`
+  abaixo, na mesma coluna), então colunas vizinhas nunca se misturam.
+- **OCR 100% local** (`ocr/`): worker, núcleo WASM (SIMD) e modelo português do Tesseract v5
+  vêm empacotados na extensão — nada é baixado de CDN em tempo de execução (a CSP de
+  extensões MV3 bloquearia; era por isso que o OCR de fotos não funcionava). O manifest
+  precisa de `wasm-unsafe-eval` na CSP, já configurado.
 
 ## Regra de ouro: o ERP é sempre a fonte de verdade
 

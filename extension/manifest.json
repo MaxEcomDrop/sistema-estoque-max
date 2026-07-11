@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
   "name": "MAX ERP AI Supplier Intelligence",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Monitoramento de fornecedores, detecção de alterações e integração inteligente com o MAX ERP.",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqInDMqlw8fYNzFDKPSHyUvL6L0r1QcYB5Sl885oXJ016M3Tfq4nc2DEp5m9KVv1L1/tggzBzUa0RDtfObMPwvUOm/bsfDt2j/YkmEOj34AmF8tw6Bg76pTiUzRJhkciBn9cM962E692j4+MXHCVYS1qp2JxUY02JyhCMmi0Zuyx/m4+14NmOcCVt6xg8uLMcSzUHjS1PXfOXfCHIt5xnpaeqvgi4ft2snpfEhnePNDnZW1StBwD2lwd5uFKBuPfZ92fmAthBLOvTz7O/DFM1mTNZq/g+Myk2SMSyiSdtjirsnb9bV25Y/ZuRXGDAoyvrR+tb/YH/85p/6AuOEi2/RwIDAQAB",
   "permissions": [
     "activeTab",

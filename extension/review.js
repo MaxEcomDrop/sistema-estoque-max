@@ -71,6 +71,93 @@ document.addEventListener('DOMContentLoaded', async () => {
   const ocrProgressPercent = document.getElementById('ocr-progress-percent');
   const ocrStatusTitle = document.getElementById('ocr-status-title');
 
+  // ── Motor OCR 100% local ─────────────────────────────────────────────
+  // O tesseract.min.js sozinho é só a casca: por padrão ele baixa o worker,
+  // o núcleo WASM e o modelo de idioma de CDNs em tempo de execução — e a
+  // CSP de extensões MV3 (script-src 'self') bloqueia tudo isso. Era por
+  // isso que o OCR "não ia": falhava silenciosamente ao criar o worker.
+  // Agora worker (ocr/worker.min.js), núcleo (ocr/tesseract-core-simd-
+  // lstm.wasm.js) e o modelo português (ocr/por.traineddata.gz) vêm
+  // EMPACOTADOS na extensão — nada sai pra rede, nada depende de CDN.
+  // workerBlobURL:false é obrigatório: worker via blob: também viola a CSP.
+  let _ocrWorkerPromise = null;
+  let _ocrProgressCb = null;
+  function getOcrWorker() {
+    if (!_ocrWorkerPromise) {
+      _ocrWorkerPromise = Tesseract.createWorker('por', 1, {
+        workerPath: chrome.runtime.getURL('ocr/worker.min.js'),
+        corePath: chrome.runtime.getURL('ocr/tesseract-core-simd-lstm.wasm.js'),
+        langPath: chrome.runtime.getURL('ocr'),
+        workerBlobURL: false,
+        gzip: true,
+        logger: (m) => {
+          if (_ocrProgressCb && m.status === 'recognizing text') _ocrProgressCb(m.progress);
+        },
+      }).catch((e) => { _ocrWorkerPromise = null; throw e; });
+    }
+    return _ocrWorkerPromise;
+  }
+
+  // Reconstrói "linhas de card" a partir das PALAVRAS do OCR (com bbox).
+  // Não dá pra usar as linhas prontas do Tesseract: numa grade de cards,
+  // uma "linha" dele atravessa a página inteira e emenda o texto das 4
+  // colunas vizinhas ("(KA-3835) Controle (KA-3592) Cabo (KA-1872)
+  // Calculadora..."), matando o parser. Aqui as palavras são reagrupadas
+  // por linha visual (mesma altura) e o segmento é CORTADO onde o espaço
+  // horizontal entre palavras é grande demais pra ser espaço de frase —
+  // ou seja, no vão entre colunas de cards.
+  function ocrDataToLines(data, offsetY = 0) {
+    const words = [];
+    (data.blocks || []).forEach(b => (b.paragraphs || []).forEach(p => (p.lines || []).forEach(l => (l.words || []).forEach(w => {
+      const t = String(w.text || '').trim();
+      if (!t) return;
+      words.push({ text: t, x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1 });
+    }))));
+    if (!words.length) return [];
+
+    const hs = words.map(w => w.y1 - w.y0).filter(h => h > 2).sort((a, b) => a - b);
+    const wordH = hs.length ? hs[Math.floor(hs.length / 2)] : 16;
+    const GAP = Math.max(30, wordH * 2.2); // maior que espaço entre palavras, menor que o vão entre colunas
+
+    // Agrupa por linha visual (centro vertical próximo)
+    words.sort((a, b) => ((a.y0 + a.y1) / 2) - ((b.y0 + b.y1) / 2));
+    const rows = [];
+    words.forEach(w => {
+      const yc = (w.y0 + w.y1) / 2;
+      const row = rows.length ? rows[rows.length - 1] : null;
+      if (row && Math.abs(yc - row.yc) <= wordH * 0.7) {
+        row.words.push(w);
+        row.yc = (row.yc * (row.words.length - 1) + yc) / row.words.length;
+      } else {
+        rows.push({ yc, words: [w] });
+      }
+    });
+
+    // Dentro da linha visual, corta em segmentos onde o vão horizontal
+    // é de coluna — cada segmento é uma linha de UM card só.
+    const out = [];
+    rows.forEach(row => {
+      row.words.sort((a, b) => a.x0 - b.x0);
+      let seg = null;
+      const flush = () => {
+        if (!seg) return;
+        const t = seg.parts.join(' ').replace(/\s+/g, ' ').trim();
+        if (t) out.push({ text: t, x0: seg.x0, y0: seg.y0 + offsetY, x1: seg.x1, y1: seg.y1 + offsetY });
+        seg = null;
+      };
+      row.words.forEach(w => {
+        if (seg && (w.x0 - seg.x1) > GAP) flush();
+        if (!seg) seg = { parts: [], x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1 };
+        seg.parts.push(w.text);
+        seg.x1 = Math.max(seg.x1, w.x1);
+        seg.y0 = Math.min(seg.y0, w.y0);
+        seg.y1 = Math.max(seg.y1, w.y1);
+      });
+      flush();
+    });
+    return out;
+  }
+
   btnUploadImage.addEventListener('click', () => {
     imageUpload.click();
   });
@@ -82,29 +169,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     modalOcr.classList.remove('hidden');
     ocrProgressBar.style.width = '0%';
     ocrProgressPercent.textContent = '0%';
-    ocrStatusTitle.textContent = 'Carregando Tesseract OCR...';
+    ocrStatusTitle.textContent = 'Carregando OCR local...';
 
     try {
-      const result = await Tesseract.recognize(
-        file,
-        'por',
-        {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              const progress = Math.round(m.progress * 100);
-              ocrProgressBar.style.width = `${progress}%`;
-              ocrProgressPercent.textContent = `${progress}%`;
-              ocrStatusTitle.textContent = 'Extraindo texto da imagem...';
-            }
-          }
-        }
-      );
-
-      const text = result.data.text;
-      console.log("[OCR TEXT]", text);
+      const worker = await getOcrWorker();
+      _ocrProgressCb = (p) => {
+        const progress = Math.round(p * 100);
+        ocrProgressBar.style.width = `${progress}%`;
+        ocrProgressPercent.textContent = `${progress}%`;
+        ocrStatusTitle.textContent = 'Extraindo texto da imagem...';
+      };
+      const { data } = await worker.recognize(file, {}, { blocks: true, text: true });
+      _ocrProgressCb = null;
+      console.log("[OCR TEXT]", data.text);
 
       ocrStatusTitle.textContent = 'Analisando dados do catálogo...';
-      const parsedProducts = parseOCRText(text);
+      // Primeiro o parser espacial (entende grid de cards em colunas);
+      // se não achar nada, cai pro parser linear de texto corrido.
+      let parsedProducts = parseCatalogLines(ocrDataToLines(data), 'FOTO_CATALOGO');
+      if (parsedProducts.length === 0) parsedProducts = parseOCRText(data.text);
 
       if (parsedProducts.length === 0) {
         alert("Não foi possível identificar produtos na imagem. Verifique se o preço e o SKU/Código estão visíveis.");
@@ -118,6 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       alert("Erro ao ler imagem: " + err.message);
     } finally {
+      _ocrProgressCb = null;
       modalOcr.classList.add('hidden');
       imageUpload.value = "";
     }
@@ -162,11 +246,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
-        allProducts = allProducts.concat(parsePdfPageProducts(textContent.items, pageNum));
+        const textLen = textContent.items.reduce((a, it) => a + (it.str || '').trim().length, 0);
+
+        if (textLen >= 60) {
+          // PDF com camada de texto de verdade: extração direta (rápida e exata).
+          allProducts = allProducts.concat(parsePdfPageProducts(textContent.items, pageNum));
+        } else {
+          // PDF-imagem (catálogo escaneado / screenshot tipo FireShot, que
+          // gera UMA página gigante sem nenhum texto embutido): renderiza a
+          // página em fatias e roda OCR local em cada fatia. É este o caso
+          // dos catálogos de fornecedor exportados como print do site.
+          if (ocrSubtitle) ocrSubtitle.textContent = 'Página sem camada de texto — usando OCR local.';
+          const pageProducts = await ocrPdfPage(page, pageNum, numPages);
+          allProducts = allProducts.concat(pageProducts);
+        }
       }
 
+      // Dedupe final por SKU entre páginas/fatias: OCR de fatias com
+      // sobreposição vê o mesmo card duas vezes — fica a leitura mais
+      // completa (a que tem preço, estoque e nome mais longo).
+      allProducts = dedupeBySku(allProducts);
+
       if (allProducts.length === 0) {
-        alert("Não foi possível identificar produtos no PDF. Verifique se o preço e o código/SKU aparecem como texto — PDFs 100% imagem (escaneados) não têm texto pra extrair; use \"Escanear Foto de Catálogo\" nesse caso.");
+        alert("Não foi possível identificar produtos no PDF — nem na camada de texto, nem via OCR. Verifique se o código/SKU e o preço estão legíveis no arquivo.");
       } else {
         scannedProducts = allProducts;
         toast(`${allProducts.length} produtos identificados em ${numPages} página(s)!`);
@@ -175,12 +277,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateKPIs();
       }
     } catch (err) {
+      console.error('[PDF SCAN]', err);
       alert("Erro ao ler PDF: " + err.message);
     } finally {
+      _ocrProgressCb = null;
       modalOcr.classList.add('hidden');
       pdfUpload.value = "";
     }
   });
+
+  // OCR de uma página de PDF sem texto: renderiza em fatias verticais
+  // (páginas de screenshot chegam a 20.000pt de altura — não cabem num
+  // canvas só) com sobreposição, pra nenhum card ficar cortado sem ser
+  // lido inteiro na fatia seguinte. Lê TODAS as fatias até o fim real.
+  async function ocrPdfPage(page, pageNum, numPages) {
+    const worker = await getOcrWorker();
+    const base = page.getViewport({ scale: 1 });
+    // Largura alvo ~1900px: catálogos de screenshot (FireShot) embutem as
+    // imagens a ~1920px/232ppi — renderizar abaixo disso joga fora nitidez
+    // que faz falta nos textos pequenos de card (SKU e "Estoque: N pcs").
+    const scale = Math.min(3.5, Math.max(1.2, 1900 / base.width));
+    const vp = page.getViewport({ scale });
+    const TILE_H = 2800, OVERLAP = 400;
+    const step = TILE_H - OVERLAP;
+    const nTiles = Math.max(1, Math.ceil((vp.height - OVERLAP) / step));
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let lines = [];
+
+    for (let t = 0; t < nTiles; t++) {
+      const tileTop = t * step;
+      const h = Math.min(TILE_H, vp.height - tileTop);
+      if (h <= 0) break;
+      canvas.width = Math.ceil(vp.width);
+      canvas.height = Math.ceil(h);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const tileVp = page.getViewport({ scale, offsetY: -tileTop });
+      await page.render({ canvasContext: ctx, viewport: tileVp }).promise;
+
+      ocrStatusTitle.textContent = `OCR página ${pageNum}/${numPages} — bloco ${t + 1} de ${nTiles}...`;
+      _ocrProgressCb = (p) => {
+        const overall = Math.round(((t + p) / nTiles) * 100);
+        ocrProgressBar.style.width = overall + '%';
+        ocrProgressPercent.textContent = overall + '%';
+      };
+      const { data } = await worker.recognize(canvas, {}, { blocks: true, text: true });
+      lines = lines.concat(ocrDataToLines(data, tileTop));
+    }
+    _ocrProgressCb = null;
+    ocrStatusTitle.textContent = `Analisando produtos da página ${pageNum}...`;
+    return parseCatalogLines(lines, 'PDF_OCR_pg' + pageNum);
+  }
 
   function parsePdfPageProducts(items, pageNum) {
     // pdf.js devolve os fragmentos de texto na ORDEM DE DESENHO do PDF, não
@@ -241,6 +390,126 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
     return products;
+  }
+
+  // Normalização de SKU para casamento EXATO: maiúsculas, sem espaços.
+  // A variante "stripped" (sem pontos/traços) cobre OCR e fornecedores que
+  // grafam o mesmo código de formas diferentes (KA-3835 vs KA3835 vs KA.3835).
+  function normSku(s) { return String(s || '').toUpperCase().replace(/\s+/g, ''); }
+  function strippedSku(s) { return normSku(s).replace(/[.\-_/]/g, ''); }
+  // SKUs inventados pela própria extensão quando a fonte não tinha código —
+  // servem só de identificador interno, NUNCA valem como código real do
+  // fornecedor (nem para casar com o ERP, nem para bloquear o match semântico).
+  const GENERATED_SKU_RE = /^(EXT|FB|TB|OCR|PDF)-/;
+
+  function dedupeBySku(products) {
+    const score = (p) => (p.cost > 0 ? 2 : 0) + (p.stock !== undefined && p.stock !== null ? 2 : 0) + Math.min(1, (p.nome || '').length / 30);
+    const byKey = new Map();
+    const order = [];
+    products.forEach(p => {
+      const key = GENERATED_SKU_RE.test(p.sku) ? 'id:' + p.id : 'sku:' + strippedSku(p.sku);
+      if (!byKey.has(key)) { byKey.set(key, p); order.push(key); return; }
+      const cur = byKey.get(key);
+      if (score(p) > score(cur)) byKey.set(key, p);
+      else {
+        // Mesmo perdendo, o duplicado pode completar campos que faltam
+        if ((cur.stock === undefined || cur.stock === null) && p.stock !== undefined) cur.stock = p.stock;
+        if (!(cur.cost > 0) && p.cost > 0) cur.cost = p.cost;
+      }
+    });
+    return order.map(k => byKey.get(k));
+  }
+
+  // ── Parser espacial de catálogo (linhas com posição) ────────────────
+  // Catálogos de fornecedor são grades de cards em N colunas. OCR e camada
+  // de texto entregam as linhas na ordem visual da PÁGINA (esquerda→direita
+  // cruzando TODAS as colunas), então concatenar linhas mistura cards
+  // vizinhos. Aqui cada card é reconstruído por GEOMETRIA:
+  //   âncora  = linha que começa com (SKU) ou [SKU]
+  //   preço   = primeira linha com R$ ABAIXO da âncora e na MESMA coluna
+  //   estoque = linha "Estoque: N pcs" abaixo da âncora, mesma coluna
+  //   nome    = texto da âncora após o SKU + linhas seguintes até o preço
+  function parseCatalogLines(lines, sourceTag) {
+    if (!lines.length) return [];
+    const skuAnchorRe = /^[^\w(\[]{0,3}[(\[]\s*([A-Za-z0-9][A-Za-z0-9 ._/-]{1,28}?)\s*[)\]]/;
+    const priceRe = /R?\$\s*([\d.]+,\d{2})/;
+    const priceFallbackRe = /\b([\d.]+,\d{2})\b/;
+    // "Estoque" com tolerância a erro de OCR no miolo da palavra (Esioque,
+    // Estcque…) + fallback pelo sufixo "pcs" ("100 pcs" / "100 pes").
+    const stockRe = /Est\w{0,6}\s*[:;.,\-–]?\s*([\d.,]+)/i;
+    const stockPcsRe = /\b([\d.,]+)\s*p[cçeé]s?\b/i;
+    const metaRe = /^(Cor|Tamanho|Cores?|\+?\s*Cadastrar)/i;
+
+    const heights = lines.map(l => l.y1 - l.y0).filter(h => h > 2).sort((a, b) => a - b);
+    const lineH = heights.length ? heights[Math.floor(heights.length / 2)] : 18;
+
+    const anchors = [];
+    lines.forEach((l, idx) => {
+      const m = l.text.match(skuAnchorRe);
+      // Código de verdade tem dígito. Sem essa exigência, pedaços de nome
+      // entre parênteses no começo de uma linha quebrada — "(Cores
+      // Sortidas)", "(TV BOX)" — viravam âncora de card fantasma.
+      if (m && /\d/.test(m[1])) anchors.push({ line: l, idx, skuRaw: m[1], rest: l.text.slice(l.text.indexOf(m[0]) + m[0].length).trim() });
+    });
+    if (!anchors.length) return [];
+
+    // Largura da coluna: mediana das distâncias entre centros de âncoras
+    // vizinhas na horizontal (mesma "linha" de cards). Fallback generoso.
+    const centers = anchors.map(a => (a.line.x0 + a.line.x1) / 2);
+    const gaps = [];
+    anchors.forEach((a, i) => {
+      anchors.forEach((b, j) => {
+        if (i >= j) return;
+        if (Math.abs(a.line.y0 - b.line.y0) < lineH * 2) {
+          const g = Math.abs(centers[i] - centers[j]);
+          if (g > lineH * 3) gaps.push(g);
+        }
+      });
+    });
+    gaps.sort((x, y) => x - y);
+    const colW = gaps.length ? gaps[0] : 340;
+
+    const products = [];
+    anchors.forEach((a, ai) => {
+      const aCx = centers[ai];
+      // Limite vertical: até a próxima âncora da MESMA coluna (ou janela padrão)
+      let maxY = a.line.y0 + lineH * 18;
+      anchors.forEach((b, bi) => {
+        if (bi === ai) return;
+        const bCx = centers[bi];
+        if (Math.abs(bCx - aCx) < colW * 0.5 && b.line.y0 > a.line.y0 && b.line.y0 < maxY) maxY = b.line.y0;
+      });
+
+      const inCard = lines.filter(l => {
+        const cx = (l.x0 + l.x1) / 2;
+        return l !== a.line && l.y0 >= a.line.y0 - lineH && l.y0 < maxY && Math.abs(cx - aCx) < colW * 0.55;
+      }).sort((l1, l2) => l1.y0 - l2.y0);
+
+      let cost = 0, stock, nameParts = a.rest ? [a.rest] : [];
+      for (const l of inCard) {
+        const sm = l.text.match(stockRe) || l.text.match(stockPcsRe);
+        if (sm && stock === undefined) { stock = parseInt(sm[1].replace(/[.,]/g, ''), 10); continue; }
+        const pm = l.text.match(priceRe) || (l.text.length < 18 ? l.text.match(priceFallbackRe) : null);
+        if (pm && !(cost > 0)) { cost = parseFloat(pm[1].replace(/\./g, '').replace(',', '.')); continue; }
+        if (!(cost > 0) && !metaRe.test(l.text) && l.text.length > 3 && !skuAnchorRe.test(l.text)) nameParts.push(l.text);
+      }
+
+      // "(ZSW-L11 / TZ-74)" → dois códigos no mesmo card: o primeiro manda.
+      const sku = a.skuRaw.split('/')[0].trim();
+      if (!sku) return;
+      const nome = nameParts.join(' ').replace(/\s+/g, ' ').trim() || ('Item ' + sku);
+
+      products.push({
+        id: 'sp_' + sourceTag + '_' + ai + '_' + Date.now(),
+        nome, sku, ean: '',
+        cost,
+        ...(stock !== undefined && !Number.isNaN(stock) ? { stock } : {}),
+        imageUrl: '', productUrl: '',
+        supplierName: sourceTag,
+      });
+    });
+
+    return dedupeBySku(products);
   }
 
   function parseOCRText(text) {
@@ -337,16 +606,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ainda rodar Jaro-Winkler O(n*m) em cima) trava a aba. Só cai pro
     // Jaro-Winkler (linear, mais caro) quando EAN/SKU não bateram.
     const byEan = new Map();
-    const bySku = new Map();
+    const bySku = new Map();       // código normalizado (maiúsculo, sem espaço)
+    const bySkuStripped = new Map(); // e sem pontos/traços (KA-3835 == KA3835)
     erpProducts.forEach(p => {
       if (p.gtin) byEan.set(String(p.gtin), p);
-      if (p.codigo) bySku.set(String(p.codigo).toLowerCase(), p);
+      if (p.codigo) {
+        bySku.set(normSku(p.codigo), p);
+        const st = strippedSku(p.codigo);
+        if (!bySkuStripped.has(st)) bySkuStripped.set(st, p);
+      }
     });
 
     matchedResults = scannedProducts.map(sc => {
       let match = null;
       let score = 0;
       let matchMethod = "";
+
+      // O SKU capturado é REAL (veio do fornecedor) ou foi inventado pela
+      // extensão só como identificador? Isso decide o modo de match.
+      const skuReal = sc.sku && !GENERATED_SKU_RE.test(sc.sku);
 
       // 1. Match por EAN/GTIN se disponível
       if (sc.ean && byEan.has(String(sc.ean))) {
@@ -355,15 +633,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         matchMethod = "EAN";
       }
 
-      // 2. Match por SKU/Código Fornecedor
-      if (!match && sc.sku && bySku.has(String(sc.sku).toLowerCase())) {
-        match = bySku.get(String(sc.sku).toLowerCase());
-        score = 1.0;
-        matchMethod = "SKU";
+      // 2. Match EXATO por SKU/Código (o método principal e mais confiável)
+      if (!match && skuReal) {
+        match = bySku.get(normSku(sc.sku)) || bySkuStripped.get(strippedSku(sc.sku)) || null;
+        if (match) {
+          score = 1.0;
+          matchMethod = "SKU";
+        }
       }
 
-      // 3. Match Semântico por Similaridade de Nome (Jaro-Winkler)
-      if (!match) {
+      // 3. Match Semântico por Similaridade de Nome (Jaro-Winkler) —
+      // SÓ quando o item não tem código real do fornecedor. Se o fornecedor
+      // publicou um SKU e ele não existe no ERP, o produto simplesmente não
+      // está cadastrado: chutar por semelhança de nome aqui é o que gerava
+      // atualização de custo no produto errado. Exatidão > cobertura.
+      if (!match && !skuReal) {
         let bestMatch = null;
         let bestScore = 0;
 
@@ -525,9 +809,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         </td>
         <td>
           <div class="cost-pair">
-            <span class="cost-current">${res.erp ? `R$ ${res.erp.precoCusto.toFixed(2)}` : 'R$ —'}</span>
-            <span class="cost-new">R$ ${res.scanned.cost.toFixed(2)}</span>
+            <span class="cost-current">${res.erp ? `R$ ${(res.erp.precoCusto || 0).toFixed(2)}` : 'R$ —'}</span>
+            <span class="cost-new">R$ ${(res.scanned.cost || 0).toFixed(2)}</span>
             ${res.erp && res.costChanged ? `<span class="cost-diff ${res.priceDiff >= 0 ? 'up' : 'down'}">${res.priceDiff >= 0 ? '▲' : '▼'} ${Math.abs(res.priceDiffPct).toFixed(1)}%</span>` : ''}
+            ${res.scanned.stock !== undefined ? `<span style="font-size:11px;color:${res.stockChanged ? 'var(--warning-text, #b45309)' : 'var(--mu, #64748b)'};font-weight:600">Est: ${res.erp ? (res.erp.estoque ?? '—') : '—'} → ${res.scanned.stock}</span>` : ''}
           </div>
         </td>
         <td>${marginContent}</td>
