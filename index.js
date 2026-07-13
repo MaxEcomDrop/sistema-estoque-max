@@ -1258,10 +1258,11 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
       // `midia.imagens.{internas,externas}[].link`. Os campos antigos
       // (imagem.link / imageThumbnailURL) NÃO existem — por isso todos os
       // produtos apareciam com placeholder mesmo tendo foto no Bling.
-      imagemUrl:  p.imagemURL
+      imagemUrl:  (p.imagemURL
                || p.midia?.imagens?.internas?.[0]?.link
                || p.midia?.imagens?.externas?.[0]?.link
-               || p.imagem?.link || '',
+               || p.imagem?.link || '').replace(/^http:\/\//i, 'https://'),
+      hasFornecedor: !!(p.fornecedor?.id || p.fornecedorId),
     }));
 
     // Imagens enviadas pelo próprio painel têm prioridade (aparecem na hora,

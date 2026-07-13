@@ -1313,6 +1313,37 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 *::-webkit-scrollbar-thumb{background:var(--bord);border-radius:8px}
 *::-webkit-scrollbar-thumb:hover{background:var(--fa)}
 *::-webkit-scrollbar-track{background:transparent}
+.pcard-select-abs {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--acc);
+}
+#ed-img-grid {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+}
+#ed-img-grid::-webkit-scrollbar {
+  display: none;
+}
+@media(min-width: 769px) {
+  #ed-img-grid {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+.edraw-bd .fk-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
 </style>
 </head>
 <body>
@@ -3328,7 +3359,9 @@ function renderCards(){
     const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onclick="event.stopPropagation();openImgLbox('${esc(p.imagemUrl)}')" style="cursor:zoom-in" onerror="this.removeAttribute('onclick');this.style.cursor='';this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
     const badge=statusBadge(p.estoque);
     return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}">
-      <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">${thumb}
+      <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">
+        <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" onclick="event.stopPropagation()" class="pcard-select-abs">
+        ${thumb}
         <button class="pcard-edit" onclick="event.stopPropagation();openEditor(${p.id})" title="Editar produto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       </div>
       <div class="pcard-body">
@@ -3336,9 +3369,9 @@ function renderCards(){
         <div class="${'pcard-sku'+(p.codigo?' pcard-sku-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${hl(p.codigo||'—',q)}</div>
         ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
         <div class="pcard-meta">
-          <span class="pcard-price">${fmt(p.preco)}</span>
+          <span class="pcard-price">Custo: ${fmt(p.precoCusto)}</span>
           <div style="display:flex;align-items:center;gap:3px"><button class="pcard-sa" onclick="event.stopPropagation();cardStockAdj(${p.id},-1)">−</button><span class="pcard-stock">${fmtN(p.estoque)}</span><button class="pcard-sa" onclick="event.stopPropagation();cardStockAdj(${p.id},1)">+</button></div>
-          <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--acc)" title="Selecionar">
+          <span style="color: ${p.hasFornecedor ? 'var(--ok)' : 'var(--fa)'}; display: flex; align-items: center;" title="${p.hasFornecedor ? 'Fornecedor vinculado' : 'Sem fornecedor'}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
         </div>
         ${badge}
       </div>
@@ -5866,7 +5899,7 @@ async function hydrateHDImages(){
   if(_hdRunning)return;_hdRunning=true;
   try{
     let hd={};try{hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');}catch{}
-    const pend=S.products.filter(p=>p.imagemUrl&&hd[p.id]===undefined&&!String(p.imagemUrl).includes('/img/produto/')).slice(0,60);
+    const pend=S.products.filter(p=>hd[p.id]===undefined&&!String(p.imagemUrl||'').includes('/img/produto/')).slice(0,60);
     let trocadas=0;
     for(const p of pend){
       try{
@@ -5951,85 +5984,7 @@ function removeImg(e, idx) {
   renderEdImgs();
 }
 
-function updateImgPrev(prevId,inputId){
-  const url=?.value.trim();
-  const prev=;if(!prev)return;
-  if(url){
-    prev.style.display='';
-    const img=prev.querySelector('img')||Object.assign(document.createElement('img'),{style:'width:100%;height:100%;object-fit:cover'});
-    img.onerror=()=>{prev.style.display='none';};
-    img.src=url;
-    if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
-  }else{prev.style.display='none';}
-}
-// ── Hidratação HD das fotos ─────────────────────────────────────────
-// A LISTAGEM do Bling só entrega miniatura; a foto em alta só existe no
-// DETALHE de cada produto. Esta fila busca os detalhes aos poucos (1 a
-// cada ~450ms, respeitando o limite da API), troca a miniatura pela HD
-// e guarda no dispositivo — nas próximas visitas já abre em alta.
-let _hdRunning=false;
-async function hydrateHDImages(){
-  if(_hdRunning)return;_hdRunning=true;
-  try{
-    let hd={};try{hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');}catch{}
-    const pend=S.products.filter(p=>p.imagemUrl&&hd[p.id]===undefined&&!String(p.imagemUrl).includes('/img/produto/')).slice(0,60);
-    let trocadas=0;
-    for(const p of pend){
-      try{
-        const r=await fetch(\/api/produtos/\);
-        if(r.status===401)break;
-        if(!r.ok){await new Promise(s=>setTimeout(s,1500));continue;}
-        const d=await r.json();
-        const url=d.midia?.imagens?.internas?.[0]?.link||d.midia?.imagens?.externas?.[0]?.link||'';
-        if(url&&url!==p.imagemUrl){p.imagemUrl=url;hd[p.id]=url;trocadas++;}
-        else hd[p.id]='';// verificado: não há versão maior
-      }catch{break;}
-      await new Promise(s=>setTimeout(s,450));
-    }
-    try{localStorage.setItem('hd_imgs',JSON.stringify(hd));}catch{}
-    if(trocadas&&S.view==='produtos'){try{applyFilters();}catch{}}
-  }finally{_hdRunning=false;}
-}
 
-function updateImgPrev(prevId,inputId){
-  const url=$(inputId)?.value.trim();
-  const prev=$(prevId);if(!prev)return;
-  if(url){
-    prev.style.display='';
-    const img=prev.querySelector('img')||Object.assign(document.createElement('img'),{style:'width:100%;height:100%;object-fit:cover'});
-    img.onerror=()=>{prev.style.display='none';};
-    img.src=url;
-    if(!prev.querySelector('img'))prev.innerHTML='',prev.appendChild(img);
-  }else{prev.style.display='none';}
-}
-// ── Hidratação HD das fotos ─────────────────────────────────────────
-// A LISTAGEM do Bling só entrega miniatura; a foto em alta só existe no
-// DETALHE de cada produto. Esta fila busca os detalhes aos poucos (1 a
-// cada ~450ms, respeitando o limite da API), troca a miniatura pela HD
-// e guarda no dispositivo — nas próximas visitas já abre em alta.
-let _hdRunning=false;
-async function hydrateHDImages(){
-  if(_hdRunning)return;_hdRunning=true;
-  try{
-    let hd={};try{hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');}catch{}
-    const pend=S.products.filter(p=>p.imagemUrl&&hd[p.id]===undefined&&!String(p.imagemUrl).includes('/img/produto/')).slice(0,60);
-    let trocadas=0;
-    for(const p of pend){
-      try{
-        const r=await fetch(`/api/produtos/${p.id}`);
-        if(r.status===401)break;
-        if(!r.ok){await new Promise(s=>setTimeout(s,1500));continue;}
-        const d=await r.json();
-        const url=d.midia?.imagens?.internas?.[0]?.link||d.midia?.imagens?.externas?.[0]?.link||'';
-        if(url&&url!==p.imagemUrl){p.imagemUrl=url;hd[p.id]=url;trocadas++;}
-        else hd[p.id]='';// verificado: não há versão maior
-      }catch{break;}
-      await new Promise(s=>setTimeout(s,450));
-    }
-    try{localStorage.setItem('hd_imgs',JSON.stringify(hd));}catch{}
-    if(trocadas&&S.view==='produtos'){try{applyFilters();}catch{}}
-  }finally{_hdRunning=false;}
-}
 
 async function handleImgFile(file){
   if(!file)return;
