@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#34a8f7">
   <title>Entrar — Estoque Max</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     /* LEFT PANEL */
     .left{flex:0 0 460px;display:flex;flex-direction:column;justify-content:center;padding:48px 56px;background:#fff;position:relative;z-index:1;min-height:100vh;min-height:100dvh}
     .logo{display:flex;align-items:center;gap:10px;margin-bottom:40px}
-    .logo-mark{width:38px;height:38px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.4)}
+    .logo-mark{width:38px;height:38px;background:linear-gradient(135deg,#34a8f7,#62c0ff);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(52,168,247,.4)}
     .logo-name{font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-.3px}
     h1{font-size:27px;font-weight:800;color:#0f172a;letter-spacing:-.6px;margin-bottom:8px}
     .sub{font-size:14px;color:#64748b;margin-bottom:32px;line-height:1.6}
@@ -25,26 +25,26 @@
     .input-wrap{position:relative}
     .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#94a3b8;pointer-events:none}
     .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14.5px;font-family:inherit;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
-    .field input:focus{border-color:#6366f1;background:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.12)}
+    .field input:focus{border-color:#34a8f7;background:#fff;box-shadow:0 0 0 4px rgba(52,168,247,.12)}
     .field input::placeholder{color:#cbd5e1}
     .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:8px;display:flex;border-radius:8px;transition:color .12s}
     .pw-toggle:hover{color:#475569}
     .pw-toggle svg{position:static;transform:none;width:18px;height:18px}
-    .btn-main{width:100%;height:52px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(99,102,241,.4);margin-top:8px;-webkit-tap-highlight-color:transparent}
-    .btn-main:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 6px 22px rgba(99,102,241,.48)}
+    .btn-main{width:100%;height:52px;background:linear-gradient(135deg,#34a8f7,#62c0ff);color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(52,168,247,.4);margin-top:8px;-webkit-tap-highlight-color:transparent}
+    .btn-main:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 6px 22px rgba(52,168,247,.48)}
     .btn-main:active{transform:translateY(0)}
     .btn-main:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
     .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none}
     @keyframes sp{to{transform:rotate(360deg)}}
     .foot-note{font-size:12.5px;color:#94a3b8;margin-top:24px;text-align:center;line-height:1.6}
-    .pwa-bar{margin-top:20px;padding:13px 16px;background:#ede9fe;border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s;border:1px solid #ddd6fe}
-    .pwa-bar:hover{background:#ddd6fe}
-    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .pwa-bar{margin-top:20px;padding:13px 16px;background:#e6f5ff;border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s;border:1px solid #b3e0ff}
+    .pwa-bar:hover{background:#b3e0ff}
+    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,#34a8f7,#62c0ff);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .pwa-icon svg{width:16px;height:16px;color:#fff}
-    .pwa-text strong{display:block;font-size:13px;font-weight:600;color:#3730a3}
-    .pwa-text span{font-size:12px;color:#6d28d9}
+    .pwa-text strong{display:block;font-size:13px;font-weight:600;color:#0a84d6}
+    .pwa-text span{font-size:12px;color:#1a92e3}
     /* RIGHT PANEL */
-    .right{flex:1;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 60%,#6366f1 100%);display:flex;align-items:center;justify-content:center;padding:48px;position:relative;overflow:hidden}
+    .right{flex:1;background:linear-gradient(135deg,#1a92e3 0%,#0a84d6 60%,#34a8f7 100%);display:flex;align-items:center;justify-content:center;padding:48px;position:relative;overflow:hidden}
     .right::before{content:'';position:absolute;width:520px;height:520px;background:rgba(255,255,255,.05);border-radius:50%;top:-130px;right:-130px}
     .right::after{content:'';position:absolute;width:360px;height:360px;background:rgba(255,255,255,.04);border-radius:50%;bottom:-90px;left:-70px}
     .right-content{position:relative;z-index:1;text-align:center;max-width:420px}
