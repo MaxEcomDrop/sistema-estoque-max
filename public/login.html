@@ -6,173 +6,200 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#34a8f7">
-  <title>Entrar — Estoque Max</title>
+  <meta name="theme-color" content="#1e9bf0">
+  <title>Entrar — Sistema ERP Max</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="manifest" href="/manifest.json">
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;height:100vh;height:100dvh;display:flex;background:#e6f5ff;color:#1e293b;overflow:hidden}
-    .left{flex:0 0 54%;position:relative;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;background:linear-gradient(145deg,#1a92e3 0%,#34a8f7 40%,#62c0ff 75%,#b3e0ff 100%);height:100vh;height:100dvh}
-    .left-bg{position:absolute;inset:0;background:url('/img/login_bg.jpg') center/cover no-repeat;opacity:1}
-    .left-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(26,146,227,.10) 0%,rgba(26,146,227,.05) 50%,rgba(10,64,102,.60) 100%)}
-    .left-badge{position:absolute;top:28px;left:28px;background:rgba(255,255,255,0.20);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.35);border-radius:100px;padding:7px 16px;font-size:12px;font-weight:700;color:#fff;letter-spacing:.4px;display:flex;align-items:center;gap:8px;z-index:2}
-    .left-badge-dot{width:7px;height:7px;border-radius:50%;background:#62c0ff;box-shadow:0 0 8px #62c0ff}
-    .left-copy{position:relative;z-index:2;padding:36px 44px}
-    .left-copy h2{font-size:34px;font-weight:800;color:#fff;letter-spacing:-.7px;line-height:1.2;text-shadow:0 2px 20px rgba(0,0,0,.35);margin-bottom:10px}
-    .left-copy p{font-size:15px;color:#fff;line-height:1.6;text-shadow:0 1px 8px rgba(0,0,0,.3);max-width:420px}
-    .right{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 40px;background:#ffffff;height:100vh;height:100dvh;position:relative;overflow:hidden}
-    .right::before{content:'';position:absolute;top:-120px;right:-120px;width:340px;height:340px;background:radial-gradient(circle,rgba(33,150,243,.07) 0%,transparent 70%);border-radius:50%;pointer-events:none}
-    .form-card{width:100%;max-width:400px;position:relative;z-index:1;max-height:calc(100vh - 64px);overflow-y:auto;scrollbar-width:none}
-    .form-card::-webkit-scrollbar{display:none}
-    .logo-block{text-align:center;margin-bottom:28px}
-    .logo-mark{width:140px;height:140px;background:transparent !important;border-radius:0;display:inline-flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#34a8f7;box-shadow:none !important;margin-bottom:14px;overflow:hidden}
-    .logo-mark img{width:100%;height:100%;object-fit:contain;border-radius:inherit}
-    .brand-name{font-size:18px;font-weight:800;color:#1a92e3;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:2px}
-    .brand-sub{font-size:11px;font-weight:600;color:#34a8f7;letter-spacing:2px;text-transform:uppercase}
-    .form-title{font-size:22px;font-weight:700;color:#0a84d6;text-align:center;margin-bottom:4px}
-    .form-desc{font-size:13px;color:#90a4ae;text-align:center;margin-bottom:28px}
-    .err-box{background:#fff3f3;border:1.5px solid #ffcdd2;color:#c62828;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;display:none;align-items:center;gap:8px;animation:shake .4s}
+    :root{--az:#1e9bf0;--az-h:#0d86d8;--az-esc:#0b6db3;--az-bg:#e8f5fe;--tx:#16324a;--mu:#64748b}
+    /* Tela fixa: o login nunca rola — se faltar altura, só o painel do
+       cartão rola por dentro, a página em si fica travada. */
+    html,body{height:100vh;height:100dvh;overflow:hidden}
+    body{font-family:'Inter',system-ui,sans-serif;display:flex;background:#fff;color:var(--tx)}
+    /* HERO (mascote) */
+    .hero{flex:1;background:linear-gradient(160deg,#39acf5 0%,var(--az) 45%,#0b7fd4 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:56px;height:100vh;height:100dvh}
+    .hero::before{content:'';position:absolute;width:560px;height:560px;background:rgba(255,255,255,.07);border-radius:50%;top:-160px;right:-140px}
+    .hero::after{content:'';position:absolute;width:400px;height:400px;background:rgba(255,255,255,.05);border-radius:50%;bottom:-120px;left:-90px}
+    .hero-badge{position:absolute;top:34px;left:38px;z-index:2;display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:10px 20px;font-size:12.5px;font-weight:800;letter-spacing:.8px;color:var(--tx);box-shadow:0 8px 24px rgba(6,60,105,.22)}
+    .hero-badge::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--az);flex-shrink:0}
+    .hero-mascote{position:relative;z-index:1;max-width:min(560px,82%);max-height:66vh;object-fit:contain;border-radius:30px;box-shadow:0 30px 70px rgba(4,48,86,.35);display:none}
+    .hero-fallback{position:relative;z-index:1;width:min(420px,70%);aspect-ratio:1;border-radius:34px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:170px;font-weight:900;color:var(--az);letter-spacing:-8px;box-shadow:0 30px 70px rgba(4,48,86,.3)}
+    .hero-copy{position:absolute;left:38px;bottom:40px;right:38px;z-index:2;max-width:640px}
+    .hero-copy h2{font-size:clamp(28px,3.4vw,44px);font-weight:800;color:#fff;letter-spacing:-1px;line-height:1.12;margin-bottom:14px;text-shadow:0 2px 18px rgba(4,48,86,.25)}
+    .hero-copy p{font-size:15.5px;color:rgba(255,255,255,.88);line-height:1.65;max-width:560px}
+    /* PAINEL DO CARTÃO */
+    .left{flex:0 0 520px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:36px 56px;background:#f6fafd;position:relative;z-index:1;height:100vh;height:100dvh;overflow-y:auto;scrollbar-width:none}
+    .left::-webkit-scrollbar{display:none}
+    .card{width:100%;max-width:400px;background:#fff;border-radius:22px;padding:38px 34px 30px;box-shadow:0 18px 50px rgba(9,66,112,.10),0 2px 8px rgba(9,66,112,.05)}
+    .logo{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:26px;text-align:center}
+    .logo-mark{width:64px;height:64px;background:#fff;border:1px solid #e3eef7;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;color:var(--az);box-shadow:0 10px 26px rgba(30,155,240,.22);margin-bottom:16px;overflow:hidden}
+    .logo-mark img{width:100%;height:100%;object-fit:contain}
+    .logo-name{font-size:24px;font-weight:800;color:var(--tx);letter-spacing:.5px;text-transform:uppercase}
+    .logo-tag{font-size:12px;font-weight:800;color:var(--az);letter-spacing:3px;margin-top:3px;text-transform:uppercase}
+    h1{font-size:19px;font-weight:800;color:var(--tx);letter-spacing:-.3px;margin-bottom:6px;text-align:center}
+    .sub{font-size:13px;color:var(--mu);margin-bottom:24px;line-height:1.6;text-align:center}
+    .err-box{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;display:none;align-items:center;gap:8px;animation:shake .4s}
     @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
     .field{margin-bottom:16px}
-    .field label{display:block;font-size:11.5px;font-weight:700;color:#546e7a;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+    .field label{display:block;font-size:11px;font-weight:700;color:#5a7184;margin-bottom:7px;letter-spacing:.8px;text-transform:uppercase}
     .input-wrap{position:relative}
-    .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#90a4ae;pointer-events:none}
-    .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#e6f5ff;border:1.5px solid #b3e0ff;border-radius:12px;font-size:14.5px;font-family:inherit;color:#0a84d6;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
-    .field input:focus{border-color:#34a8f7;background:#fff;box-shadow:0 0 0 4px rgba(52,168,247,.12)}
-    .field input::placeholder{color:#b0bec5}
-    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#90a4ae;padding:8px;display:flex;border-radius:8px;transition:color .12s}
-    .pw-toggle:hover{color:#34a8f7}
-    .pw-toggle svg{position:static;transform:none;width:17px;height:17px}
-    .btn-main{width:100%;height:52px;background:#34a8f7;color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 20px rgba(52,168,247,.4);margin-top:8px;letter-spacing:.2px;-webkit-tap-highlight-color:transparent}
-    .btn-main:hover{background:#1a92e3;transform:translateY(-1px);box-shadow:0 8px 26px rgba(52,168,247,.5)}
+    .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#9db4c6;pointer-events:none}
+    .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#f8fbfd;border:1.5px solid #dfeaf3;border-radius:12px;font-size:14.5px;font-family:inherit;color:var(--tx);outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+    .field input:focus{border-color:var(--az);background:#fff;box-shadow:0 0 0 4px rgba(30,155,240,.14)}
+    .field input::placeholder{color:#b6c8d8}
+    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9db4c6;padding:8px;display:flex;border-radius:8px;transition:color .12s}
+    .pw-toggle:hover{color:#5a7184}
+    .pw-toggle svg{position:static;transform:none;width:18px;height:18px}
+    .btn-main{width:100%;height:52px;background:linear-gradient(135deg,var(--az),var(--az-h));color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 18px rgba(30,155,240,.38);margin-top:8px;-webkit-tap-highlight-color:transparent}
+    .btn-main:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 8px 24px rgba(30,155,240,.46)}
     .btn-main:active{transform:translateY(0)}
     .btn-main:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
-    .btn-google{width:100%;height:50px;background:#fff;color:#374151;border:1.5px solid #b3e0ff;border-radius:13px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 8px rgba(52,168,247,.08);-webkit-tap-highlight-color:transparent}
-    .btn-google:hover{background:#e6f5ff;border-color:#62c0ff;transform:translateY(-1px);box-shadow:0 4px 14px rgba(52,168,247,.12)}
-    .btn-google:active{transform:translateY(0)}
-    .btn-google:disabled{opacity:.6;cursor:not-allowed;transform:none}
-    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#b0bec5}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:#b3e0ff}
-    .divider span{font-size:12px;font-weight:600;letter-spacing:.5px}
+    .divisor{display:flex;align-items:center;gap:12px;margin:18px 0 2px;color:#9db4c6;font-size:11px;font-weight:700;letter-spacing:1.5px}
+    .divisor::before,.divisor::after{content:'';flex:1;height:1px;background:#e3eef7}
     .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .tip-box{background:#fffde7;border:1.5px solid #fff176;border-radius:10px;padding:11px 14px;font-size:12.5px;color:#f57f17;margin-top:16px;line-height:1.5}
-    .tip-box strong{color:#e65100}
-    .foot-links{margin-top:20px;text-align:center}
-    .foot-links a{font-size:13px;color:#34a8f7;font-weight:600;text-decoration:none}
-    .foot-links a:hover{text-decoration:underline}
-    .ssl-note{margin-top:14px;text-align:center;font-size:11.5px;color:#b0bec5;display:flex;align-items:center;justify-content:center;gap:5px}
-    .ssl-note svg{width:12px;height:12px;color:#b0bec5}
-    .pwa-bar{margin-top:16px;padding:12px 15px;background:#e6f5ff;border:1.5px solid #b3e0ff;border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s}
-    .pwa-bar:hover{background:#b3e0ff}
-    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,#1a92e3,#34a8f7);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .foot-note{font-size:11px;font-weight:700;color:#9db4c6;margin-top:22px;text-align:center;line-height:1.6;letter-spacing:1.2px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:6px}
+    .foot-note svg{width:13px;height:13px}
+    .pwa-bar{margin-top:18px;padding:13px 16px;background:var(--az-bg);border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s;border:1px solid #cfeafd}
+    .pwa-bar:hover{background:#d8eefc}
+    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--az),var(--az-h));border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .pwa-icon svg{width:16px;height:16px;color:#fff}
-    .pwa-text strong{display:block;font-size:13px;font-weight:600;color:#0a84d6}
-    .pwa-text span{font-size:12px;color:#1a92e3}
-    @media(max-width:860px){body{flex-direction:column;height:auto;overflow-y:auto}.left{flex:none;height:50vh;justify-content:flex-end}.right{height:auto;min-height:50vh;padding:28px 24px 36px;overflow:visible}.form-card{max-height:none;overflow:visible}}
-    @media(max-width:500px){.left-copy h2{font-size:26px}.left-copy{padding:24px 24px}.left-badge{top:16px;left:16px}}
+    .pwa-text strong{display:block;font-size:13px;font-weight:600;color:var(--az-esc)}
+    .pwa-text span{font-size:12px;color:var(--az-h)}
+    @media(max-width:900px){
+      body{flex-direction:column}
+      .hero{display:none}
+      .left{flex:none;width:100%;height:100vh;height:100dvh;padding:max(24px,env(safe-area-inset-top)) 20px 24px}
+      .card{padding:28px 24px 24px}
+      .logo-mark{width:56px;height:56px;font-size:30px;margin-bottom:12px}
+      .logo{margin-bottom:18px}
+      .sub{margin-bottom:18px}
+    }
   </style>
 </head>
 <body>
 
-<div class="left">
-  <div class="left-bg"></div>
-  <div class="left-overlay"></div>
-  <div class="left-badge">
-    <span class="left-badge-dot"></span>
-    <span id="badge-label">SISTEMA MAX ESTOQUE V2.0</span>
-  </div>
-  <div class="left-copy">
-    <h2>Precisao e Velocidade<br>em Gestao de Estoque</h2>
-    <p>Controle produtos, pedidos e financas integrados ao Bling ERP em tempo real, do celular ou computador.</p>
+<div class="hero">
+  <div class="hero-badge" id="hero-badge">SISTEMA ERP MAX V2.0</div>
+  <!-- Mascote: 1º a imagem enviada pelo usuário (CDN Shopify); 2º o arquivo
+       fixo public/mascote.png; 3º o logo enviado em Configurações (/img/logo);
+       sem nenhum dos três, mostra o quadrado com o M. -->
+  <img class="hero-mascote" id="hero-mascote" src="https://cdn.shopify.com/s/files/1/0725/2502/1322/files/FOTO_PERFIL_MAX_RENOVACAO_b319aedc-4828-4b26-ac23-1eb59d17e7a6.png?v=1783694971" alt="Mascote do sistema"
+       onload="this.style.display='block';document.getElementById('hero-fallback').style.display='none'"
+       onerror="if(!this.dataset.try2){this.dataset.try2=1;this.src='/mascote.png';}else if(!this.dataset.try3){this.dataset.try3=1;this.src='/img/logo';}else{this.style.display='none';document.getElementById('hero-fallback').style.display='flex';}">
+  <div class="hero-fallback" id="hero-fallback">M</div>
+  <div class="hero-copy">
+    <h2>Gestão completa de<br>Estoque e Vendas</h2>
+    <p>Produtos, pedidos, NF-e e financeiro num só painel — conectado ao Bling e ao Mercado Livre em tempo real.</p>
   </div>
 </div>
 
-<div class="right">
-  <div class="form-card">
-    <div class="logo-block">
-      <div class="logo-mark" id="app-bmark">M</div>
-      <span class="brand-name" id="app-bname">SISTEMA MAX</span>
-      <span class="brand-sub">ESTOQUE ERP</span>
-    </div>
-    <div class="form-title">Acesse sua conta</div>
-    <div class="form-desc">Insira suas credenciais para gerenciar a plataforma</div>
-    <div class="err-box" id="errBox">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="errMsg"></span>
-    </div>
-    <form id="loginForm" onsubmit="doLogin(event)">
-      <div class="field">
-        <label for="email">E-MAIL</label>
-        <div class="input-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="username" required>
-        </div>
+<div class="left">
+ <div class="card">
+  <div class="logo">
+    <div class="logo-mark" id="app-bmark">M</div>
+    <span class="logo-name" id="app-bname">Sistema ERP Max</span>
+    <span class="logo-tag">Gestão &amp; Estoque</span>
+  </div>
+
+  <h1>Acesse sua conta</h1>
+  <p class="sub">Insira suas credenciais para gerenciar a plataforma.</p>
+
+  <div class="err-box" id="errBox">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="errMsg"></span>
+  </div>
+
+  <form id="loginForm" onsubmit="doLogin(event)">
+    <div class="field">
+      <label for="email">E-mail</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="username" required>
       </div>
-      <div class="field">
-        <label for="password">SENHA</label>
-        <div class="input-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <input type="password" id="password" name="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" required>
-          <button type="button" class="pw-toggle" id="pwToggle" onclick="togglePw()" aria-label="Mostrar senha">
-            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
+    </div>
+    <div class="field">
+      <label for="password">Senha</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+        <button type="button" class="pw-toggle" id="pwToggle" onclick="togglePw()" aria-label="Mostrar senha">
+          <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
       </div>
-      <button class="btn-main" id="btnSubmit" type="submit">
-        <div class="spin" id="spin"></div>
-        <span id="btnTxt">Entrar no Painel</span>
-      </button>
-    </form>
-    <div class="divider"><span>OU</span></div>
-    <button type="button" class="btn-google" id="googleLoginBtn" onclick="loginWithGoogle()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-      <span>Entrar com o Google</span>
+    </div>
+    <button class="btn-main" id="btnSubmit" type="submit">
+      <div class="spin" id="spin"></div>
+      <span id="btnTxt">Entrar no Painel</span>
     </button>
-    <div class="tip-box">
-      <strong>Dica de Conexao:</strong> Se o login do Google falhar ou atualizar sem entrar, clique em <strong>"Criar Conta"</strong> abaixo para registrar seu e-mail com senha e entrar de forma direta.
-    </div>
-    <div class="foot-links">
-      <span style="font-size:13px;color:#90a4ae;">Novo no sistema? </span>
-      <a href="#" onclick="alert('Entre em contato com o administrador para criar sua conta.');return false;">Criar uma Conta</a>
-    </div>
-    <div class="ssl-note">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      CRIPTOGRAFIA SSL PROTEGIDA
-    </div>
-    <div class="pwa-bar" id="pwa-install" onclick="installPWA()">
-      <div class="pwa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg></div>
-      <div class="pwa-text">
-        <strong>Instalar como aplicativo</strong>
-        <span>Acesse pelo celular como app nativo</span>
-      </div>
+  </form>
+
+  <div class="divisor">OU</div>
+
+  <button type="button" class="btn-main" id="googleLoginBtn" onclick="loginWithGoogle()" style="background:linear-gradient(135deg,#fff 0%,#f8fbfd 100%);color:#16324a;border:1.5px solid #dfeaf3;box-shadow:0 2px 8px rgba(9,66,112,.08);margin-top:16px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    <span>Entrar com o Google</span>
+  </button>
+
+  <div class="pwa-bar" id="pwa-install" onclick="installPWA()">
+    <div class="pwa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg></div>
+    <div class="pwa-text">
+      <strong>Instalar como aplicativo</strong>
+      <span>Acesse pelo celular como app nativo — Android e iOS</span>
     </div>
   </div>
+
+  <p class="foot-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Criptografia SSL protegida<span id="app-bname-inline" style="display:none"></span></p>
+ </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
+  // Identidade do sistema (nome/ícone/logo/cor global) personalizável em
+  // Configurações — reflete aqui na tela de login também.
+  function hexToRgb(hex){const n=parseInt(hex.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+  function rgbToHex(r,g,b){return'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+  function mixColor(hex,target,amt){const[r,g,b]=hexToRgb(hex);return rgbToHex(r+(target[0]-r)*amt,g+(target[1]-g)*amt,b+(target[2]-b)*amt);}
   (async()=>{
     try{
       const r=await fetch('/api/config'),d=await r.json();
       if(!r.ok||!d)return;
-      document.title=`Entrar - ${d.nome}`;
+      document.title=`Entrar — ${d.nome}`;
+      // Marca do cartão: ícone enviado em Configurações; senão a inicial em
+      // azul sobre fundo branco (padrão da identidade "M").
       const bmark=document.getElementById('app-bmark');
       if(bmark){
-        if(d.temLogo){bmark.innerHTML=`<img src="/img/logo?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`;bmark.style.background='transparent';bmark.style.boxShadow='none';}
-        else{bmark.textContent=d.iniciais;}
+        if(d.temIcone)bmark.innerHTML=`<img src="/img/icone?v=${Date.now()}" alt="">`;
+        else{bmark.textContent=d.iniciais;bmark.style.color=d.cor;}
       }
       const bname=document.getElementById('app-bname');if(bname)bname.textContent=d.nome;
-      const badge=document.getElementById('badge-label');if(badge)badge.textContent=`${d.nome.toUpperCase()} V2.0`;
+      const badge=document.getElementById('hero-badge');if(badge)badge.textContent=`${d.nome} V2.0`.toUpperCase();
+      // Mascote do herói: se o arquivo fixo /mascote.png não existir, o
+      // onerror da própria <img> já cai para /img/logo (upload) e depois
+      // para o quadrado com o M — nada a fazer aqui.
       let link=document.querySelector("link[rel~='icon']");
       if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
-      link.href=d.temIcone?`/img/icone?v=${Date.now()}`:`data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\''+d.cor+'\'/><text x=\'50\' y=\'68\' text-anchor=\'middle\' font-size=\'55\' font-weight=\'700\' fill=\'white\' font-family=\'Inter,sans-serif\'>'+d.iniciais+'</text></svg>')}`;
+      link.href=d.temIcone?`/img/icone?v=${Date.now()}`:`data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='white' stroke='%23e3eef7' stroke-width='2'/><text x='50' y='70' text-anchor='middle' font-size='58' font-weight='800' fill='${d.cor}' font-family='Inter,sans-serif'>${d.iniciais}</text></svg>`)}`;
+      // Cor global configurável — só injeta overrides se fugir do azul padrão.
+      if(d.cor&&d.cor.toLowerCase()!=='#1e9bf0'){
+        const cor2=mixColor(d.cor,[255,255,255],.28);
+        const style=document.createElement('style');
+        style.textContent=`.logo-mark{color:${d.cor} !important}
+.logo-tag{color:${d.cor} !important}
+.field input:focus{border-color:${d.cor} !important;box-shadow:0 0 0 4px ${d.cor}22 !important}
+.btn-main:not(#googleLoginBtn){background:linear-gradient(135deg,${d.cor},${cor2}) !important}
+.pwa-icon{background:linear-gradient(135deg,${d.cor},${cor2}) !important}
+.hero{background:linear-gradient(160deg,${cor2} 0%,${d.cor} 45%,${mixColor(d.cor,[0,0,0],.18)} 100%) !important}
+.hero-badge::before,.hero-fallback{color:${d.cor} !important;background-color:#fff}
+.hero-badge::before{background:${d.cor} !important}`;
+        document.head.appendChild(style);
+      }
     }catch(e){console.error('[config]',e);}
   })();
-
+  // Initialize Firebase with config from project
   firebase.initializeApp({
     apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
     authDomain:"erp-max-sistema.firebaseapp.com",
@@ -182,92 +209,159 @@
     appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
   });
 
-  const _p=new URLSearchParams(location.search);
-  const _err=_p.get('error');
-  if(_err){
-    const msgs={session_expired:'Sua sessao expirou. Entre novamente.',invalid_request:'Requisicao invalida. Verifique a configuracao do app no Bling.',access_denied:'Acesso negado ao Bling. Autorize o app para continuar.',token_exchange_failed:'Falha ao obter o token do Bling.'};
-    showErr(msgs[_err]||`Erro: ${_err}`);
+  // Mensagem de erro vinda de redirect (?error=...)
+  const p = new URLSearchParams(location.search);
+  const err = p.get('error');
+  if (err) {
+    const msgs = {
+      session_expired: 'Sua sessão expirou. Entre novamente.',
+      invalid_request: 'Requisição inválida. Verifique a configuração do app no Bling.',
+      access_denied:   'Acesso negado ao Bling. Autorize o app para continuar.',
+      token_exchange_failed: 'Falha ao obter o token do Bling — normalmente é a URL de redirecionamento cadastrada no Bling que não bate com a do servidor. Depois de entrar, veja em Configurações → Diagnóstico ao vivo.',
+    };
+    showErr(msgs[err] || `Erro: ${err}`);
   }
 
-  function showErr(msg){document.getElementById('errMsg').textContent=msg;document.getElementById('errBox').style.display='flex';}
-  function hideErr(){document.getElementById('errBox').style.display='none';}
-
-  function togglePw(){
-    const inp=document.getElementById('password');
-    const eye=document.getElementById('eyeIcon');
-    if(inp.type==='password'){inp.type='text';eye.innerHTML='<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';}
-    else{inp.type='password';eye.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';}
+  function showErr(msg) {
+    document.getElementById('errMsg').textContent = msg;
+    document.getElementById('errBox').style.display = 'flex';
+  }
+  function hideErr() {
+    document.getElementById('errBox').style.display = 'none';
   }
 
-  async function doLogin(e){
-    e.preventDefault();hideErr();
-    const email=document.getElementById('email').value.trim();
-    const password=document.getElementById('password').value;
-    const btn=document.getElementById('btnSubmit');
-    const spin=document.getElementById('spin');
-    const txt=document.getElementById('btnTxt');
-    btn.disabled=true;spin.style.display='block';txt.textContent='Entrando...';
-    try{
-      const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-      const data=await res.json().catch(()=>({}));
-      if(res.ok&&data.success){window.location.href='/';return;}
-      showErr(data.error||'E-mail ou senha incorretos.');
-    }catch(err){showErr('Erro de conexao. Tente novamente.');}
-    finally{btn.disabled=false;spin.style.display='none';txt.textContent='Entrar no Painel';}
-  }
-
-  const GOOGLE_BTN_HTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg><span>Entrar com o Google</span>';
-
-  async function finishGoogleLogin(user){
-    const idToken=await user.getIdToken();
-    const res=await fetch('/api/auth/firebase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,email:user.email})});
-    const data=await res.json().catch(()=>({}));
-    if(res.ok&&data.success){window.location.href='/';return true;}
-    showErr(data.error||'Erro ao autenticar. Tente novamente.');return false;
-  }
-
-  function resetGoogleBtn(){const btn=document.getElementById('googleLoginBtn');btn.disabled=false;btn.innerHTML=GOOGLE_BTN_HTML;}
-
-  async function loginWithGoogle(){
-    const btn=document.getElementById('googleLoginBtn');
-    btn.disabled=true;btn.textContent='Aguarde...';
-    const provider=new firebase.auth.GoogleAuthProvider();
-    try{
-      const result=await firebase.auth().signInWithPopup(provider);
-      const ok=await finishGoogleLogin(result.user);
-      if(!ok)resetGoogleBtn();
-    }catch(err){
-      const popupBlocked=['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(err.code);
-      if(popupBlocked){
-        try{await firebase.auth().signInWithRedirect(provider);return;}
-        catch(err2){showErr(err2.message||'Erro ao conectar com Google.');resetGoogleBtn();}
-        return;
-      }
-      showErr(err.message||'Erro ao conectar com Google.');resetGoogleBtn();
+  function togglePw() {
+    const inp = document.getElementById('password');
+    const eye = document.getElementById('eyeIcon');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      eye.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      inp.type = 'password';
+      eye.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
   }
 
-  firebase.auth().getRedirectResult().then(async(result)=>{
-    if(!result||!result.user)return;
-    const btn=document.getElementById('googleLoginBtn');
-    btn.disabled=true;btn.textContent='Entrando...';
-    const ok=await finishGoogleLogin(result.user);
-    if(!ok)resetGoogleBtn();
-  }).catch(err=>{
-    if(err&&err.code!=='auth/no-auth-event')showErr(err.message||'Erro ao conectar com Google.');
+  async function doLogin(e) {
+    e.preventDefault();
+    hideErr();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('btnSubmit');
+    const spin = document.getElementById('spin');
+    const txt = document.getElementById('btnTxt');
+
+    btn.disabled = true; spin.style.display = 'block'; txt.textContent = 'Entrando…';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        // Login OK → vai para a tela de conexão / dashboard
+        window.location.href = '/';
+        return;
+      }
+      showErr(data.error || 'E-mail ou senha incorretos.');
+    } catch (err) {
+      showErr('Erro de conexão. Tente novamente.');
+    } finally {
+      btn.disabled = false; spin.style.display = 'none'; txt.textContent = 'Entrar';
+    }
+  }
+
+  const GOOGLE_BTN_HTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg><span>Entrar com o Google</span>';
+
+  // Troca o token do Firebase pelo JWT do sistema e entra.
+  async function finishGoogleLogin(user) {
+    const idToken = await user.getIdToken();
+    const res = await fetch('/api/auth/firebase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, email: user.email }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      window.location.href = '/';
+      return true;
+    }
+    showErr(data.error || 'Erro ao autenticar. Tente novamente.');
+    return false;
+  }
+
+  function resetGoogleBtn() {
+    const btn = document.getElementById('googleLoginBtn');
+    btn.disabled = false;
+    btn.innerHTML = GOOGLE_BTN_HTML;
+  }
+
+  // signInWithPopup trava silenciosamente em muitos celulares e navegadores
+  // (bloqueio de pop-up, Safari com cookies de terceiros bloqueados,
+  // WebView do Instagram/Facebook) — é a causa mais comum de "o login com
+  // Google não funciona" sem nenhuma mensagem de erro clara. Tentamos popup
+  // primeiro (mais rápido no desktop) e caímos para redirect automaticamente
+  // quando o navegador recusa o popup.
+  async function loginWithGoogle() {
+    const btn = document.getElementById('googleLoginBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Aguarde…';
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+      const result = await firebase.auth().signInWithPopup(provider);
+      const ok = await finishGoogleLogin(result.user);
+      if (!ok) resetGoogleBtn();
+    } catch (err) {
+      const popupBlocked = [
+        'auth/popup-blocked', 'auth/popup-closed-by-user',
+        'auth/cancelled-popup-request', 'auth/operation-not-supported-in-this-environment',
+      ].includes(err.code);
+      if (popupBlocked) {
+        try {
+          await firebase.auth().signInWithRedirect(provider);
+          return; // a página vai navegar para o Google — nada mais a fazer aqui
+        } catch (err2) {
+          showErr(err2.message || 'Erro ao conectar com Google. Tente novamente.');
+          resetGoogleBtn();
+        }
+        return;
+      }
+      showErr(err.message || 'Erro ao conectar com Google. Tente novamente.');
+      resetGoogleBtn();
+    }
+  }
+
+  // Ao voltar do redirect do Google (signInWithRedirect acima), finaliza o
+  // login automaticamente. Sem isso, o navegador volta para /login e nada
+  // acontece — parecendo que "o login com Google não funciona".
+  firebase.auth().getRedirectResult().then(async (result) => {
+    if (!result || !result.user) return;
+    const btn = document.getElementById('googleLoginBtn');
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    const ok = await finishGoogleLogin(result.user);
+    if (!ok) resetGoogleBtn();
+  }).catch(err => {
+    if (err && err.code !== 'auth/no-auth-event') showErr(err.message || 'Erro ao conectar com Google. Tente novamente.');
   });
 
+  // PWA install
   let deferredPrompt;
-  window.addEventListener('beforeinstallprompt',e=>{
-    e.preventDefault();deferredPrompt=e;
-    document.getElementById('pwa-install').style.display='flex';
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById('pwa-install').style.display = 'flex';
   });
-  function installPWA(){
-    if(!deferredPrompt)return;
+  function installPWA() {
+    if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('pwa-install').style.display='none';});
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; document.getElementById('pwa-install').style.display = 'none'; });
   }
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}
+  // Service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 </script>
 </body>
 </html>
