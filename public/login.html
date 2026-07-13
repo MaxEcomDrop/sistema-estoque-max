@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#34a8f7">
   <title>Entrar — Estoque Max</title>
@@ -10,143 +13,140 @@
   <link rel="manifest" href="/manifest.json">
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;background:#f8fafc;color:#0f172a}
-    /* LEFT PANEL */
-    .left{flex:0 0 460px;display:flex;flex-direction:column;justify-content:center;padding:48px 56px;background:#fff;position:relative;z-index:1;min-height:100vh;min-height:100dvh}
-    .logo{display:flex;align-items:center;gap:10px;margin-bottom:40px}
-    .logo-mark{width:38px;height:38px;background:linear-gradient(135deg,#34a8f7,#62c0ff);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(52,168,247,.4)}
-    .logo-name{font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-.3px}
-    h1{font-size:27px;font-weight:800;color:#0f172a;letter-spacing:-.6px;margin-bottom:8px}
-    .sub{font-size:14px;color:#64748b;margin-bottom:32px;line-height:1.6}
-    .err-box{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;display:none;align-items:center;gap:8px;animation:shake .4s}
+    body{font-family:'Inter',system-ui,sans-serif;height:100vh;height:100dvh;display:flex;background:#e6f5ff;color:#1e293b;overflow:hidden}
+    .left{flex:0 0 54%;position:relative;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;background:linear-gradient(145deg,#1a92e3 0%,#34a8f7 40%,#62c0ff 75%,#b3e0ff 100%);height:100vh;height:100dvh}
+    .left-bg{position:absolute;inset:0;background:url('/img/login_bg.jpg') center/cover no-repeat;opacity:1}
+    .left-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(26,146,227,.10) 0%,rgba(26,146,227,.05) 50%,rgba(10,64,102,.60) 100%)}
+    .left-badge{position:absolute;top:28px;left:28px;background:rgba(255,255,255,0.20);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.35);border-radius:100px;padding:7px 16px;font-size:12px;font-weight:700;color:#fff;letter-spacing:.4px;display:flex;align-items:center;gap:8px;z-index:2}
+    .left-badge-dot{width:7px;height:7px;border-radius:50%;background:#62c0ff;box-shadow:0 0 8px #62c0ff}
+    .left-copy{position:relative;z-index:2;padding:36px 44px}
+    .left-copy h2{font-size:34px;font-weight:800;color:#fff;letter-spacing:-.7px;line-height:1.2;text-shadow:0 2px 20px rgba(0,0,0,.35);margin-bottom:10px}
+    .left-copy p{font-size:15px;color:#fff;line-height:1.6;text-shadow:0 1px 8px rgba(0,0,0,.3);max-width:420px}
+    .right{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 40px;background:#ffffff;height:100vh;height:100dvh;position:relative;overflow:hidden}
+    .right::before{content:'';position:absolute;top:-120px;right:-120px;width:340px;height:340px;background:radial-gradient(circle,rgba(33,150,243,.07) 0%,transparent 70%);border-radius:50%;pointer-events:none}
+    .form-card{width:100%;max-width:400px;position:relative;z-index:1;max-height:calc(100vh - 64px);overflow-y:auto;scrollbar-width:none}
+    .form-card::-webkit-scrollbar{display:none}
+    .logo-block{text-align:center;margin-bottom:28px}
+    .logo-mark{width:140px;height:140px;background:transparent !important;border-radius:0;display:inline-flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#34a8f7;box-shadow:none !important;margin-bottom:14px;overflow:hidden}
+    .logo-mark img{width:100%;height:100%;object-fit:contain;border-radius:inherit}
+    .brand-name{font-size:18px;font-weight:800;color:#1a92e3;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:2px}
+    .brand-sub{font-size:11px;font-weight:600;color:#34a8f7;letter-spacing:2px;text-transform:uppercase}
+    .form-title{font-size:22px;font-weight:700;color:#0a84d6;text-align:center;margin-bottom:4px}
+    .form-desc{font-size:13px;color:#90a4ae;text-align:center;margin-bottom:28px}
+    .err-box{background:#fff3f3;border:1.5px solid #ffcdd2;color:#c62828;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:18px;display:none;align-items:center;gap:8px;animation:shake .4s}
     @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
     .field{margin-bottom:16px}
-    .field label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:7px;letter-spacing:.2px}
+    .field label{display:block;font-size:11.5px;font-weight:700;color:#546e7a;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
     .input-wrap{position:relative}
-    .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#94a3b8;pointer-events:none}
-    .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14.5px;font-family:inherit;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+    .input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#90a4ae;pointer-events:none}
+    .field input{width:100%;height:50px;padding:0 14px 0 42px;background:#e6f5ff;border:1.5px solid #b3e0ff;border-radius:12px;font-size:14.5px;font-family:inherit;color:#0a84d6;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
     .field input:focus{border-color:#34a8f7;background:#fff;box-shadow:0 0 0 4px rgba(52,168,247,.12)}
-    .field input::placeholder{color:#cbd5e1}
-    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:8px;display:flex;border-radius:8px;transition:color .12s}
-    .pw-toggle:hover{color:#475569}
-    .pw-toggle svg{position:static;transform:none;width:18px;height:18px}
-    .btn-main{width:100%;height:52px;background:linear-gradient(135deg,#34a8f7,#62c0ff);color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 16px rgba(52,168,247,.4);margin-top:8px;-webkit-tap-highlight-color:transparent}
-    .btn-main:hover{opacity:.94;transform:translateY(-1px);box-shadow:0 6px 22px rgba(52,168,247,.48)}
+    .field input::placeholder{color:#b0bec5}
+    .pw-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#90a4ae;padding:8px;display:flex;border-radius:8px;transition:color .12s}
+    .pw-toggle:hover{color:#34a8f7}
+    .pw-toggle svg{position:static;transform:none;width:17px;height:17px}
+    .btn-main{width:100%;height:52px;background:#34a8f7;color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 20px rgba(52,168,247,.4);margin-top:8px;letter-spacing:.2px;-webkit-tap-highlight-color:transparent}
+    .btn-main:hover{background:#1a92e3;transform:translateY(-1px);box-shadow:0 8px 26px rgba(52,168,247,.5)}
     .btn-main:active{transform:translateY(0)}
     .btn-main:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+    .btn-google{width:100%;height:50px;background:#fff;color:#374151;border:1.5px solid #b3e0ff;border-radius:13px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 8px rgba(52,168,247,.08);-webkit-tap-highlight-color:transparent}
+    .btn-google:hover{background:#e6f5ff;border-color:#62c0ff;transform:translateY(-1px);box-shadow:0 4px 14px rgba(52,168,247,.12)}
+    .btn-google:active{transform:translateY(0)}
+    .btn-google:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#b0bec5}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:#b3e0ff}
+    .divider span{font-size:12px;font-weight:600;letter-spacing:.5px}
     .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .foot-note{font-size:12.5px;color:#94a3b8;margin-top:24px;text-align:center;line-height:1.6}
-    .pwa-bar{margin-top:20px;padding:13px 16px;background:#e6f5ff;border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s;border:1px solid #b3e0ff}
+    .tip-box{background:#fffde7;border:1.5px solid #fff176;border-radius:10px;padding:11px 14px;font-size:12.5px;color:#f57f17;margin-top:16px;line-height:1.5}
+    .tip-box strong{color:#e65100}
+    .foot-links{margin-top:20px;text-align:center}
+    .foot-links a{font-size:13px;color:#34a8f7;font-weight:600;text-decoration:none}
+    .foot-links a:hover{text-decoration:underline}
+    .ssl-note{margin-top:14px;text-align:center;font-size:11.5px;color:#b0bec5;display:flex;align-items:center;justify-content:center;gap:5px}
+    .ssl-note svg{width:12px;height:12px;color:#b0bec5}
+    .pwa-bar{margin-top:16px;padding:12px 15px;background:#e6f5ff;border:1.5px solid #b3e0ff;border-radius:12px;display:none;align-items:center;gap:12px;cursor:pointer;transition:background .15s}
     .pwa-bar:hover{background:#b3e0ff}
-    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,#34a8f7,#62c0ff);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .pwa-icon{width:34px;height:34px;background:linear-gradient(135deg,#1a92e3,#34a8f7);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .pwa-icon svg{width:16px;height:16px;color:#fff}
     .pwa-text strong{display:block;font-size:13px;font-weight:600;color:#0a84d6}
     .pwa-text span{font-size:12px;color:#1a92e3}
-    /* RIGHT PANEL */
-    .right{flex:1;background:linear-gradient(135deg,#1a92e3 0%,#0a84d6 60%,#34a8f7 100%);display:flex;align-items:center;justify-content:center;padding:48px;position:relative;overflow:hidden}
-    .right::before{content:'';position:absolute;width:520px;height:520px;background:rgba(255,255,255,.05);border-radius:50%;top:-130px;right:-130px}
-    .right::after{content:'';position:absolute;width:360px;height:360px;background:rgba(255,255,255,.04);border-radius:50%;bottom:-90px;left:-70px}
-    .right-content{position:relative;z-index:1;text-align:center;max-width:420px}
-    .right-content h2{font-size:36px;font-weight:800;color:#fff;letter-spacing:-.8px;margin-bottom:14px;line-height:1.15}
-    .right-content h2 em{font-style:normal;color:#c4b5fd}
-    .right-content p{font-size:15px;color:rgba(255,255,255,.72);line-height:1.7;margin-bottom:40px}
-    .feat-list{display:flex;flex-direction:column;gap:12px;text-align:left}
-    .feat{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 18px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:background .15s,transform .15s}
-    .feat:hover{background:rgba(255,255,255,.16);transform:translateX(4px)}
-    .feat-ico{width:38px;height:38px;background:rgba(255,255,255,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .feat-ico svg{width:19px;height:19px;color:#fff}
-    .feat-txt{font-size:14px;color:rgba(255,255,255,.92);font-weight:500;line-height:1.3}
-    .feat-sub{font-size:12px;color:rgba(255,255,255,.55);margin-top:2px}
-    @media(max-width:860px){
-      body{flex-direction:column}
-      .left{flex:none;min-height:100vh;min-height:100dvh;padding:max(36px,env(safe-area-inset-top)) 24px 32px;justify-content:center}
-      .right{display:none}
-    }
+    @media(max-width:860px){body{flex-direction:column;height:auto;overflow-y:auto}.left{flex:none;height:50vh;justify-content:flex-end}.right{height:auto;min-height:50vh;padding:28px 24px 36px;overflow:visible}.form-card{max-height:none;overflow:visible}}
+    @media(max-width:500px){.left-copy h2{font-size:26px}.left-copy{padding:24px 24px}.left-badge{top:16px;left:16px}}
   </style>
 </head>
 <body>
 
 <div class="left">
-  <div class="logo">
-    <div class="logo-mark">EM</div>
-    <span class="logo-name">Estoque Max</span>
+  <div class="left-bg"></div>
+  <div class="left-overlay"></div>
+  <div class="left-badge">
+    <span class="left-badge-dot"></span>
+    <span id="badge-label">SISTEMA MAX ESTOQUE V2.0</span>
   </div>
-
-  <h1>Entrar na sua conta</h1>
-  <p class="sub">Acesse o painel de controle do seu estoque, vendas e finanças.</p>
-
-  <div class="err-box" id="errBox">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <span id="errMsg"></span>
+  <div class="left-copy">
+    <h2>Precisao e Velocidade<br>em Gestao de Estoque</h2>
+    <p>Controle produtos, pedidos e financas integrados ao Bling ERP em tempo real, do celular ou computador.</p>
   </div>
-
-  <button type="button" class="btn-main" id="googleLoginBtn" onclick="loginWithGoogle()" style="background:linear-gradient(135deg,#fff 0%,#f8fafc 100%);color:#0f172a;border:1.5px solid #e2e8f0;box-shadow:0 2px 8px rgba(15,23,42,.08);margin-bottom:16px">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-    <span>Entrar com Google</span>
-  </button>
-
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;color:#cbd5e1">
-    <div style="flex:1;height:1px;background:#e2e8f0"></div>
-    <span style="font-size:12px;font-weight:500">OU</span>
-    <div style="flex:1;height:1px;background:#e2e8f0"></div>
-  </div>
-
-  <form id="loginForm" onsubmit="doLogin(event)">
-    <div class="field">
-      <label for="email">E-mail</label>
-      <div class="input-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="username" required>
-      </div>
-    </div>
-    <div class="field">
-      <label for="password">Senha</label>
-      <div class="input-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
-        <button type="button" class="pw-toggle" id="pwToggle" onclick="togglePw()" aria-label="Mostrar senha">
-          <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </div>
-    </div>
-    <button class="btn-main" id="btnSubmit" type="submit">
-      <div class="spin" id="spin"></div>
-      <span id="btnTxt">Entrar</span>
-    </button>
-  </form>
-
-  <div class="pwa-bar" id="pwa-install" onclick="installPWA()">
-    <div class="pwa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg></div>
-    <div class="pwa-text">
-      <strong>Instalar como aplicativo</strong>
-      <span>Acesse pelo celular como app nativo — Android e iOS</span>
-    </div>
-  </div>
-
-  <p class="foot-note">Conexão segura · Estoque Max integrado ao Bling ERP</p>
 </div>
 
 <div class="right">
-  <div class="right-content">
-    <h2>Seu ERP na<br><em>Palma da Mão</em></h2>
-    <p>Gerencie produtos, pedidos e finanças direto do celular — conectado ao Bling em tempo real, sem precisar do computador.</p>
-    <div class="feat-list">
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-        <div><div class="feat-txt">Painel com faturamento e lucro</div><div class="feat-sub">Vendas, contas a pagar e a receber num só lugar</div></div>
+  <div class="form-card">
+    <div class="logo-block">
+      <div class="logo-mark" id="app-bmark">M</div>
+      <span class="brand-name" id="app-bname">SISTEMA MAX</span>
+      <span class="brand-sub">ESTOQUE ERP</span>
+    </div>
+    <div class="form-title">Acesse sua conta</div>
+    <div class="form-desc">Insira suas credenciais para gerenciar a plataforma</div>
+    <div class="err-box" id="errBox">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="errMsg"></span>
+    </div>
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <div class="field">
+        <label for="email">E-MAIL</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="username" required>
+        </div>
       </div>
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg></div>
-        <div><div class="feat-txt">Catálogo de produtos completo</div><div class="feat-sub">Edição, imagens, SKU, custo e preço</div></div>
+      <div class="field">
+        <label for="password">SENHA</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="password" name="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="pwToggle" onclick="togglePw()" aria-label="Mostrar senha">
+            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-        <div><div class="feat-txt">Gráficos de vendas por período</div><div class="feat-sub">Hoje, 7 dias, 30 dias ou personalizado</div></div>
-      </div>
-      <div class="feat">
-        <div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-        <div><div class="feat-txt">Alertas e notificações push</div><div class="feat-sub">Estoque crítico e pedidos em tempo real</div></div>
+      <button class="btn-main" id="btnSubmit" type="submit">
+        <div class="spin" id="spin"></div>
+        <span id="btnTxt">Entrar no Painel</span>
+      </button>
+    </form>
+    <div class="divider"><span>OU</span></div>
+    <button type="button" class="btn-google" id="googleLoginBtn" onclick="loginWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      <span>Entrar com o Google</span>
+    </button>
+    <div class="tip-box">
+      <strong>Dica de Conexao:</strong> Se o login do Google falhar ou atualizar sem entrar, clique em <strong>"Criar Conta"</strong> abaixo para registrar seu e-mail com senha e entrar de forma direta.
+    </div>
+    <div class="foot-links">
+      <span style="font-size:13px;color:#90a4ae;">Novo no sistema? </span>
+      <a href="#" onclick="alert('Entre em contato com o administrador para criar sua conta.');return false;">Criar uma Conta</a>
+    </div>
+    <div class="ssl-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      CRIPTOGRAFIA SSL PROTEGIDA
+    </div>
+    <div class="pwa-bar" id="pwa-install" onclick="installPWA()">
+      <div class="pwa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"/></svg></div>
+      <div class="pwa-text">
+        <strong>Instalar como aplicativo</strong>
+        <span>Acesse pelo celular como app nativo</span>
       </div>
     </div>
   </div>
@@ -155,7 +155,24 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
-  // Initialize Firebase with config from project
+  (async()=>{
+    try{
+      const r=await fetch('/api/config'),d=await r.json();
+      if(!r.ok||!d)return;
+      document.title=`Entrar - ${d.nome}`;
+      const bmark=document.getElementById('app-bmark');
+      if(bmark){
+        if(d.temLogo){bmark.innerHTML=`<img src="/img/logo?v=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:contain;border-radius:inherit">`;bmark.style.background='transparent';bmark.style.boxShadow='none';}
+        else{bmark.textContent=d.iniciais;}
+      }
+      const bname=document.getElementById('app-bname');if(bname)bname.textContent=d.nome;
+      const badge=document.getElementById('badge-label');if(badge)badge.textContent=`${d.nome.toUpperCase()} V2.0`;
+      let link=document.querySelector("link[rel~='icon']");
+      if(!link){link=document.createElement('link');link.rel='icon';document.head.appendChild(link);}
+      link.href=d.temIcone?`/img/icone?v=${Date.now()}`:`data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\''+d.cor+'\'/><text x=\'50\' y=\'68\' text-anchor=\'middle\' font-size=\'55\' font-weight=\'700\' fill=\'white\' font-family=\'Inter,sans-serif\'>'+d.iniciais+'</text></svg>')}`;
+    }catch(e){console.error('[config]',e);}
+  })();
+
   firebase.initializeApp({
     apiKey:"AIzaSyBN9e-vJfKk66ZW6BE9dgNDFQvbnbzM82I",
     authDomain:"erp-max-sistema.firebaseapp.com",
@@ -165,120 +182,92 @@
     appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
   });
 
-  // Mensagem de erro vinda de redirect (?error=...)
-  const p = new URLSearchParams(location.search);
-  const err = p.get('error');
-  if (err) {
-    const msgs = {
-      session_expired: 'Sua sessão expirou. Entre novamente.',
-      invalid_request: 'Requisição inválida. Verifique a configuração do app no Bling.',
-      access_denied:   'Acesso negado ao Bling. Autorize o app para continuar.',
-      token_exchange_failed: 'Falha ao obter o token do Bling. Tente novamente.',
-    };
-    showErr(msgs[err] || `Erro: ${err}`);
+  const _p=new URLSearchParams(location.search);
+  const _err=_p.get('error');
+  if(_err){
+    const msgs={session_expired:'Sua sessao expirou. Entre novamente.',invalid_request:'Requisicao invalida. Verifique a configuracao do app no Bling.',access_denied:'Acesso negado ao Bling. Autorize o app para continuar.',token_exchange_failed:'Falha ao obter o token do Bling.'};
+    showErr(msgs[_err]||`Erro: ${_err}`);
   }
 
-  function showErr(msg) {
-    document.getElementById('errMsg').textContent = msg;
-    document.getElementById('errBox').style.display = 'flex';
-  }
-  function hideErr() {
-    document.getElementById('errBox').style.display = 'none';
-  }
+  function showErr(msg){document.getElementById('errMsg').textContent=msg;document.getElementById('errBox').style.display='flex';}
+  function hideErr(){document.getElementById('errBox').style.display='none';}
 
-  function togglePw() {
-    const inp = document.getElementById('password');
-    const eye = document.getElementById('eyeIcon');
-    if (inp.type === 'password') {
-      inp.type = 'text';
-      eye.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-    } else {
-      inp.type = 'password';
-      eye.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-    }
+  function togglePw(){
+    const inp=document.getElementById('password');
+    const eye=document.getElementById('eyeIcon');
+    if(inp.type==='password'){inp.type='text';eye.innerHTML='<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';}
+    else{inp.type='password';eye.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';}
   }
 
-  async function doLogin(e) {
-    e.preventDefault();
-    hideErr();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const btn = document.getElementById('btnSubmit');
-    const spin = document.getElementById('spin');
-    const txt = document.getElementById('btnTxt');
+  async function doLogin(e){
+    e.preventDefault();hideErr();
+    const email=document.getElementById('email').value.trim();
+    const password=document.getElementById('password').value;
+    const btn=document.getElementById('btnSubmit');
+    const spin=document.getElementById('spin');
+    const txt=document.getElementById('btnTxt');
+    btn.disabled=true;spin.style.display='block';txt.textContent='Entrando...';
+    try{
+      const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const data=await res.json().catch(()=>({}));
+      if(res.ok&&data.success){window.location.href='/';return;}
+      showErr(data.error||'E-mail ou senha incorretos.');
+    }catch(err){showErr('Erro de conexao. Tente novamente.');}
+    finally{btn.disabled=false;spin.style.display='none';txt.textContent='Entrar no Painel';}
+  }
 
-    btn.disabled = true; spin.style.display = 'block'; txt.textContent = 'Entrando…';
+  const GOOGLE_BTN_HTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg><span>Entrar com o Google</span>';
 
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        // Login OK → vai para a tela de conexão / dashboard
-        window.location.href = '/';
+  async function finishGoogleLogin(user){
+    const idToken=await user.getIdToken();
+    const res=await fetch('/api/auth/firebase',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,email:user.email})});
+    const data=await res.json().catch(()=>({}));
+    if(res.ok&&data.success){window.location.href='/';return true;}
+    showErr(data.error||'Erro ao autenticar. Tente novamente.');return false;
+  }
+
+  function resetGoogleBtn(){const btn=document.getElementById('googleLoginBtn');btn.disabled=false;btn.innerHTML=GOOGLE_BTN_HTML;}
+
+  async function loginWithGoogle(){
+    const btn=document.getElementById('googleLoginBtn');
+    btn.disabled=true;btn.textContent='Aguarde...';
+    const provider=new firebase.auth.GoogleAuthProvider();
+    try{
+      const result=await firebase.auth().signInWithPopup(provider);
+      const ok=await finishGoogleLogin(result.user);
+      if(!ok)resetGoogleBtn();
+    }catch(err){
+      const popupBlocked=['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(err.code);
+      if(popupBlocked){
+        try{await firebase.auth().signInWithRedirect(provider);return;}
+        catch(err2){showErr(err2.message||'Erro ao conectar com Google.');resetGoogleBtn();}
         return;
       }
-      showErr(data.error || 'E-mail ou senha incorretos.');
-    } catch (err) {
-      showErr('Erro de conexão. Tente novamente.');
-    } finally {
-      btn.disabled = false; spin.style.display = 'none'; txt.textContent = 'Entrar';
+      showErr(err.message||'Erro ao conectar com Google.');resetGoogleBtn();
     }
   }
 
-  async function loginWithGoogle() {
-    const btn = document.getElementById('googleLoginBtn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Aguarde…';
-
-    try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      const result = await firebase.auth().signInWithPopup(provider);
-      const user = result.user;
-
-      // Get Firebase ID token
-      const idToken = await user.getIdToken();
-
-      // Exchange Firebase token for app JWT
-      const res = await fetch('/api/auth/firebase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, email: user.email }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        window.location.href = '/';
-        return;
-      }
-      showErr(data.error || 'Erro ao autenticar. Tente novamente.');
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg><span>Entrar com Google</span>';
-    } catch (err) {
-      showErr(err.message || 'Erro ao conectar com Google. Tente novamente.');
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg><span>Entrar com Google</span>';
-    }
-  }
-
-  // PWA install
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault(); deferredPrompt = e;
-    document.getElementById('pwa-install').style.display = 'flex';
+  firebase.auth().getRedirectResult().then(async(result)=>{
+    if(!result||!result.user)return;
+    const btn=document.getElementById('googleLoginBtn');
+    btn.disabled=true;btn.textContent='Entrando...';
+    const ok=await finishGoogleLogin(result.user);
+    if(!ok)resetGoogleBtn();
+  }).catch(err=>{
+    if(err&&err.code!=='auth/no-auth-event')showErr(err.message||'Erro ao conectar com Google.');
   });
-  function installPWA() {
-    if (!deferredPrompt) return;
+
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault();deferredPrompt=e;
+    document.getElementById('pwa-install').style.display='flex';
+  });
+  function installPWA(){
+    if(!deferredPrompt)return;
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => { deferredPrompt = null; document.getElementById('pwa-install').style.display = 'none'; });
+    deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('pwa-install').style.display='none';});
   }
-  // Service worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}
 </script>
 </body>
 </html>
