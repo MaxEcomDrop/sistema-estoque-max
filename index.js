@@ -1497,16 +1497,46 @@ app.delete('/api/produtos/:id/ocultar', requireAuthJson, async (req, res) => {
 
 // Busca pedidos de venda num intervalo (paginado)
 async function fetchPedidos(token, inicio, fim, maxPg = 3) {
-  let all = [];
-  for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
-    });
-    const items = Array.isArray(data?.data) ? data.data : [];
-    all = all.concat(items);
-    if (items.length < 100) break;
+  const firstPageRes = await fetchWithRetry(() => axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+    headers: { Authorization: `Bearer ${token}` },
+    params: { limite: 100, pagina: 1, dataInicial: inicio, dataFinal: fim }
+  }));
+  const firstItems = Array.isArray(firstPageRes.data?.data) ? firstPageRes.data.data : [];
+  let all = [...firstItems];
+
+  if (firstItems.length < 100 || maxPg <= 1) {
+    return all;
   }
+
+  const remainingPages = Array.from({ length: maxPg - 1 }, (_, i) => i + 2);
+  for (let i = 0; i < remainingPages.length; i += 3) {
+    const chunk = remainingPages.slice(i, i + 3);
+    const chunkPromises = chunk.map(pg =>
+      fetchWithRetry(() => axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim }
+      })).then(res => ({
+        pg,
+        items: Array.isArray(res.data?.data) ? res.data.data : []
+      }))
+    );
+
+    const results = await Promise.all(chunkPromises);
+    results.sort((a, b) => a.pg - b.pg);
+
+    let chunkEarlyBreak = false;
+    for (const res of results) {
+      all = all.concat(res.items);
+      if (res.items.length < 100) {
+        chunkEarlyBreak = true;
+        break;
+      }
+    }
+    if (chunkEarlyBreak) break;
+
+    if (i + 3 < remainingPages.length) await new Promise(r => setTimeout(r, 1000));
+  }
+
   return all;
 }
 
