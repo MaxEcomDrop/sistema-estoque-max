@@ -44,6 +44,7 @@ async function handleProdutoWebhook(produtoId) {
     if (authService.isTokenExpired(user)) {
       try {
         accessToken = await authService.refreshUserToken(user);
+        cachedUser = null; // invalidate cache
         console.log('[WEBHOOK] Token renovado com sucesso');
       } catch (error) {
         console.error('[WEBHOOK] Erro ao renovar token:', error);
@@ -78,6 +79,7 @@ async function handleEstoqueWebhook(produtoId) {
     if (authService.isTokenExpired(user)) {
       try {
         accessToken = await authService.refreshUserToken(user);
+        cachedUser = null; // invalidate cache
       } catch (error) {
         console.error('[WEBHOOK] Erro ao renovar token:', error);
         return;
@@ -124,12 +126,25 @@ function updateOrInsertProduto(userId, produtoData) {
   });
 }
 
+let cachedUser = null;
+let cacheTime = 0;
+const CACHE_TTL = 60000; // 1 minute
+
 function getValidUser() {
+  const now = Date.now();
+  if (cachedUser && (now - cacheTime < CACHE_TTL)) {
+    return Promise.resolve(cachedUser);
+  }
+
   return new Promise((resolve, reject) => {
     db.get(
       'SELECT * FROM users WHERE access_token IS NOT NULL ORDER BY updated_at DESC LIMIT 1',
       (err, user) => {
         if (err) return reject(err);
+        if (user) {
+          cachedUser = user;
+          cacheTime = now;
+        }
         resolve(user);
       }
     );
