@@ -4,6 +4,8 @@ const cookieParser = require('cookie-parser');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -66,6 +68,13 @@ function getAdmin() {
 const app = express();
 // Confia no 1º proxy da cadeia (Vercel/Render) para req.ip refletir o IP real do cliente
 app.set('trust proxy', 1);
+const DATA_DIR = path.join(__dirname, 'data');
+const AUDIT_LOG_PATH = path.join(DATA_DIR, 'audit-log.jsonl');
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
+const loginAttempts = new Map();
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -104,7 +113,22 @@ const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 
 // In-memory change log (resets on cold start)
 // TODO: Persistir em banco de dados em produção
-let changeLog = [];
+function loadAuditLog() {
+  try {
+    if (!fs.existsSync(AUDIT_LOG_PATH)) return [];
+    return fs.readFileSync(AUDIT_LOG_PATH, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map(line => JSON.parse(line))
+      .slice(-1000);
+  } catch (error) {
+    console.error('[audit:load]', error.message);
+    return [];
+  }
+}
+
+let changeLog = loadAuditLog();
+const pushAuditEntry = Array.prototype.push.bind(changeLog);
 
 // Contas customizadas e eventos de calendário: cache em memória com
 // persistência no Firestore (quando FIREBASE_SERVICE_ACCOUNT configurado).
@@ -326,8 +350,6 @@ function safeEqual(a, b) {
 
 // Rate limit simples em memória para /api/auth/login (proteção contra brute force)
 const _loginAttempts = new Map(); // ip -> { count, firstAt }
-const LOGIN_MAX_ATTEMPTS = 5;
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 function loginRateLimit(req, res, next) {
   const ip = req.ip;
@@ -341,6 +363,70 @@ function loginRateLimit(req, res, next) {
     }
   } else {
     _loginAttempts.set(ip, { count: 0, firstAt: now });
+  }
+  next();
+}
+
+function getRequestActor(req) {
+  try {
+    const payload = jwt.verify(req.cookies?.system_token || '', JWT_SECRET);
+    return payload?.email || 'sistema';
+  } catch {
+    return 'sistema';
+  }
+}
+
+async function recordAudit(entry) {
+  const item = {
+    id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+    timestamp: new Date().toISOString(),
+    ...entry,
+  };
+  pushAuditEntry(item);
+  if (changeLog.length > 1000) changeLog.shift();
+  try {
+    await fs.promises.appendFile(AUDIT_LOG_PATH, `${JSON.stringify(item)}\n`, 'utf8');
+  } catch (error) {
+    console.error('[audit:append]', error.message);
+  }
+  return item;
+}
+
+changeLog.push = (...entries) => {
+  entries.forEach(entry => {
+    recordAudit(entry).catch(error => console.error('[audit:proxy]', error.message));
+  });
+  return changeLog.length;
+};
+
+function pruneLoginAttempts() {
+  const now = Date.now();
+  for (const [key, value] of loginAttempts.entries()) {
+    if (value.resetAt <= now) loginAttempts.delete(key);
+  }
+}
+
+function loginAttemptKey(req, email = '') {
+  return `${req.ip || 'unknown'}::${String(email).trim().toLowerCase()}`;
+}
+
+function ensureCsrfCookie(req, res) {
+  const existing = req.cookies?.csrf_token;
+  if (existing) return existing;
+  const token = crypto.randomBytes(24).toString('hex');
+  res.cookie('csrf_token', token, {
+    secure: NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 3600 * 1000,
+  });
+  return token;
+}
+
+function requireCsrf(req, res, next) {
+  const cookieToken = req.cookies?.csrf_token;
+  const headerToken = req.headers['x-csrf-token'];
+  if (!cookieToken || !headerToken || !safeEqual(cookieToken, headerToken)) {
+    return res.status(403).json({ error: 'CSRF token inválido' });
   }
   next();
 }
@@ -372,15 +458,28 @@ function validateNumericId(id, fieldName = 'ID') {
   }
   return Number(id);
 }
-
 function requireAuth(req, res, next) {
-  try { jwt.verify(req.cookies?.system_token || '', JWT_SECRET); next(); }
-  catch { res.clearCookie('system_token'); res.redirect('/login'); }
+  try {
+    jwt.verify(req.cookies?.system_token || '', JWT_SECRET);
+    ensureCsrfCookie(req, res);
+    next();
+  } catch {
+    res.clearCookie('system_token');
+    res.clearCookie('csrf_token');
+    res.redirect('/login');
+  }
 }
 
 function requireAuthJson(req, res, next) {
-  try { jwt.verify(req.cookies?.system_token || '', JWT_SECRET); next(); }
-  catch { res.clearCookie('system_token'); res.status(401).json({ error: 'Não autenticado' }); }
+  try {
+    jwt.verify(req.cookies?.system_token || '', JWT_SECRET);
+    ensureCsrfCookie(req, res);
+    next();
+  } catch {
+    res.clearCookie('system_token');
+    res.clearCookie('csrf_token');
+    res.status(401).json({ error: 'Não autenticado' });
+  }
 }
 
 function blingHeaders(token) {
@@ -675,7 +774,7 @@ function noCache(res) {
   res.set('Surrogate-Control', 'no-store');
 }
 
-app.get('/login', (req, res) => { noCache(res); res.sendFile(__dirname + '/public/login.html'); });
+app.get('/login', (req, res) => { noCache(res); ensureCsrfCookie(req, res); res.sendFile(__dirname + '/public/login.html'); });
 app.get('/', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/index.html'); });
 app.get('/index.html', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/index.html'); });
 app.get('/dashboard.html', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/dashboard.html'); });
@@ -738,11 +837,24 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
 // para que /index.html e /dashboard.html passem pela autenticação acima
 app.use(express.static('public', { index: false, maxAge: NODE_ENV === 'production' ? '1d' : 0 }));
 
+app.use('/api', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  if (req.path === '/webhook/bling') return next();
+  return requireCsrf(req, res, next);
+});
+
 // ── Login ────────────────────────────────────────────────────────────
 
-app.post('/api/auth/login', loginRateLimit, (req, res) => {
+app.post('/api/auth/login', loginRateLimit, requireCsrf, async (req, res) => {
   const { email, password } = req.body || {};
-
+  pruneLoginAttempts();
+  const attemptKey = loginAttemptKey(req, email);
+  const currentAttempt = loginAttempts.get(attemptKey);
+  if (currentAttempt && currentAttempt.count >= LOGIN_MAX_ATTEMPTS && currentAttempt.resetAt > Date.now()) {
+    const retryAfterSec = Math.ceil((currentAttempt.resetAt - Date.now()) / 1000);
+    res.set('Retry-After', String(retryAfterSec));
+    return sendErrorResponse(res, 429, 'Muitas tentativas de login. Tente novamente em alguns minutos.');
+  }
   if (!email || !password) {
     return sendErrorResponse(res, 400, 'Email e senha são obrigatórios');
   }
@@ -755,17 +867,39 @@ app.post('/api/auth/login', loginRateLimit, (req, res) => {
 
   if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
     registerLoginFailure(req);
+    const nextCount = (currentAttempt?.count || 0) + 1;
+    loginAttempts.set(attemptKey, {
+      count: nextCount,
+      resetAt: currentAttempt?.resetAt && currentAttempt.resetAt > Date.now()
+        ? currentAttempt.resetAt
+        : Date.now() + LOGIN_WINDOW_MS,
+    });
+    await recordAudit({
+      type: 'auth.login_failed',
+      actor: String(email).trim().toLowerCase() || 'desconhecido',
+      ip: req.ip,
+      source: 'login',
+      detail: `tentativa ${nextCount}/${LOGIN_MAX_ATTEMPTS}`,
+    });
     return sendErrorResponse(res, 401, 'Email ou senha incorretos');
   }
 
   try {
     clearLoginFailures(req);
+    loginAttempts.delete(attemptKey);
     const token = jwt.sign({ email: ADMIN_EMAIL }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('system_token', token, {
       httpOnly: true,
       secure: NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 3600 * 1000,
+    });
+    ensureCsrfCookie(req, res);
+    await recordAudit({
+      type: 'auth.login_success',
+      actor: ADMIN_EMAIL,
+      ip: req.ip,
+      source: 'login',
     });
     res.json({ success: true });
   } catch (e) {
@@ -774,28 +908,41 @@ app.post('/api/auth/login', loginRateLimit, (req, res) => {
 });
 
 // Reconfirma a senha (para liberar áreas/ações sensíveis, estilo Shopee)
-app.post('/api/auth/verify', requireAuthJson, (req, res) => {
+app.post('/api/auth/verify', requireAuthJson, requireCsrf, async (req, res) => {
   const { password } = req.body || {};
   if (!ADMIN_PASSWORD) return res.status(500).json({ error: 'Senha não configurada no servidor.' });
-  if (safeEqual(password, ADMIN_PASSWORD)) return res.json({ ok: true });
+  if (safeEqual(password, ADMIN_PASSWORD)) {
+    await recordAudit({ type: 'auth.password_verify_success', actor: getRequestActor(req), ip: req.ip, source: 'verify' });
+    return res.json({ ok: true });
+  }
+  await recordAudit({ type: 'auth.password_verify_failed', actor: getRequestActor(req), ip: req.ip, source: 'verify' });
   return res.status(401).json({ error: 'Senha incorreta.' });
 });
 
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', requireAuthJson, requireCsrf, async (req, res) => {
   res.clearCookie('system_token');
   res.clearCookie('bling_token');
   res.clearCookie('bling_refresh');
+  res.clearCookie('csrf_token');
+  await recordAudit({ type: 'auth.logout', actor: getRequestActor(req), ip: req.ip, source: 'logout' });
   res.json({ ok: true });
 });
 
 // ── OAuth Bling ──────────────────────────────────────────────────────
 
 app.get('/api/auth/url', requireAuthJson, (req, res) => {
+  const state = crypto.randomBytes(24).toString('hex');
+  res.cookie('bling_oauth_state', state, {
+    httpOnly: true,
+    secure: NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000,
+  });
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: BLING_CLIENT_ID,
     redirect_uri: BLING_REDIRECT_URI,
-    state: 'estoque_max',
+    state,
   });
   res.json({ authUrl: `https://www.bling.com.br/Api/v3/oauth/authorize?${params}` });
 });
@@ -804,7 +951,9 @@ app.get('/api/auth/callback', async (req, res) => {
   const { code, error, state } = req.query;
   if (error) return res.redirect(`/?error=${encodeURIComponent(error)}`);
   if (!code) return res.redirect('/?error=no_code');
-  if (state !== 'estoque_max') return res.redirect('/?error=invalid_state');
+  if (!state || !req.cookies?.bling_oauth_state || !safeEqual(state, req.cookies.bling_oauth_state)) {
+    return res.redirect('/?error=invalid_request');
+  }
 
   try {
     const creds = Buffer.from(`${BLING_CLIENT_ID}:${BLING_CLIENT_SECRET}`).toString('base64');
@@ -815,6 +964,8 @@ app.get('/api/auth/callback', async (req, res) => {
     });
 
     setBlingCookies(res, data);
+    res.clearCookie('bling_oauth_state');
+    await recordAudit({ type: 'oauth.bling_connected', actor: getRequestActor(req), ip: req.ip, source: 'oauth' });
 
     res.redirect('/dashboard.html');
   } catch (err) {
@@ -2525,8 +2676,18 @@ function slotAtual() {
   return 'jantar';
 }
 function checkCronSecret(req) {
-  if (!process.env.CRON_SECRET) return true; // sem secret configurado, libera (uso interno)
+  if (!process.env.CRON_SECRET) return false;
   return req.headers['x-cron-secret'] === process.env.CRON_SECRET || req.query.secret === process.env.CRON_SECRET;
+}
+
+function validateBlingWebhookRequest(req) {
+  const expected = process.env.BLING_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET;
+  if (!expected) return false;
+  const provided = req.headers['x-bling-secret']
+    || req.headers['x-webhook-secret']
+    || req.headers['authorization']?.replace(/^Bearer\s+/i, '')
+    || req.query.secret;
+  return !!provided && safeEqual(provided, expected);
 }
 function montaResumo(slot, { fat, lucro, nv, zerados, brl, temMargem }) {
   const lucroTxt = temMargem ? ` · lucro estimado ${brl(lucro)}` : '';
@@ -3091,11 +3252,18 @@ app.delete('/api/calendario/:id', requireAuthJson, (req, res) => {
 // ── Webhook (Bling notificações) ──────────────────────────────────────
 
 app.post('/api/webhook/bling', async (req, res) => {
+  if (!validateBlingWebhookRequest(req)) return res.status(401).json({ error: 'unauthorized' });
   res.json({ received: true }); // responde rápido (Bling espera 200)
   try {
     const admin = getAdmin();
     if (!admin) return;
     const evt = req.body || {};
+    await recordAudit({
+      type: 'webhook.bling_received',
+      actor: 'bling',
+      source: 'webhook',
+      detail: String(evt.event || evt.tipo || evt.type || evt.data?.tipo || 'evento-desconhecido'),
+    });
     const tipo = String(evt.event || evt.tipo || evt.type || evt.data?.tipo || '').toLowerCase();
     let title, body;
     if (tipo.includes('order') || tipo.includes('pedido') || tipo.includes('venda')) {

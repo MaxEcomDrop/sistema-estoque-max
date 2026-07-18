@@ -209,6 +209,11 @@
     appId:"1:1023327647246:web:7c35c5dd88d7aeef9dae5f"
   });
 
+  function getCookie(name) {
+    const prefix = `${name}=`;
+    return document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith(prefix))?.slice(prefix.length) || '';
+  }
+
   // Mensagem de erro vinda de redirect (?error=...)
   const p = new URLSearchParams(location.search);
   const err = p.get('error');
@@ -256,7 +261,10 @@
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCookie('csrf_token'),
+        },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
@@ -280,7 +288,10 @@
     const idToken = await user.getIdToken();
     const res = await fetch('/api/auth/firebase', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': getCookie('csrf_token'),
+      },
       body: JSON.stringify({ idToken, email: user.email }),
     });
     const data = await res.json().catch(() => ({}));
