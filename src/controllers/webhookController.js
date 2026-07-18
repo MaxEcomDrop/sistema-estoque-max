@@ -13,9 +13,13 @@ exports.handleBlingWebhook = async (req, res) => {
     }
 
     if (tipo === 'produto.criacao' || tipo === 'produto.atualizacao') {
-      await handleProdutoWebhook(idRegistro);
+      handleProdutoWebhook(idRegistro).catch(err =>
+        console.error(`[WEBHOOK] Erro no processamento em background do produto ${idRegistro}:`, err)
+      );
     } else if (tipo === 'estoque.atualizacao') {
-      await handleEstoqueWebhook(idRegistro);
+      handleEstoqueWebhook(idRegistro).catch(err =>
+        console.error(`[WEBHOOK] Erro no processamento em background do estoque ${idRegistro}:`, err)
+      );
     } else {
       console.log(`[WEBHOOK] Tipo de evento não suportado: ${tipo}`);
     }
