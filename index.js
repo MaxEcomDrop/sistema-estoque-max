@@ -20,6 +20,7 @@ function validateEnvironment() {
   if (missing.length > 0) {
     console.warn('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
     console.warn('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
+    process.exit(1);
   }
 }
 
