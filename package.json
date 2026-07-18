@@ -27,5 +27,12 @@
     "express": "^5.2.1",
     "firebase-admin": "^12.7.0",
     "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "mock-express-request": "^0.2.2",
+    "mock-express-response": "^0.3.0",
+    "sqlite3": "^6.0.1",
+    "supertest": "^7.2.2"
   }
 }
