@@ -1497,16 +1497,51 @@ app.delete('/api/produtos/:id/ocultar', requireAuthJson, async (req, res) => {
 
 // Busca pedidos de venda num intervalo (paginado)
 async function fetchPedidos(token, inicio, fim, maxPg = 3) {
+  if (maxPg <= 0) return [];
+
   let all = [];
-  for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
-    });
-    const items = Array.isArray(data?.data) ? data.data : [];
-    all = all.concat(items);
-    if (items.length < 100) break;
+
+  // Otimização: busca a primeira página isolada
+  const { data: firstData } = await fetchWithRetry(() => axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+    headers: { Authorization: `Bearer ${token}` },
+    params: { limite: 100, pagina: 1, dataInicial: inicio, dataFinal: fim },
+  }));
+
+  const items = Array.isArray(firstData?.data) ? firstData.data : [];
+  all = all.concat(items);
+
+  // Se não veio a página cheia, ou se maxPg for 1, encerra sem chamadas em lote
+  if (items.length < 100 || maxPg <= 1) return all;
+
+  // Busca páginas subsequentes em paralelo com limite de concorrência (batch de 3)
+  const concurrencyLimit = 3;
+  for (let batchStart = 2; batchStart <= maxPg; batchStart += concurrencyLimit) {
+    const promises = [];
+    const batchEnd = Math.min(batchStart + concurrencyLimit - 1, maxPg);
+
+    for (let pg = batchStart; pg <= batchEnd; pg++) {
+      promises.push(
+        fetchWithRetry(() => axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
+        }))
+      );
+    }
+
+    const results = await Promise.all(promises);
+    let breakEarly = false;
+    for (const { data } of results) {
+      const pageItems = Array.isArray(data?.data) ? data.data : [];
+      all = all.concat(pageItems);
+      if (pageItems.length < 100) {
+        breakEarly = true;
+        break;
+      }
+    }
+
+    if (breakEarly) break;
   }
+
   return all;
 }
 
