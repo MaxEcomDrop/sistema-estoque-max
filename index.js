@@ -67,8 +67,9 @@ const app = express();
 // Confia no 1º proxy da cadeia (Vercel/Render) para req.ip refletir o IP real do cliente
 app.set('trust proxy', 1);
 
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use('/api/produtos/importar', express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use(cookieParser());
 
 // Cabeçalhos de segurança. A app é same-origin (frontend e API no mesmo
