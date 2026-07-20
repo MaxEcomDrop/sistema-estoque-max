@@ -636,6 +636,57 @@ tbody td{padding:12px 12px;font-size:13px;color:var(--tx);vertical-align:middle}
 /* DASH SECTION */
 .dash-sec-t{font-size:13px;font-weight:700;color:var(--tx);margin:4px 0 -6px;display:flex;align-items:center;gap:7px}
 .dash-sec-t svg{width:15px;height:15px;color:var(--mu)}
+/* INÍCIO EXECUTIVO — hierarquia financeira e qualidade dos dados */
+.exec-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:2px 0 4px}
+.exec-head-copy{min-width:0}
+.exec-head-copy h2{text-wrap:balance}
+.exec-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.exec-refresh{min-height:36px}
+.exec-status{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 11px;border:1px solid var(--bord);border-radius:10px;background:var(--surf);color:var(--mu);font-size:11.5px;font-weight:650;white-space:nowrap}
+.exec-status-dot{width:7px;height:7px;border-radius:50%;background:var(--wa);box-shadow:0 0 0 3px color-mix(in srgb,var(--wa) 16%,transparent)}
+.exec-status.ok .exec-status-dot{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 16%,transparent)}
+.exec-status.bad .exec-status-dot{background:var(--er);box-shadow:0 0 0 3px color-mix(in srgb,var(--er) 16%,transparent)}
+.exec-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.8fr);gap:14px;align-items:stretch}
+.exec-primary{position:relative;overflow:hidden;min-height:254px;padding:24px;border:1px solid color-mix(in srgb,var(--acc) 24%,var(--bord));border-radius:18px;background:linear-gradient(145deg,color-mix(in srgb,var(--acc-bg) 72%,var(--surf)),var(--surf) 62%);box-shadow:var(--sh)}
+.exec-primary::after{content:'';position:absolute;right:-80px;top:-90px;width:260px;height:260px;border-radius:50%;background:color-mix(in srgb,var(--acc) 10%,transparent);pointer-events:none}
+.exec-eyebrow{position:relative;z-index:1;font-size:11px;font-weight:750;letter-spacing:.65px;text-transform:uppercase;color:var(--acc-t)}
+.exec-values{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:13px}
+.exec-value-block{min-width:0}
+.exec-value-label{font-size:12px;font-weight:650;color:var(--mu);margin-bottom:5px}
+.exec-value{font-size:clamp(27px,3vw,38px);font-weight:820;letter-spacing:-1.3px;line-height:1.05;color:var(--tx);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.exec-value.profit{color:var(--ok-t)}
+.exec-value.profit.negative{color:var(--er-t)}
+.exec-sub{min-height:18px;margin-top:7px;color:var(--mu);font-size:11.5px;line-height:1.45}
+.exec-spark{position:absolute;bottom:0;left:0;right:0;width:100%;height:58px;opacity:.34;pointer-events:none}
+.exec-quality{display:flex;flex-direction:column;gap:12px;padding:20px;border:1px solid var(--bord);border-radius:18px;background:var(--surf);box-shadow:var(--sh)}
+.exec-quality-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:750;color:var(--tx)}
+.exec-quality-badge{padding:4px 8px;border-radius:999px;background:var(--wa-bg);color:var(--wa-t);font-size:10px;font-weight:750;white-space:nowrap}
+.exec-quality-badge.ok{background:var(--ok-bg);color:var(--ok-t)}
+.exec-quality-badge.bad{background:var(--er-bg);color:var(--er-t)}
+.exec-quality-copy{font-size:11.5px;line-height:1.55;color:var(--mu)}
+.exec-coverage-head{display:flex;justify-content:space-between;gap:10px;color:var(--mu);font-size:11px}
+.exec-coverage-head strong{color:var(--tx);font-variant-numeric:tabular-nums}
+.exec-coverage-track{height:8px;border-radius:999px;background:var(--bord-l);overflow:hidden}
+.exec-coverage-fill{height:100%;width:0;background:linear-gradient(90deg,var(--wa),var(--ok));border-radius:inherit;transition:width .35s ease}
+.exec-formula{margin-top:auto;padding:10px 12px;border-radius:11px;background:var(--bg);color:var(--mu);font-size:10.5px;line-height:1.5}
+.exec-waterfall{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.exec-step{min-width:0;padding:13px 14px;border:1px solid var(--bord);border-radius:13px;background:var(--surf)}
+.exec-step-label{font-size:10.5px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exec-step-value{margin-top:4px;font-size:15px;font-weight:760;color:var(--tx);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.exec-step.cost .exec-step-value{color:var(--er-t)}
+.exec-step.result{border-color:color-mix(in srgb,var(--ok) 34%,var(--bord));background:color-mix(in srgb,var(--ok-bg) 65%,var(--surf))}
+.exec-step.result .exec-step-value{color:var(--ok-t)}
+.exec-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.exec-kpi{appearance:none;width:100%;min-width:0;padding:14px;text-align:left;border:1px solid var(--bord);border-radius:14px;background:var(--surf);color:var(--tx);font-family:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;touch-action:manipulation}
+.exec-kpi:hover{transform:translateY(-2px);border-color:var(--acc);box-shadow:var(--sh-md)}
+.exec-kpi:focus-visible,.exec-refresh:focus-visible{outline:3px solid color-mix(in srgb,var(--acc) 34%,transparent);outline-offset:2px}
+.exec-kpi-label{font-size:10.5px;font-weight:650;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exec-kpi-value{margin-top:6px;font-size:19px;font-weight:800;letter-spacing:-.45px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.exec-kpi-sub{margin-top:3px;font-size:10px;color:var(--fa);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exec-legacy{display:none!important}
+@media(max-width:1050px){.exec-kpis{grid-template-columns:repeat(3,1fr)}.exec-waterfall{grid-template-columns:repeat(3,1fr)}.exec-step.result{grid-column:span 2}}
+@media(max-width:760px){.exec-grid{grid-template-columns:1fr}.exec-primary{min-height:240px}.exec-values{grid-template-columns:1fr;gap:18px}.exec-waterfall{grid-template-columns:1fr 1fr}.exec-step.result{grid-column:1/-1}.exec-kpis{grid-template-columns:1fr 1fr}.exec-actions{width:100%;min-width:0;justify-content:flex-start}.dash-period{width:100%;max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.dp-btn{flex:0 0 auto}.exec-value{font-size:29px}}
+@media(prefers-reduced-motion:reduce){.exec-coverage-fill,.exec-kpi{transition:none}.exec-kpi:hover{transform:none}}
 /* ALERT CHIPS */
 .dash-alerts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .da-card{border-radius:13px;padding:14px 16px;cursor:pointer;border:1px solid transparent;transition:transform .12s,box-shadow .15s;display:flex;flex-direction:column;gap:2px}
@@ -1474,11 +1525,14 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
 
     <!-- VIEW INÍCIO (DASHBOARD) -->
     <div class="view on" id="view-inicio">
-      <div class="dash-greet">
-        <div>
+      <div class="exec-head dash-greet">
+        <div class="exec-head-copy">
           <h2 id="dash-hello">Olá! 👋</h2>
-          <p id="dash-sub">Aqui está o resumo do seu negócio.</p>
+          <p id="dash-sub">Decisões do negócio em um único resumo.</p>
         </div>
+        <div class="exec-actions">
+          <div class="exec-status" id="dash-data-status" role="status" aria-live="polite"><span class="exec-status-dot" aria-hidden="true"></span><span id="dash-data-status-text">Calculando dados…</span></div>
+          <button class="bts exec-refresh" type="button" onclick="loadDashboard(true)" aria-label="Atualizar dados do painel">↻ Atualizar</button>
         <div class="dash-period">
           <button class="dp-btn on" data-dp="today" onclick="setDashPeriod('today',this)">Hoje</button>
           <button class="dp-btn" data-dp="yesterday" onclick="setDashPeriod('yesterday',this)">Ontem</button>
@@ -1488,6 +1542,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <button class="dp-btn" data-dp="year" onclick="setDashPeriod('year',this)">Este ano</button>
           <button class="dp-btn" data-dp="custom" onclick="setDashPeriod('custom',this)">Personalizado</button>
         </div>
+        </div>
       </div>
       <div class="fin-custom-range" id="dash-custom-range" style="display:none;margin-bottom:16px">
         <input type="date" id="dash-dt-start">
@@ -1496,30 +1551,43 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <button class="btp" onclick="loadDashboard(true)">Aplicar</button>
       </div>
 
-      <!-- HERO: Faturamento + Lucro -->
-      <div class="dash-hero">
-        <div class="fk-card" style="padding:22px 24px" onclick="setView('financeiro')">
-          <div class="fk-top" style="margin-bottom:14px;font-size:12.5px;font-weight:600;opacity:0.92;color:var(--tx);display:flex;align-items:center;gap:8px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Faturamento
+      <!-- VISÃO EXECUTIVA: receita, lucro e confiabilidade -->
+      <div class="exec-grid">
+        <section class="exec-primary" aria-labelledby="dash-exec-title">
+          <div class="exec-eyebrow" id="dash-exec-title">Resultado do período</div>
+          <div class="exec-values">
+            <div class="exec-value-block">
+              <div class="exec-value-label">Faturamento realizado</div>
+              <div class="exec-value" id="dash-faturamento">—</div>
+              <div class="exec-sub" id="dash-fat-sub">No período selecionado</div>
+              <div class="exec-sub"><span id="dash-fat-conc"></span> <span id="dash-fat-pend"></span> <span id="dash-fat-canc"></span></div>
+            </div>
+            <div class="exec-value-block">
+              <div class="exec-value-label" id="dash-lucro-label">Lucro real estimado</div>
+              <div class="exec-value profit" id="dash-lucro">—</div>
+              <div class="exec-sub" id="dash-luc-sub">Calculando custos, taxas e frete…</div>
+              <div class="exec-sub" id="dash-luc-custo"></div>
+            </div>
           </div>
-          <div id="dash-faturamento" style="font-size:32px;letter-spacing:-1.2px;color:var(--tx);font-weight:700">-</div>
-          <div id="dash-fat-sub" style="font-size:12.5px;opacity:0.9;margin-top:8px;color:var(--mu)">no período selecionado</div>
-          <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;flex-wrap:wrap;color:var(--mu)">
-            <span id="dash-fat-conc"></span>
-            <span id="dash-fat-pend"></span>
-            <span id="dash-fat-canc"></span>
+          <div id="dash-fin-break" hidden></div>
+          <svg class="exec-spark" id="dash-sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </section>
+        <aside class="exec-quality" aria-labelledby="dash-quality-title">
+          <div class="exec-quality-title" id="dash-quality-title">Qualidade do resultado <span class="exec-quality-badge" id="dash-quality-badge">Calculando…</span></div>
+          <div class="exec-quality-copy" id="dash-quality-copy">Conferindo os SKUs vendidos com os custos cadastrados em Produtos.</div>
+          <div>
+            <div class="exec-coverage-head"><span>Cobertura dos custos</span><strong id="dash-cost-coverage">0%</strong></div>
+            <div class="exec-coverage-track" aria-hidden="true"><div class="exec-coverage-fill" id="dash-cost-coverage-fill"></div></div>
           </div>
-          <div id="dash-fin-break"></div>
-          <svg id="dash-sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="position:absolute;bottom:0;left:0;right:0;width:100%;height:52px;opacity:.35;pointer-events:none"></svg>
-        </div>
-        <div class="fk-card" style="padding:22px 24px" onclick="setView('financeiro')">
-          <div class="fk-top" style="margin-bottom:14px;font-size:12.5px;font-weight:600;opacity:0.92;color:var(--tx);display:flex;align-items:center;gap:8px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> <span id="dash-lucro-label">Lucro real estimado</span>
-          </div>
-          <div id="dash-lucro" style="font-size:32px;letter-spacing:-1.2px;color:var(--tx);font-weight:700">-</div>
-          <div id="dash-luc-sub" style="font-size:12.5px;opacity:0.9;margin-top:8px;color:var(--mu)">calculando custos, taxas e frete</div>
-          <div style="margin-top:8px;font-size:11px;color:var(--mu)" id="dash-luc-custo"></div>
-        </div>
+          <div class="exec-formula"><strong>Fórmula única</strong><br>Venda − custo dos produtos − taxas − frete do canal</div>
+        </aside>
+      </div>
+      <div class="exec-waterfall" aria-label="Composição do lucro">
+        <div class="exec-step"><div class="exec-step-label">Receita</div><div class="exec-step-value" id="dash-revenue-step">—</div></div>
+        <div class="exec-step cost"><div class="exec-step-label">Custo dos produtos</div><div class="exec-step-value" id="dash-product-cost">—</div></div>
+        <div class="exec-step cost"><div class="exec-step-label">Taxas do canal</div><div class="exec-step-value" id="dash-marketplace-fee">—</div></div>
+        <div class="exec-step cost"><div class="exec-step-label">Frete do canal</div><div class="exec-step-value" id="dash-channel-shipping">—</div></div>
+        <div class="exec-step result"><div class="exec-step-label">Lucro de contribuição</div><div class="exec-step-value" id="dash-contribution-result">—</div></div>
       </div>
 
       <!-- META DE VENDAS -->
@@ -1533,7 +1601,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
 
       <!-- KPIs -->
-      <div class="dash-kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="dash-kpis exec-legacy" style="grid-template-columns:repeat(4,1fr)">
         <div class="fk-card fk-blue" onclick="viewPedidosFiltrado('all')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
             <div class="fk-label">Pedidos feitos</div>
@@ -1567,7 +1635,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="fk-sub">pedidos feitos</div>
         </div>
       </div>
-      <div class="dash-kpis" style="grid-template-columns:repeat(3,1fr);margin-top:12px">
+      <div class="dash-kpis exec-legacy" style="grid-template-columns:repeat(3,1fr);margin-top:12px">
         <div class="fk-card fk-orange" onclick="setView('financeiro')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
             <div class="fk-label">Taxas e frete do canal</div>
@@ -1592,6 +1660,16 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           <div class="fk-val" id="dash-pagar">—</div>
           <div class="fk-sub" id="dash-pagar-sub">contas em aberto</div>
         </div>
+      </div>
+
+      <!-- KPIs DE DECISÃO -->
+      <div class="exec-kpis">
+        <button class="exec-kpi" type="button" onclick="viewPedidosFiltrado('all')"><div class="exec-kpi-label">Pedidos feitos</div><div class="exec-kpi-value" id="dash-exec-orders">—</div><div class="exec-kpi-sub" id="dash-exec-orders-sub">No período</div></button>
+        <button class="exec-kpi" type="button" onclick="setView('financeiro')"><div class="exec-kpi-label">Ticket médio</div><div class="exec-kpi-value" id="dash-exec-ticket">—</div><div class="exec-kpi-sub">Por pedido feito</div></button>
+        <button class="exec-kpi" type="button" onclick="setView('financeiro')"><div class="exec-kpi-label">Lucro por pedido</div><div class="exec-kpi-value" id="dash-profit-order">—</div><div class="exec-kpi-sub">Após custos variáveis</div></button>
+        <button class="exec-kpi" type="button" onclick="viewPedidosFiltrado('cancelado')"><div class="exec-kpi-label">Taxa de cancelamento</div><div class="exec-kpi-value" id="dash-cancel-rate">—</div><div class="exec-kpi-sub" id="dash-exec-cancelled">— cancelados</div></button>
+        <button class="exec-kpi" type="button" onclick="setView('financeiro')"><div class="exec-kpi-label">A receber</div><div class="exec-kpi-value" id="dash-exec-receivable">—</div><div class="exec-kpi-sub" id="dash-exec-receivable-sub">Contas em aberto</div></button>
+        <button class="exec-kpi" type="button" onclick="setView('financeiro')"><div class="exec-kpi-label">A pagar</div><div class="exec-kpi-value" id="dash-exec-payable">—</div><div class="exec-kpi-sub" id="dash-exec-payable-sub">Contas em aberto</div></button>
       </div>
 
       <!-- ALERTAS -->
@@ -3423,7 +3501,7 @@ function setView(v){
 let dashPeriod='today';
 let _dashLoaded=false;
 let _dashReqId=0;
-let _dashFat=0,_dashTotalPedidos=0,_dashCancelados=0,_dashPendentes=null;
+let _dashFat=0,_dashTotalPedidos=0,_dashFeitos=0,_dashCancelados=0,_dashPendentes=null;
 let _dashFrete=0,_dashDesconto=0,_dashLastTaxas=null;
 function setDashPeriod(p,btn){
   dashPeriod=p;
@@ -3437,6 +3515,14 @@ function dashHello(){
   const h=new Date().getHours();
   return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
 }
+function setDashDataStatus(state,text){
+  const el=$('dash-data-status'),label=$('dash-data-status-text');
+  if(!el||!label)return;
+  el.classList.remove('ok','bad');
+  if(state==='ok')el.classList.add('ok');
+  if(state==='bad')el.classList.add('bad');
+  label.textContent=text;
+}
 async function loadDashboard(force=false){
   $('dash-hello').textContent=`${dashHello()}! 👋`;
   // Alertas de estoque vêm dos produtos já carregados
@@ -3444,7 +3530,8 @@ async function loadDashboard(force=false){
   if(_dashLoaded&&!force)return;
   _dashLastTaxas=null;
   const setTxt=(id,v)=>{const el=$(id);if(el){el.textContent=v;el.classList.remove('skel');}};
-  ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>{const el=$(id);if(el){el.textContent='R$ 0.000,00';el.classList.add('skel');}});
+  ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar','dash-exec-orders','dash-exec-ticket','dash-exec-receivable','dash-exec-payable'].forEach(id=>{const el=$(id);if(el){el.textContent='…';el.classList.add('skel');}});
+  setDashDataStatus('loading','Calculando dados…');
   // Guarda contra respostas fora de ordem: se o usuário trocar de período
   // rapidamente, só a resposta da ÚLTIMA requisição pode atualizar a tela —
   // sem isso, um período mais lento podia "vencer" e mostrar dado errado,
@@ -3467,6 +3554,7 @@ async function loadDashboard(force=false){
       ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
       $('dash-receber-list').innerHTML='<div class="st-wrap" style="padding:24px"><p class="st-d">Conecte o Bling para ver os dados.</p></div>';
       $('dash-pagar-list').innerHTML='<div class="st-wrap" style="padding:24px"><p class="st-d">Conecte o Bling para ver os dados.</p></div>';
+      setDashDataStatus('bad','Bling desconectado');
       return;
     }
     if(!r.ok)throw new Error(d.error||'Erro');
@@ -3492,6 +3580,7 @@ async function loadDashboard(force=false){
     // amostra (custos por SKU, comissão e custo de frete do canal).
     _dashFat=v.faturamento||0;
     _dashTotalPedidos=v.totalPedidos||0;
+    _dashFeitos=v.feitos||0;
     _dashCancelados=v.cancelados||0;
     _dashFrete=v.freteTotal||0;
     _dashDesconto=v.descontoTotal||0;
@@ -3499,10 +3588,15 @@ async function loadDashboard(force=false){
     // KPIs
     setTxt('dash-vendas',fmtN(v.feitos||0));
     setTxt('dash-vendas-sub',`${fmtN(v.totalPedidos||0)} pedidos no total`);
+    setTxt('dash-exec-orders',fmtN(v.feitos||0));
+    setTxt('dash-exec-orders-sub',`${fmtN(v.totalPedidos||0)} pedidos no total`);
     _dashPendentes=v.pendentes||0;
     setTxt('dash-pendentes',fmtN(_dashPendentes));
     setTxt('dash-ticket',fmt(v.ticketMedio));
     setTxt('dash-cancelados',fmtN(v.cancelados||0));
+    setTxt('dash-exec-ticket',fmt(v.ticketMedio));
+    setTxt('dash-exec-cancelled',`${fmtN(v.cancelados||0)} cancelado${v.cancelados===1?'':'s'}`);
+    setTxt('dash-cancel-rate',v.totalPedidos?`${(v.cancelados/v.totalPedidos*100).toFixed(1)}%`:'0%');
     setTxt('dash-frete',fmt(v.freteTotal||0));
     // Financial breakdown
     const finBreak=$('dash-fin-break');
@@ -3519,6 +3613,10 @@ async function loadDashboard(force=false){
     setTxt('dash-receber-sub',cr.ok?`${fmtN(cr.count||0)} conta${cr.count!==1?'s':''}`:'sem permissão Bling');
     setTxt('dash-pagar',cp.ok?fmt(cp.total):'—');
     setTxt('dash-pagar-sub',cp.ok?`${fmtN(cp.count||0)} conta${cp.count!==1?'s':''}`:'sem permissão Bling');
+    setTxt('dash-exec-receivable',cr.ok?fmt(cr.total):'—');
+    setTxt('dash-exec-receivable-sub',cr.ok?`${fmtN(cr.count||0)} conta${cr.count!==1?'s':''}`:'Sem permissão Bling');
+    setTxt('dash-exec-payable',cp.ok?fmt(cp.total):'—');
+    setTxt('dash-exec-payable-sub',cp.ok?`${fmtN(cp.count||0)} conta${cp.count!==1?'s':''}`:'Sem permissão Bling');
     setTxt('dash-receber-tot',cr.ok?fmt(cr.total):'—');
     setTxt('dash-pagar-tot',cp.ok?fmt(cp.total):'—');
     // Contas vencidas (alerta)
@@ -3542,6 +3640,7 @@ async function loadDashboard(force=false){
     _dashLoaded=false;
     ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
     toast('Erro ao carregar painel: '+e.message,'err');
+    setDashDataStatus('bad','Falha ao atualizar');
   }finally{
     if(reqId===_dashReqId){
       if(periodWrap)periodWrap.classList.remove('loading');
@@ -3558,10 +3657,13 @@ function avgMargem(){
 function recomputeDashLucro(){
   const el=$('dash-lucro'),sub=$('dash-luc-sub'),label=$('dash-lucro-label');
   const custoEl=$('dash-luc-custo');
+  const setValue=(id,value)=>{const node=$(id);if(node){node.textContent=value;node.classList.remove('skel');}};
+  setValue('dash-revenue-step',fmt(_dashFat));
   if(!_dashLastTaxas){
     if(el)el.textContent='…';
-    if(sub)sub.textContent='calculando custos, taxas e frete';
+    if(sub)sub.textContent='Calculando custos, taxas e frete…';
     if(custoEl)custoEl.textContent='';
+    setDashDataStatus('loading','Calculando dados…');
     return;
   }
   const est=_dashLastTaxas.estimativaPeriodo||{};
@@ -3577,13 +3679,38 @@ function recomputeDashLucro(){
     costsComplete:completo,
     estimated:!est.exata,
   });
-  if(el)el.textContent=fmt(resultado.contributionProfit);
+  if(el){
+    el.textContent=fmt(resultado.contributionProfit);
+    el.classList.toggle('negative',resultado.contributionProfit<0);
+  }
   if(label)label.textContent=completo?'Lucro real estimado':'Lucro parcial';
   if(sub){
     const margem=Math.round(resultado.contributionMargin*100);
     sub.textContent=completo?`${margem}% de margem · ${est.exata?'dados completos':'projeção por amostra'}`:`${margem}% · custos cobertos em ${Math.round(custo.coverage*100)}% da amostra`;
   }
   if(custoEl)custoEl.textContent=`Custos: ${fmt(custo.projectedCost)} · Taxas: ${fmt(est.comissao||0)} · Frete: ${fmt(est.custoFrete||0)}`;
+  setValue('dash-product-cost','− '+fmt(custo.projectedCost));
+  setValue('dash-marketplace-fee','− '+fmt(est.comissao||0));
+  setValue('dash-channel-shipping','− '+fmt(est.custoFrete||0));
+  setValue('dash-contribution-result',fmt(resultado.contributionProfit));
+  setValue('dash-profit-order',_dashFeitos?fmt(resultado.contributionProfit/_dashFeitos):'—');
+
+  const coverage=Math.max(0,Math.min(100,Math.round(custo.coverage*100)));
+  setValue('dash-cost-coverage',`${coverage}%`);
+  const fill=$('dash-cost-coverage-fill');if(fill)fill.style.width=`${coverage}%`;
+  const badge=$('dash-quality-badge'),copy=$('dash-quality-copy');
+  if(badge){
+    badge.classList.remove('ok','bad');
+    badge.textContent=completo?(est.exata?'Completo':'Projetado'):'Incompleto';
+    badge.classList.add(completo?'ok':'bad');
+  }
+  if(copy){
+    const missing=custo.missingSkus?.length||0;
+    copy.textContent=completo
+      ?(est.exata?'Custos, taxas e frete conferidos para os pedidos do período.':'Custos conferidos por SKU; totais projetados a partir da amostra do período.')
+      :`${missing} SKU${missing===1?'':'s'} sem custo cadastrado. O lucro exibido é parcial até completar os custos em Produtos.`;
+  }
+  setDashDataStatus(completo?'ok':'loading',completo?(est.exata?'Dados completos':'Projeção por amostra'):'Custos incompletos');
   renderMetaBar();
 }
 async function loadEnhancedDashboard(){
@@ -3664,7 +3791,11 @@ async function loadDashTaxas(){
     _dashLastTaxas=null;
     const lucro=$('dash-lucro'),sub=$('dash-luc-sub');
     if(lucro)lucro.textContent='—';
-    if(sub)sub.textContent='dados financeiros indisponíveis';
+    if(sub)sub.textContent='Dados financeiros indisponíveis';
+    setDashDataStatus('bad','Dados financeiros indisponíveis');
+    const badge=$('dash-quality-badge'),copy=$('dash-quality-copy');
+    if(badge){badge.textContent='Indisponível';badge.classList.remove('ok');badge.classList.add('bad');}
+    if(copy)copy.textContent='Não foi possível conferir custos, taxas e frete. Atualize o painel para tentar novamente.';
     console.error('[Taxas]',e.message);
     if(topEl)topEl.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Erro ao carregar: ${esc(e.message)}</p></div>`;
   }
