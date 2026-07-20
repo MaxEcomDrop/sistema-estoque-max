@@ -3672,10 +3672,10 @@ function recomputeDashLucro(){
   _dashFat=receitaBling;
   _dashFrete=Number(est.freteCobrado||0);
   _dashDesconto=Number(est.desconto||0);
-  setTxt('dash-faturamento',fmt(receitaBling));
-  setTxt('dash-ticket',fmt(_dashFeitos?receitaBling/_dashFeitos:0));
-  setTxt('dash-exec-ticket',fmt(_dashFeitos?receitaBling/_dashFeitos:0));
-  setTxt('dash-frete',fmt(_dashFrete));
+  setValue('dash-faturamento',fmt(receitaBling));
+  setValue('dash-ticket',fmt(_dashFeitos?receitaBling/_dashFeitos:0));
+  setValue('dash-exec-ticket',fmt(_dashFeitos?receitaBling/_dashFeitos:0));
+  setValue('dash-frete',fmt(_dashFrete));
   setValue('dash-revenue-step',fmt(receitaBling));
   const custo=FinancialCalculator.estimateProductCost(
     _dashLastTaxas.produtosVendidos||[],S.products,est.fator||1
