@@ -3658,8 +3658,8 @@ function recomputeDashLucro(){
   const el=$('dash-lucro'),sub=$('dash-luc-sub'),label=$('dash-lucro-label');
   const custoEl=$('dash-luc-custo');
   const setValue=(id,value)=>{const node=$(id);if(node){node.textContent=value;node.classList.remove('skel');}};
-  setValue('dash-revenue-step',fmt(_dashFat));
   if(!_dashLastTaxas){
+    setValue('dash-revenue-step',fmt(_dashFat));
     if(el)el.textContent='…';
     if(sub)sub.textContent='Calculando custos, taxas e frete…';
     if(custoEl)custoEl.textContent='';
@@ -3667,26 +3667,36 @@ function recomputeDashLucro(){
     return;
   }
   const est=_dashLastTaxas.estimativaPeriodo||{};
+  const receitaBling=Number.isFinite(Number(est.valorBase))?Number(est.valorBase):_dashFat;
+  const dadosExatos=Boolean(est.exata);
+  _dashFat=receitaBling;
+  _dashFrete=Number(est.freteCobrado||0);
+  _dashDesconto=Number(est.desconto||0);
+  setTxt('dash-faturamento',fmt(receitaBling));
+  setTxt('dash-ticket',fmt(_dashFeitos?receitaBling/_dashFeitos:0));
+  setTxt('dash-exec-ticket',fmt(_dashFeitos?receitaBling/_dashFeitos:0));
+  setTxt('dash-frete',fmt(_dashFrete));
+  setValue('dash-revenue-step',fmt(receitaBling));
   const custo=FinancialCalculator.estimateProductCost(
     _dashLastTaxas.produtosVendidos||[],S.products,est.fator||1
   );
-  const completo=custo.complete&&custo.coverage>=.99;
+  const completo=custo.complete&&custo.coverage>=.99&&dadosExatos;
   const resultado=FinancialCalculator.calculateResult({
-    revenue:_dashFat,
+    revenue:receitaBling,
     productCost:custo.projectedCost,
     marketplaceFee:est.comissao||0,
     shippingCost:est.custoFrete||0,
     costsComplete:completo,
-    estimated:!est.exata,
+    estimated:!dadosExatos,
   });
   if(el){
     el.textContent=fmt(resultado.contributionProfit);
     el.classList.toggle('negative',resultado.contributionProfit<0);
   }
-  if(label)label.textContent=completo?'Lucro real estimado':'Lucro parcial';
+  if(label)label.textContent=completo?'Lucro real':'Lucro parcial';
   if(sub){
     const margem=Math.round(resultado.contributionMargin*100);
-    sub.textContent=completo?`${margem}% de margem · ${est.exata?'dados completos':'projeção por amostra'}`:`${margem}% · custos cobertos em ${Math.round(custo.coverage*100)}% da amostra`;
+    sub.textContent=completo?`${margem}% de margem · igual ao Bling`:`${margem}% · ${dadosExatos?'há custo de produto ausente':'pedidos ainda não conferidos por completo'}`;
   }
   if(custoEl)custoEl.textContent=`Custos: ${fmt(custo.projectedCost)} · Taxas: ${fmt(est.comissao||0)} · Frete: ${fmt(est.custoFrete||0)}`;
   setValue('dash-product-cost','− '+fmt(custo.projectedCost));
@@ -3701,16 +3711,16 @@ function recomputeDashLucro(){
   const badge=$('dash-quality-badge'),copy=$('dash-quality-copy');
   if(badge){
     badge.classList.remove('ok','bad');
-    badge.textContent=completo?(est.exata?'Completo':'Projetado'):'Incompleto';
+    badge.textContent=completo?'Completo':'Incompleto';
     badge.classList.add(completo?'ok':'bad');
   }
   if(copy){
     const missing=custo.missingSkus?.length||0;
     copy.textContent=completo
-      ?(est.exata?'Custos, taxas e frete conferidos para os pedidos do período.':'Custos conferidos por SKU; totais projetados a partir da amostra do período.')
-      :`${missing} SKU${missing===1?'':'s'} sem custo cadastrado. O lucro exibido é parcial até completar os custos em Produtos.`;
+      ?'Valor base, descontos, taxas e frete conferidos pedido por pedido no Bling.'
+      :(dadosExatos?`${missing} SKU${missing===1?'':'s'} sem custo cadastrado. O lucro exibido é parcial até completar os custos em Produtos.`:`${_dashLastTaxas.amostra||0} de ${_dashLastTaxas.dePedidos||0} pedidos conferidos no Bling. Atualize para concluir.`);
   }
-  setDashDataStatus(completo?'ok':'loading',completo?(est.exata?'Dados completos':'Projeção por amostra'):'Custos incompletos');
+  setDashDataStatus(completo?'ok':'loading',completo?'Dados completos':'Dados incompletos');
   renderMetaBar();
 }
 async function loadEnhancedDashboard(){
@@ -3781,12 +3791,12 @@ async function loadDashTaxas(){
     const est=d.estimativaPeriodo||{};
     const el=$('dash-taxas'),sub=$('dash-taxas-sub');
     if(el)el.textContent=fmt((est.comissao||0)+(est.custoFrete||0));
-    if(sub)sub.textContent=`comissão ${fmt(est.comissao||0)} · frete ${fmt(est.custoFrete||0)}${est.exata?'':' · amostra'}`;
+    if(sub)sub.textContent=`comissão ${fmt(est.comissao||0)} · frete ${fmt(est.custoFrete||0)}${est.exata?' · conferido no Bling':' · parcial'}`;
     const top=d.topVendidos||[];
     if(!topEl)return;
     if(!top.length){topEl.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Sem pedidos detalhados o suficiente no período pra calcular.</p></div>';return;}
     topEl.innerHTML=top.map((p,i)=>`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${i+1}. ${esc(p.nome)}</div><div class="mn-row-sub">${p.codigo?esc(p.codigo)+' · ':''}${fmtN(p.qtd)} un. vendidas</div></div><div class="mn-row-val">${fmt(p.faturamento)}</div></div>`).join('')
-      +`<div style="padding:8px 16px;font-size:10.5px;color:var(--fa)">Baseado em uma amostra de ${d.amostra||0} de ${d.dePedidos||0} pedido(s) do período — não é a contagem exata quando há muitos pedidos.</div>`;
+      +`<div style="padding:8px 16px;font-size:10.5px;color:var(--fa)">${d.estimativaPeriodo?.exata?'Conferido pedido por pedido no Bling.':`${d.amostra||0} de ${d.dePedidos||0} pedidos conferidos — dados parciais.`}</div>`;
   }catch(e){
     _dashLastTaxas=null;
     const lucro=$('dash-lucro'),sub=$('dash-luc-sub');
@@ -5365,6 +5375,8 @@ async function openPedidoDetalhe(id){
     const waNum=(p.contatoTel||'').replace(/\D/g,'');
     const waLink=waNum?`https://wa.me/55${waNum}`:'';
     const totalPed=Number(p.total||p.valor||0);
+    const valorBasePed=Number(p.valorBase||0);
+    const liquidoReceberPed=Number(p.valorLiquidoReceber||0);
     const fretePed=Number(p.frete||0);
     const descPed=Number(p.desconto||0);
     const qtdItens=(p.itens||[]).reduce((a,it)=>a+Number(it.qtd||0),0);
@@ -5377,7 +5389,7 @@ async function openPedidoDetalhe(id){
     const itensPedido=p.itens||[];
     const custosCompletos=itensPedido.length>0&&itensPedido.every(it=>S.products.some(q=>q.codigo&&it.codigo&&q.codigo===it.codigo&&q.precoCusto>0));
     const resultadoPedido=FinancialCalculator.calculateResult({
-      revenue:totalPed,
+      revenue:valorBasePed,
       productCost:custoItens,
       marketplaceFee:p.taxaComissao||0,
       shippingCost:p.custoFreteCanal||0,
@@ -5393,19 +5405,25 @@ async function openPedidoDetalhe(id){
         </div>
         <span class="sb2 ${sb}" style="flex-shrink:0;gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
       </div>
-      <div class="pd-facts">
+      <div class="pd-facts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
         <div class="pd-fact"><div class="pd-fact-l">Data</div><div class="pd-fact-v">${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</div></div>
-        <div class="pd-fact"><div class="pd-fact-l">Total</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(totalPed)}</div></div>
-        <div class="pd-fact"><div class="pd-fact-l">Frete</div><div class="pd-fact-v">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.transportadora)}</div>`:''}</div>
+        <div class="pd-fact"><div class="pd-fact-l">Total da venda</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(totalPed)}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Valor base marketplace</div><div class="pd-fact-v">${fmt(valorBasePed)}</div></div>
+        <div class="pd-fact"><div class="pd-fact-l">Frete cobrado</div><div class="pd-fact-v">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.transportadora)}</div>`:''}</div>
+        <div class="pd-fact"><div class="pd-fact-l">Líquido a receber</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(liquidoReceberPed)}</div></div>
         <div class="pd-fact"><div class="pd-fact-l">Itens</div><div class="pd-fact-v">${fmtN(qtdItens)} un.</div></div>
       </div>
       ${(Number(p.taxaComissao)>0||Number(p.custoFreteCanal)>0||custoItens>0||itensPedido.length>0)?`<div class="pd-facts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
         <div class="pd-fact" style="border-left:3px solid var(--er)"><div class="pd-fact-l">Custo dos produtos</div><div class="pd-fact-v" style="color:var(--er-t)">−${fmt(custoItens)}</div></div>
-        ${Number(p.taxaComissao)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Comissão do canal</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.taxaComissao||0)}</div></div>`:''}
-        ${Number(p.custoFreteCanal)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Custo de frete (canal)</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.custoFreteCanal||0)}</div></div>`:''}
+        ${Number(p.taxaComissao)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Taxa marketplace (${Number(p.taxaComissaoPercentual||0).toFixed(2)}%)</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.taxaComissao||0)}</div></div>`:''}
+        ${Number(p.custoFreteCanal)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Custo frete (${Number(p.custoFretePercentual||0).toFixed(2)}%)</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.custoFreteCanal||0)}</div></div>`:''}
         <div class="pd-fact" style="border-left:3px solid ${custosCompletos?'var(--ok)':'var(--wa)'}"><div class="pd-fact-l">${custosCompletos?'Lucro do pedido':'Lucro parcial'}</div><div class="pd-fact-v" style="color:${custosCompletos?'var(--ok-t)':'var(--wa-t)'}">${fmt(resultadoPedido.contributionProfit)}</div>${custosCompletos?'':`<div style="font-size:10px;color:var(--wa-t);margin-top:3px">Há item sem custo cadastrado</div>`}</div>
       </div>`:''}
-      ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:10px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
+      <div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:10px;display:flex;gap:16px;flex-wrap:wrap">
+        <span>Total dos itens: <strong style="color:var(--tx)">${fmt(p.totalProdutos||0)}</strong></span>
+        <span>Desconto: <strong style="color:${descPed>0?'var(--er-t)':'var(--tx)'}">${descPed>0?'−':''}${fmt(descPed)}</strong></span>
+        <span>Total de taxas: <strong style="color:var(--wa-t)">${Number(p.totalTaxasPercentual||0).toFixed(2)}%</strong></span>
+      </div>
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
       <div class="pd-items"><table><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
       <div style="margin-top:14px;border-top:1px solid var(--bord-l);padding-top:12px">
@@ -6703,11 +6721,11 @@ function renderFinTrend(d){
 }
 function renderDRE(d){
   const el=$('dre-list');if(!el||!d)return;
-  const receita=d.receitaConcluida||0;
   const cancel=d.totalCancelado||0;
-  const freteCobrado=d.totalFrete||0;
   const taxasEst=_finLastTaxas?.estimativaPeriodo||_finLastTaxas?.totais||{};
   const temTaxas=_finLastTaxas!=null;
+  const receita=temTaxas&&Number.isFinite(Number(taxasEst.valorBase))?Number(taxasEst.valorBase):(d.receitaConcluida||0);
+  const freteCobrado=temTaxas?Number(taxasEst.freteCobrado||0):(d.totalFrete||0);
   const taxas=temTaxas?(taxasEst.comissao||0):0;
   const custoFrete=temTaxas?(taxasEst.custoFrete||0):0;
   const custoSku=FinancialCalculator.estimateProductCost(
@@ -6718,7 +6736,7 @@ function renderDRE(d){
   // Fallback explícito: só usa a margem média quando a amostra não contém
   // nenhum SKU com custo. A interface identifica que o resultado é parcial.
   const custoProdutos=temCustoSku?custoSku.projectedCost:(margemCatalogo>0?receita*(1-margemCatalogo):0);
-  const custosCompletos=temCustoSku&&custoSku.complete&&custoSku.coverage>=.99;
+  const custosCompletos=temCustoSku&&custoSku.complete&&custoSku.coverage>=.99&&Boolean(taxasEst.exata);
   const temCusto=custoProdutos>0;
   const custoFixoPct=getCustoFixoPct();
   const custoFixo=custoFixoPct>0?receita*(custoFixoPct/100):0;
@@ -6740,7 +6758,7 @@ function renderDRE(d){
   const qualityTag=$('dre-quality-tag');
   if(qualityTag){
     const cobertura=Math.round(custoSku.coverage*100);
-    qualityTag.textContent=custosCompletos?(taxasEst.exata?'dados completos':'projeção por amostra'):`dados incompletos · cobertura de custo ${cobertura}%`;
+    qualityTag.textContent=custosCompletos?'dados conferidos no Bling':`dados incompletos · cobertura de custo ${cobertura}%`;
   }
   el.innerHTML=
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Receita bruta <span style="font-size:10px;color:var(--mu)">(${feiN+canN} pedidos)</span></span><span class="dre-val">${fmt(d.totalBruto||0)}</span></div>`+
@@ -6759,6 +6777,13 @@ function renderDRE(d){
   if($('fin-taxas-plataforma'))$('fin-taxas-plataforma').textContent=temTaxas?fmt(taxas):'…';
   if($('fin-lucro-bruto'))$('fin-lucro-bruto').textContent=margemBruta!=null?fmt(margemBruta):'—';
   if($('fin-lucro-liquido'))$('fin-lucro-liquido').textContent=lucroOperacional!=null?fmt(lucroOperacional):'—';
+  if(temTaxas){
+    if($('fin-bruto'))$('fin-bruto').textContent=fmt(taxasEst.totalVenda||receita);
+    if($('fin-rec'))$('fin-rec').textContent=fmt(receita);
+    if($('fin-frete'))$('fin-frete').textContent=fmt(freteCobrado);
+    if($('fin-desconto'))$('fin-desconto').textContent=fmt(taxasEst.desconto||0);
+    if($('fin-ticket'))$('fin-ticket').textContent=fmt(d.feitos?receita/d.feitos:0);
+  }
 }
 function renderFinChart(byDay,inicio,fim){
   const wrap=$('fin-chart');if(!wrap)return;
