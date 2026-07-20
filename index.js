@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { normalizeBlingOrder, orderDiscount } = require('./lib/bling-order');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -1668,13 +1669,63 @@ async function fetchPedidos(token, inicio, fim, maxPg = 3) {
   return all;
 }
 
+const _pedidoDetalheCache = new Map();
+const PEDIDO_DETALHE_TTL_MS = 30 * 60 * 1000;
+const PEDIDOS_EXATOS_MAX = 150;
+
+async function fetchPedidoDetalheCached(token, id) {
+  const key = String(id);
+  const hit = _pedidoDetalheCache.get(key);
+  if (hit && Date.now() - hit.at < PEDIDO_DETALHE_TTL_MS) return hit.data;
+  const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const detail = data?.data || data || {};
+  _pedidoDetalheCache.set(key, { at: Date.now(), data: detail });
+  return detail;
+}
+
+async function fetchPedidosDetalhados(token, pedidos, max = PEDIDOS_EXATOS_MAX) {
+  const selecionados = pedidos.slice(0, max);
+  const details = [];
+  let failed = 0;
+  for (let index = 0; index < selecionados.length; index++) {
+    try {
+      details.push(await fetchPedidoDetalheCached(token, selecionados[index].id));
+    } catch {
+      failed++;
+    }
+    // O Bling limita a conta inteira a 3 chamadas por segundo.
+    if (index < selecionados.length - 1) await new Promise(resolve => setTimeout(resolve, 350));
+  }
+  return {
+    details,
+    failed,
+    requested: selecionados.length,
+    total: pedidos.length,
+    exact: details.length === pedidos.length && failed === 0,
+  };
+}
+
 const categorizePedido = s => {
   const n = situacaoPT(s).toLowerCase();
   if (n.includes('cancel') || n.includes('devolv') || n.includes('reembolsad') || n.includes('suspenso') || n.includes('falhou')) return 'cancelado';
   if (n.includes('atend') || n.includes('conclui') || n.includes('entregue') || n.includes('faturad') || n.includes('despachad') || n.includes('enviado') || n.includes('encerrad')) return 'concluido';
   return 'pendente';
 };
-const valorPedido = p => p.totalVenda || p.totalProdutos || 0;
+// Receita efetiva da mercadoria, igual ao "Valor Base R$" do Bling. O frete
+// cobrado do comprador é informativo/pass-through e não infla o faturamento.
+const valorPedido = p => normalizeBlingOrder(p).salesBase;
+const valorTotalPedido = p => normalizeBlingOrder(p).customerTotal;
+const BLING_LOJA_NOMES = {
+  '205944878': 'Max Renovação Google Shop',
+  '205751409': 'Max Renovação ML',
+  '205940466': 'Max Renovação Shopify',
+  '205943400': 'Max Renovação Tiktok Shop',
+  '205751424': 'Max Renovação Yampi',
+  '205940026': 'TM Logistica',
+};
+const nomeLojaPedido = p => p?.loja?.nome || BLING_LOJA_NOMES[String(p?.loja?.id || '')] || null;
 
 // Calcula o intervalo imediatamente anterior, de mesma duração
 function periodoAnterior(inicio, fim) {
@@ -1718,8 +1769,8 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     // Bling retorna frete aninhado em transporte.frete (não como campo
     // plano) — ler o caminho errado aqui fazia o total de frete ficar
     // sempre zero, mesmo com pedidos tendo frete cobrado de verdade.
-    const totalFrete       = sum(allPedidos, p => Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || Number(p.frete) || 0);
-    const totalDesconto    = sum(allPedidos, p => Number(p.desconto) || Number(p.descontoValor) || 0);
+    const totalFrete       = sum(allPedidos, p => normalizeBlingOrder(p).shippingCharged);
+    const totalDesconto    = sum(allPedidos, p => orderDiscount(p));
 
     // Comparativo com período anterior (pedidos feitos)
     const prevFeitos = prevPedidos.filter(p => categorize(p.situacao) !== 'cancelado');
@@ -1758,10 +1809,9 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
 // ── Taxas reais por canal (comissão + custo de frete dos marketplaces) ──
 // A LISTAGEM de pedidos do Bling não traz o bloco `taxas` — ele só vem no
 // DETALHE (GET /pedidos/vendas/{id}): { taxaComissao, custoFrete, valorBase }.
-// Buscar o detalhe de todos os pedidos estouraria o rate-limit, então
-// amostramos os mais recentes, agregamos por loja/canal e guardamos em
-// cache por 10 minutos.
-const TAXAS_AMOSTRA_MAX = 12; // 12 × ~350ms de espaçamento ≈ 4s (cabe no timeout da Vercel)
+// O detalhe contém os números que aparecem na tela do Bling: desconto,
+// Valor Base, comissão, custo de frete e valor líquido. Eles são consultados
+// respeitando o limite oficial de 3 chamadas/s e guardados em cache.
 const _taxasCache = new Map();
 app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
@@ -1773,24 +1823,29 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
   try {
     const lista = await fetchPedidos(token, inicio, fim, 2);
     const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
-    const amostra = validos.slice(0, TAXAS_AMOSTRA_MAX);
+    const loteDetalhes = await fetchPedidosDetalhados(token, validos);
     const porLoja = {};
     const produtos = {}; // agregação de itens vendidos, pra "top 5 mais vendidos"
-    let comissao = 0, custoFrete = 0, freteCobrado = 0, valorAmostrado = 0, detalhados = 0;
-    for (const p of amostra) {
+    let comissao = 0, custoFrete = 0, freteCobrado = 0, valorBase = 0;
+    let totalVenda = 0, totalProdutos = 0, desconto = 0, outrasDespesas = 0, valorLiquido = 0;
+    for (const d of loteDetalhes.details) {
       try {
-        const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${p.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const d = data?.data || data || {};
-        const tx = d.taxas || {};
-        const lojaId = String(d.loja?.id || p.loja?.id || '0');
-        const com = Number(tx.taxaComissao) || 0;
-        const cf = Number(tx.custoFrete) || 0;
-        const fc = Number(d.transporte?.frete) || Number(d.transporte?.valorFrete) || 0;
-        const val = valorPedido(d) || valorPedido(p) || 0;
-        comissao += com; custoFrete += cf; freteCobrado += fc; valorAmostrado += val; detalhados++;
-        if (!porLoja[lojaId]) porLoja[lojaId] = { lojaId, pedidos: 0, comissao: 0, custoFrete: 0, freteCobrado: 0, valor: 0 };
+        const financeiro = normalizeBlingOrder(d);
+        const lojaId = String(d.loja?.id || '0');
+        const com = financeiro.marketplaceFee;
+        const cf = financeiro.marketplaceShippingCost;
+        const fc = financeiro.shippingCharged;
+        const val = financeiro.salesBase;
+        comissao += com;
+        custoFrete += cf;
+        freteCobrado += fc;
+        valorBase += val;
+        totalVenda += financeiro.customerTotal;
+        totalProdutos += financeiro.productsTotal;
+        desconto += financeiro.discount;
+        outrasDespesas += financeiro.otherExpenses;
+        valorLiquido += financeiro.marketplaceNet;
+        if (!porLoja[lojaId]) porLoja[lojaId] = { lojaId, lojaNome: nomeLojaPedido(d), pedidos: 0, comissao: 0, custoFrete: 0, freteCobrado: 0, valor: 0 };
         const l = porLoja[lojaId];
         l.pedidos++; l.comissao += com; l.custoFrete += cf; l.freteCobrado += fc; l.valor += val;
         // Reaproveita a MESMA chamada de detalhe (já paga o custo de API) pra
@@ -1806,20 +1861,17 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
           produtos[chave].qtd += qtd;
           produtos[chave].faturamento += valorItem;
         }
-      } catch { /* um pedido falhou; os demais seguem */ }
+      } catch { /* um pedido inválido não bloqueia os demais */ }
     }
-    // Projeção: se só uma amostra foi detalhada, extrapola para o período
-    // inteiro proporcionalmente ao VALOR vendido (taxas escalam com valor).
-    const valorTotalPeriodo = validos.reduce((a, p) => a + (valorPedido(p) || 0), 0);
-    const fator = (valorAmostrado > 0 && valorTotalPeriodo > valorAmostrado) ? valorTotalPeriodo / valorAmostrado : 1;
+    const detalhados = loteDetalhes.details.length;
+    const exata = loteDetalhes.exact;
     const payload = {
       periodo: { inicio, fim, period },
-      totais: { comissao, custoFrete, freteCobrado },
+      totais: { comissao, custoFrete, freteCobrado, valorBase, totalVenda, totalProdutos, desconto, outrasDespesas, valorLiquido },
       estimativaPeriodo: {
-        comissao: comissao * fator,
-        custoFrete: custoFrete * fator,
-        freteCobrado: freteCobrado * fator,
-        fator, exata: fator === 1,
+        comissao, custoFrete, freteCobrado, valorBase, totalVenda,
+        totalProdutos, desconto, outrasDespesas, valorLiquido,
+        fator: 1, exata,
       },
       porLoja: Object.values(porLoja).sort((a, b) => b.valor - a.valor),
       topVendidos: Object.values(produtos).sort((a, b) => b.qtd - a.qtd).slice(0, 5),
@@ -1828,6 +1880,7 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
       // vendidos. O fator sinaliza claramente quando há projeção do período.
       produtosVendidos: Object.values(produtos).sort((a, b) => b.faturamento - a.faturamento),
       amostra: detalhados, dePedidos: validos.length,
+      falhas: loteDetalhes.failed,
     };
     _taxasCache.set(key, { at: Date.now(), payload });
     res.json(payload);
@@ -2231,16 +2284,18 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       id:        p.id,
       numero:    p.numero,
       data:      p.data,
-      // totalVenda é o valor final do pedido (já com desconto aplicado); totalProdutos
-      // é a soma dos itens ANTES do desconto — priorizar totalProdutos aqui inflava o
-      // valor exibido sempre que o pedido tinha desconto.
-      valor:     Number(p.totalVenda) || Number(p.totalProdutos) || Number(p.total) || 0,
+      // Igual ao "Total da venda" do Bling: base após desconto + frete cobrado.
+      valor:     valorTotalPedido(p),
+      valorBase: valorPedido(p),
+      totalProdutos: normalizeBlingOrder(p).productsTotal,
+      desconto: normalizeBlingOrder(p).discount,
+      frete: normalizeBlingOrder(p).shippingCharged,
       situacao:  situacaoPT(p.situacao),
       contato:   p.contato?.nome || '—',
       // Canal de venda (nome da loja configurada no Bling — ex. "Mercado
       // Livre", "TikTok Shop"). Pode não vir na listagem em massa do Bling
       // (só confirmado no detalhe do pedido); nesse caso fica "—".
-      canal:     p.loja?.nome || null,
+      canal:     nomeLojaPedido(p),
     }));
 
     res.json({ total: pedidos.length, pedidos });
@@ -2259,10 +2314,7 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
 
   try {
     const id = validateNumericId(req.params.id, 'ID do pedido');
-    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const p = data?.data || data || {};
+    const p = await fetchPedidoDetalheCached(token, id);
     const itens = (Array.isArray(p.itens) ? p.itens : []).map(it => ({
       codigo:    it.codigo || it.produto?.codigo || '',
       descricao: it.descricao || it.produto?.nome || 'Item',
@@ -2271,6 +2323,7 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       total:     (Number(it.quantidade) || 0) * (Number(it.valor) || 0),
     }));
 
+    const financeiro = normalizeBlingOrder(p);
     res.json({
       id:          p.id,
       numero:      p.numero,
@@ -2281,20 +2334,27 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       contatoTel:  p.contato?.celular || p.contato?.telefone || '',
       observacoes:         p.observacoes || '',
       observacoesInternas: p.observacoesInternas || '',
-      total:       Number(p.totalVenda) || Number(p.totalProdutos) || Number(p.total) || 0,
-      totalProdutos:    Number(p.totalProdutos) || 0,
-      frete:            Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0,
+      total:            financeiro.customerTotal,
+      totalVenda:       financeiro.customerTotal,
+      valorBase:        financeiro.salesBase,
+      valorLiquidoReceber: financeiro.marketplaceNet,
+      totalProdutos:    financeiro.productsTotal,
+      frete:            financeiro.shippingCharged,
       transportadora:   p.transporte?.transportadora?.nome || _TRANSP_TIPO[p.transporte?.tipo] || '',
-      desconto:         Number(p.desconto) || 0,
+      desconto:         financeiro.discount,
+      outrasDespesas:   financeiro.otherExpenses,
       // Valores EXATOS que o Bling recebe do marketplace neste pedido —
       // sem estimativa: é o bloco `taxas` do próprio pedido.
-      taxaComissao:     Number(p.taxas?.taxaComissao) || 0,
-      custoFreteCanal:  Number(p.taxas?.custoFrete) || 0,
+      taxaComissao:     financeiro.marketplaceFee,
+      taxaComissaoPercentual: financeiro.marketplaceFeePercent,
+      custoFreteCanal:  financeiro.marketplaceShippingCost,
+      custoFretePercentual: financeiro.marketplaceShippingPercent,
+      totalTaxasPercentual: financeiro.totalMarketplacePercent,
       loja:             p.loja?.id || null,
       // Canal de venda (nome da loja configurada no Bling — ex.: "Mercado
       // Livre", "TikTok Shop"). Igual ao rótulo "Loja" que o próprio Bling
       // exibe no formulário do pedido.
-      lojaNome:         p.loja?.nome || null,
+      lojaNome:         nomeLojaPedido(p),
       itens,
     });
   } catch (err) {
@@ -2324,7 +2384,12 @@ app.put('/api/pedidos/:id', requireAuthJson, async (req, res) => {
     const raw = data?.data || data || {};
     if (observacoes !== undefined) raw.observacoes = observacoes;
     if (observacoesInternas !== undefined) raw.observacoesInternas = observacoesInternas;
-    if (desconto !== undefined) raw.desconto = Number(desconto) || 0;
+    if (desconto !== undefined) {
+      const valorDesconto = Number(desconto) || 0;
+      raw.desconto = raw.desconto && typeof raw.desconto === 'object'
+        ? { ...raw.desconto, valor: valorDesconto }
+        : { valor: valorDesconto, unidade: 'REAL' };
+    }
     if (frete !== undefined) {
       raw.transporte = raw.transporte || {};
       raw.transporte.frete = Number(frete) || 0;
@@ -2332,6 +2397,8 @@ app.put('/api/pedidos/:id', requireAuthJson, async (req, res) => {
     await axios.put(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, raw, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
+    _pedidoDetalheCache.delete(String(id));
+    _taxasCache.clear();
     res.json({ ok: true });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -2887,7 +2954,7 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     }
 
     const allPedidos = pedRes.value || [];
-    const valorOf = p => p.totalVenda || p.totalProdutos || 0;
+    const valorOf = valorPedido;
     const concluidos = allPedidos.filter(p => categorize(p.situacao) === 'concluido');
     const pendentes  = allPedidos.filter(p => categorize(p.situacao) === 'pendente');
     const cancelados = allPedidos.filter(p => categorize(p.situacao) === 'cancelado');
@@ -2904,8 +2971,8 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
     const aReceberPedidos = sum(pendentes);
 
     // Custos detalhados (frete, descontos) dos pedidos feitos
-    const freteTotal = feitos.reduce((a, p) => a + (Number(p.transporte?.frete) || Number(p.transporte?.valorFrete) || 0), 0);
-    const descontoTotal = feitos.reduce((a, p) => a + (Number(p.desconto) || 0), 0);
+    const freteTotal = feitos.reduce((a, p) => a + normalizeBlingOrder(p).shippingCharged, 0);
+    const descontoTotal = feitos.reduce((a, p) => a + orderDiscount(p), 0);
 
     // Comparativo de faturamento com o período anterior
     const prevPedidos = prevRes.status === 'fulfilled' ? (prevRes.value || []) : [];
@@ -3310,12 +3377,13 @@ app.get('/api/pedidos/sync/status', requireAuthJson, async (req, res) => {
       id:         p.id,
       numero:     p.numero,
       data:       p.data,
-      valor:      Number(p.totalVenda || p.totalProdutos || 0),
+      valor:      valorTotalPedido(p),
+      valorBase:  valorPedido(p),
       situacao:   situacaoPT(p.situacao),
       contato:    p.contato?.nome || '—',
       status:     p.situacao?.valor || p.situacao,
-      frete:      Number(p.transporte?.frete || p.frete || 0),
-      desconto:   Number(p.desconto || 0),
+      frete:      normalizeBlingOrder(p).shippingCharged,
+      desconto:   orderDiscount(p),
       observ:     p.observacoes || '',
       lastSync:   new Date().toISOString(),
     }));
@@ -3478,7 +3546,7 @@ app.get('/api/dashboard/enhanced', requireAuthJson, async (req, res) => {
     ]);
 
     const allPedidos = pedRes.status === 'fulfilled' ? (pedRes.value || []) : [];
-    const valorOf = p => p.totalVenda || p.totalProdutos || 0;
+    const valorOf = valorPedido;
     const concluidos = allPedidos.filter(p => categorizePedido(p.situacao) === 'concluido');
     const pendentes = allPedidos.filter(p => categorizePedido(p.situacao) === 'pendente');
     const cancelados = allPedidos.filter(p => categorizePedido(p.situacao) === 'cancelado');
