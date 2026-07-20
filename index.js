@@ -70,11 +70,15 @@ const app = express();
 app.set('trust proxy', 1);
 const DATA_DIR = path.join(__dirname, 'data');
 const AUDIT_LOG_PATH = path.join(DATA_DIR, 'audit-log.jsonl');
+const IS_VERCEL = Boolean(process.env.VERCEL);
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
 const loginAttempts = new Map();
 
-fs.mkdirSync(DATA_DIR, { recursive: true });
+// O filesystem do bundle publicado na Vercel é somente leitura. Nesse
+// ambiente, a auditoria continua disponível em memória durante a execução;
+// a persistência em arquivo fica restrita aos servidores com disco gravável.
+if (!IS_VERCEL) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -114,6 +118,7 @@ const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 // In-memory change log (resets on cold start)
 // TODO: Persistir em banco de dados em produção
 function loadAuditLog() {
+  if (IS_VERCEL) return [];
   try {
     if (!fs.existsSync(AUDIT_LOG_PATH)) return [];
     return fs.readFileSync(AUDIT_LOG_PATH, 'utf8')
@@ -384,10 +389,12 @@ async function recordAudit(entry) {
   };
   pushAuditEntry(item);
   if (changeLog.length > 1000) changeLog.shift();
-  try {
-    await fs.promises.appendFile(AUDIT_LOG_PATH, `${JSON.stringify(item)}\n`, 'utf8');
-  } catch (error) {
-    console.error('[audit:append]', error.message);
+  if (!IS_VERCEL) {
+    try {
+      await fs.promises.appendFile(AUDIT_LOG_PATH, `${JSON.stringify(item)}\n`, 'utf8');
+    } catch (error) {
+      console.error('[audit:append]', error.message);
+    }
   }
   return item;
 }
