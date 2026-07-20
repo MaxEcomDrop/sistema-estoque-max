@@ -1514,10 +1514,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
         <div class="fk-card" style="padding:22px 24px" onclick="setView('financeiro')">
           <div class="fk-top" style="margin-bottom:14px;font-size:12.5px;font-weight:600;opacity:0.92;color:var(--tx);display:flex;align-items:center;gap:8px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Lucro estimado
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> <span id="dash-lucro-label">Lucro real estimado</span>
           </div>
           <div id="dash-lucro" style="font-size:32px;letter-spacing:-1.2px;color:var(--tx);font-weight:700">-</div>
-          <div id="dash-luc-sub" style="font-size:12.5px;opacity:0.9;margin-top:8px;color:var(--mu)">margem média do catálogo</div>
+          <div id="dash-luc-sub" style="font-size:12.5px;opacity:0.9;margin-top:8px;color:var(--mu)">calculando custos, taxas e frete</div>
           <div style="margin-top:8px;font-size:11px;color:var(--mu)" id="dash-luc-custo"></div>
         </div>
       </div>
@@ -1570,7 +1570,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="dash-kpis" style="grid-template-columns:repeat(3,1fr);margin-top:12px">
         <div class="fk-card fk-orange" onclick="setView('financeiro')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-            <div class="fk-label">Taxas de plataforma</div>
+            <div class="fk-label">Taxas e frete do canal</div>
             <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
           </div>
           <div class="fk-val" id="dash-taxas">—</div>
@@ -2032,7 +2032,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="fk-grid-2">
         <div class="fk-sm">
           <div class="fk-sm-ico" style="background:#f0f9ff;color:#0284c7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
-          <div><div class="fk-sm-label">Frete total</div><div class="fk-sm-val" id="fin-frete">—</div></div>
+          <div><div class="fk-sm-label">Frete cobrado</div><div class="fk-sm-val" id="fin-frete">—</div></div>
         </div>
         <div class="fk-sm">
           <div class="fk-sm-ico" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
@@ -2055,11 +2055,11 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
         <div class="fk-sm">
           <div class="fk-sm-ico" style="background:#ecfdf5;color:#059669"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg></div>
-          <div><div class="fk-sm-label">Lucro bruto</div><div class="fk-sm-val" id="fin-lucro-bruto">—</div></div>
+          <div><div class="fk-sm-label">Margem bruta</div><div class="fk-sm-val" id="fin-lucro-bruto">—</div></div>
         </div>
         <div class="fk-sm">
           <div class="fk-sm-ico" style="background:#f0fdfa;color:#0d9488"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8M8 8l8 8"/></svg></div>
-          <div><div class="fk-sm-label">Lucro líquido</div><div class="fk-sm-val" id="fin-lucro-liquido">—</div></div>
+          <div><div class="fk-sm-label">Resultado operacional</div><div class="fk-sm-val" id="fin-lucro-liquido">—</div></div>
         </div>
         <div class="fk-sm" style="cursor:default">
           <div class="fk-sm-ico" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H1l8-8 8 8h-8v8"/></svg></div>
@@ -2079,7 +2079,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="dre-card">
         <div class="dre-head">
           <span class="dre-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg> Resultado do período (DRE)</span>
-          <span class="dre-tag">taxas reais do Bling · custo via margem do catálogo</span>
+          <span class="dre-tag" id="dre-quality-tag">custos por SKU · taxas e frete do Bling</span>
         </div>
         <div class="dre-list" id="dre-list">
           <div class="st-wrap" style="padding:20px"><p class="st-d">Clique em Atualizar para calcular o resultado.</p></div>
@@ -3115,6 +3115,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   </div>
 </div>
 
+<script src="/financial-calculator.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
@@ -3423,6 +3424,7 @@ let dashPeriod='today';
 let _dashLoaded=false;
 let _dashReqId=0;
 let _dashFat=0,_dashTotalPedidos=0,_dashCancelados=0,_dashPendentes=null;
+let _dashFrete=0,_dashDesconto=0,_dashLastTaxas=null;
 function setDashPeriod(p,btn){
   dashPeriod=p;
   document.querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('on'));
@@ -3440,6 +3442,7 @@ async function loadDashboard(force=false){
   // Alertas de estoque vêm dos produtos já carregados
   renderDashAlerts();
   if(_dashLoaded&&!force)return;
+  _dashLastTaxas=null;
   const setTxt=(id,v)=>{const el=$(id);if(el){el.textContent=v;el.classList.remove('skel');}};
   ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>{const el=$(id);if(el){el.textContent='R$ 0.000,00';el.classList.add('skel');}});
   // Guarda contra respostas fora de ordem: se o usuário trocar de período
@@ -3485,7 +3488,8 @@ async function loadDashboard(force=false){
     if(fatConc)fatConc.textContent=v.feitos>0?`✅ ${fmtN(v.feitos)} feitos`:'';
     if(fatPend)fatPend.textContent=v.pendentes>0?`⏳ ${fmtN(v.pendentes||0)} pendentes`:'';
     if(fatCanc)fatCanc.textContent=v.cancelados>0?`🚫 ${fmtN(v.cancelados)} cancelados`:'';
-    // Lucro estimado via margem média do catálogo
+    // O lucro só é fechado depois que chegam os detalhes financeiros da
+    // amostra (custos por SKU, comissão e custo de frete do canal).
     _dashFat=v.faturamento||0;
     _dashTotalPedidos=v.totalPedidos||0;
     _dashCancelados=v.cancelados||0;
@@ -3552,19 +3556,34 @@ function avgMargem(){
   return sum/withCost.length;
 }
 function recomputeDashLucro(){
-  const margem=avgMargem();
-  const lucro=_dashFat*margem;
-  const el=$('dash-lucro');if(el)el.textContent=margem>0?fmt(lucro):'—';
-  const sub=$('dash-luc-sub');if(sub)sub.textContent=margem>0?`margem média ~${Math.round(margem*100)}%`:'cadastre custos p/ estimar';
+  const el=$('dash-lucro'),sub=$('dash-luc-sub'),label=$('dash-lucro-label');
   const custoEl=$('dash-luc-custo');
-  if(custoEl){
-    if(margem>0){
-      const custoEst=_dashFat*(1-margem);
-      custoEl.textContent=`Custo estimado: ${fmt(custoEst)}`;
-    } else {
-      custoEl.textContent='Importe custos dos produtos para ver estimativa';
-    }
+  if(!_dashLastTaxas){
+    if(el)el.textContent='…';
+    if(sub)sub.textContent='calculando custos, taxas e frete';
+    if(custoEl)custoEl.textContent='';
+    return;
   }
+  const est=_dashLastTaxas.estimativaPeriodo||{};
+  const custo=FinancialCalculator.estimateProductCost(
+    _dashLastTaxas.produtosVendidos||[],S.products,est.fator||1
+  );
+  const completo=custo.complete&&custo.coverage>=.99;
+  const resultado=FinancialCalculator.calculateResult({
+    revenue:_dashFat,
+    productCost:custo.projectedCost,
+    marketplaceFee:est.comissao||0,
+    shippingCost:est.custoFrete||0,
+    costsComplete:completo,
+    estimated:!est.exata,
+  });
+  if(el)el.textContent=fmt(resultado.contributionProfit);
+  if(label)label.textContent=completo?'Lucro real estimado':'Lucro parcial';
+  if(sub){
+    const margem=Math.round(resultado.contributionMargin*100);
+    sub.textContent=completo?`${margem}% de margem · ${est.exata?'dados completos':'projeção por amostra'}`:`${margem}% · custos cobertos em ${Math.round(custo.coverage*100)}% da amostra`;
+  }
+  if(custoEl)custoEl.textContent=`Custos: ${fmt(custo.projectedCost)} · Taxas: ${fmt(est.comissao||0)} · Frete: ${fmt(est.custoFrete||0)}`;
   renderMetaBar();
 }
 async function loadEnhancedDashboard(){
@@ -3630,16 +3649,22 @@ async function loadDashTaxas(){
   try{
     const r=await fetch(`/api/financeiro/taxas?period=${dashPeriod}`),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
+    _dashLastTaxas=d;
+    recomputeDashLucro();
     const est=d.estimativaPeriodo||{};
     const el=$('dash-taxas'),sub=$('dash-taxas-sub');
-    if(el)el.textContent=fmt(est.comissao||0);
-    if(sub)sub.textContent=est.exata?'no período':'estimado (amostra) no período';
+    if(el)el.textContent=fmt((est.comissao||0)+(est.custoFrete||0));
+    if(sub)sub.textContent=`comissão ${fmt(est.comissao||0)} · frete ${fmt(est.custoFrete||0)}${est.exata?'':' · amostra'}`;
     const top=d.topVendidos||[];
     if(!topEl)return;
     if(!top.length){topEl.innerHTML='<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Sem pedidos detalhados o suficiente no período pra calcular.</p></div>';return;}
     topEl.innerHTML=top.map((p,i)=>`<div class="mn-row"><div class="mn-row-info"><div class="mn-row-nome">${i+1}. ${esc(p.nome)}</div><div class="mn-row-sub">${p.codigo?esc(p.codigo)+' · ':''}${fmtN(p.qtd)} un. vendidas</div></div><div class="mn-row-val">${fmt(p.faturamento)}</div></div>`).join('')
       +`<div style="padding:8px 16px;font-size:10.5px;color:var(--fa)">Baseado em uma amostra de ${d.amostra||0} de ${d.dePedidos||0} pedido(s) do período — não é a contagem exata quando há muitos pedidos.</div>`;
   }catch(e){
+    _dashLastTaxas=null;
+    const lucro=$('dash-lucro'),sub=$('dash-luc-sub');
+    if(lucro)lucro.textContent='—';
+    if(sub)sub.textContent='dados financeiros indisponíveis';
     console.error('[Taxas]',e.message);
     if(topEl)topEl.innerHTML=`<div class="st-wrap" style="padding:12px"><p style="font-size:12px;color:var(--mu)">Erro ao carregar: ${esc(e.message)}</p></div>`;
   }
@@ -5212,16 +5237,21 @@ async function openPedidoDetalhe(id){
     const fretePed=Number(p.frete||0);
     const descPed=Number(p.desconto||0);
     const qtdItens=(p.itens||[]).reduce((a,it)=>a+Number(it.qtd||0),0);
-    // Lucro bruto do pedido: total menos taxas do canal (comissão + custo de
-    // frete cobrado pelo marketplace) menos o custo dos produtos vendidos,
-    // casando cada item pelo SKU com o custo já carregado em S.products —
-    // não requer nenhuma chamada extra à API do Bling.
+    // Resultado do pedido: a mesma regra usada no Início e no Financeiro.
+    // O lucro de contribuição desconta CMV, comissão e frete do canal.
     const custoItens=(p.itens||[]).reduce((a,it)=>{
       const mp=S.products.find(q=>q.codigo&&it.codigo&&q.codigo===it.codigo);
       return a+(mp&&mp.precoCusto>0?mp.precoCusto*Number(it.qtd||0):0);
     },0);
-    const temCustoItens=(p.itens||[]).some(it=>S.products.some(q=>q.codigo&&it.codigo&&q.codigo===it.codigo&&q.precoCusto>0));
-    const lucroBruto=totalPed-(p.taxaComissao||0)-(p.custoFreteCanal||0)-custoItens;
+    const itensPedido=p.itens||[];
+    const custosCompletos=itensPedido.length>0&&itensPedido.every(it=>S.products.some(q=>q.codigo&&it.codigo&&q.codigo===it.codigo&&q.precoCusto>0));
+    const resultadoPedido=FinancialCalculator.calculateResult({
+      revenue:totalPed,
+      productCost:custoItens,
+      marketplaceFee:p.taxaComissao||0,
+      shippingCost:p.custoFreteCanal||0,
+      costsComplete:custosCompletos,
+    });
     $('ped-detalhe').innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px">
         <div style="min-width:0">
@@ -5238,10 +5268,11 @@ async function openPedidoDetalhe(id){
         <div class="pd-fact"><div class="pd-fact-l">Frete</div><div class="pd-fact-v">${fmt(fretePed)}</div>${p.transportadora?`<div style="font-size:10px;color:var(--mu);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.transportadora)}</div>`:''}</div>
         <div class="pd-fact"><div class="pd-fact-l">Itens</div><div class="pd-fact-v">${fmtN(qtdItens)} un.</div></div>
       </div>
-      ${(Number(p.taxaComissao)>0||Number(p.custoFreteCanal)>0||temCustoItens)?`<div class="pd-facts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+      ${(Number(p.taxaComissao)>0||Number(p.custoFreteCanal)>0||custoItens>0||itensPedido.length>0)?`<div class="pd-facts" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+        <div class="pd-fact" style="border-left:3px solid var(--er)"><div class="pd-fact-l">Custo dos produtos</div><div class="pd-fact-v" style="color:var(--er-t)">−${fmt(custoItens)}</div></div>
         ${Number(p.taxaComissao)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Comissão do canal</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.taxaComissao||0)}</div></div>`:''}
         ${Number(p.custoFreteCanal)>0?`<div class="pd-fact" style="border-left:3px solid var(--wa)"><div class="pd-fact-l">Custo de frete (canal)</div><div class="pd-fact-v" style="color:var(--wa-t)">−${fmt(p.custoFreteCanal||0)}</div></div>`:''}
-        <div class="pd-fact" style="border-left:3px solid var(--ok)"><div class="pd-fact-l">Lucro bruto${temCustoItens?'':' (sem custo cadastrado)'}</div><div class="pd-fact-v" style="color:var(--ok-t)">${fmt(lucroBruto)}</div></div>
+        <div class="pd-fact" style="border-left:3px solid ${custosCompletos?'var(--ok)':'var(--wa)'}"><div class="pd-fact-l">${custosCompletos?'Lucro do pedido':'Lucro parcial'}</div><div class="pd-fact-v" style="color:${custosCompletos?'var(--ok-t)':'var(--wa-t)'}">${fmt(resultadoPedido.contributionProfit)}</div>${custosCompletos?'':`<div style="font-size:10px;color:var(--wa-t);margin-top:3px">Há item sem custo cadastrado</div>`}</div>
       </div>`:''}
       ${descPed>0?`<div style="font-size:12px;color:var(--mu);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:10px">Desconto aplicado: <strong style="color:var(--er-t)">−${fmt(descPed)}</strong></div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
@@ -6458,6 +6489,7 @@ async function loadFinanceiro(force=false){
 }
 function renderFinFromData(d){
   const body=$('fin-margin-body');if(!body)return;
+    _finLastTaxas=null;
     // KPI Row 1
     $('fin-bruto').textContent=fmt(d.totalBruto);
     $('fin-rec').textContent=fmt(d.receitaConcluida);
@@ -6540,42 +6572,62 @@ function renderFinTrend(d){
 }
 function renderDRE(d){
   const el=$('dre-list');if(!el||!d)return;
-  const margem=avgMargem();
   const receita=d.receitaConcluida||0;
   const cancel=d.totalCancelado||0;
-  const frete=d.totalFrete||0;
-  const temCusto=margem>0;
-  const custoProdutos=temCusto?receita*(1-margem):0;
-  // Taxas de plataforma (comissão real/estimada do Bling) — vem de loadFinTaxas(),
-  // que roda em paralelo e pode ainda não ter chegado na primeira renderização.
+  const freteCobrado=d.totalFrete||0;
   const taxasEst=_finLastTaxas?.estimativaPeriodo||_finLastTaxas?.totais||{};
   const temTaxas=_finLastTaxas!=null;
   const taxas=temTaxas?(taxasEst.comissao||0):0;
+  const custoFrete=temTaxas?(taxasEst.custoFrete||0):0;
+  const custoSku=FinancialCalculator.estimateProductCost(
+    _finLastTaxas?.produtosVendidos||[],S.products,taxasEst.fator||1
+  );
+  const margemCatalogo=avgMargem();
+  const temCustoSku=custoSku.projectedCost>0;
+  // Fallback explícito: só usa a margem média quando a amostra não contém
+  // nenhum SKU com custo. A interface identifica que o resultado é parcial.
+  const custoProdutos=temCustoSku?custoSku.projectedCost:(margemCatalogo>0?receita*(1-margemCatalogo):0);
+  const custosCompletos=temCustoSku&&custoSku.complete&&custoSku.coverage>=.99;
+  const temCusto=custoProdutos>0;
   const custoFixoPct=getCustoFixoPct();
   const custoFixo=custoFixoPct>0?receita*(custoFixoPct/100):0;
-  // Lucro bruto = receita + frete − taxas de plataforma (não desconta custo de produto)
-  const receitaAjustada=receita+frete;
-  const lucroBruto=temTaxas?receitaAjustada-taxas:null;
-  // Lucro líquido = lucro bruto − custo de produtos − custos fixos/variáveis (%)
-  const lucroLiquido=(temTaxas&&temCusto)?lucroBruto-custoProdutos-custoFixo:null;
-  const mPct=lucroLiquido!=null&&receitaAjustada>0?Math.round((lucroLiquido/receitaAjustada)*100):null;
+  const resultado=(temTaxas&&temCusto)?FinancialCalculator.calculateResult({
+    revenue:receita,
+    productCost:custoProdutos,
+    marketplaceFee:taxas,
+    shippingCost:custoFrete,
+    fixedCost:custoFixo,
+    costsComplete:custosCompletos,
+    estimated:!taxasEst.exata,
+  }):null;
+  const margemBruta=resultado?.grossMargin??null;
+  const lucroContribuicao=resultado?.contributionProfit??null;
+  const lucroOperacional=resultado?.operationalProfit??null;
+  const mPct=resultado&&receita>0?Math.round(resultado.operationalProfit/receita*100):null;
   const mCor=mPct==null?'':mPct<10?'var(--er-bg);color:var(--er-t)':mPct<25?'var(--wa-bg);color:var(--wa-t)':'var(--ok-bg);color:var(--ok-t)';
   const canN=d.cancelados||0,feiN=d.feitos||0;
+  const qualityTag=$('dre-quality-tag');
+  if(qualityTag){
+    const cobertura=Math.round(custoSku.coverage*100);
+    qualityTag.textContent=custosCompletos?(taxasEst.exata?'dados completos':'projeção por amostra'):`dados incompletos · cobertura de custo ${cobertura}%`;
+  }
   el.innerHTML=
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Receita bruta <span style="font-size:10px;color:var(--mu)">(${feiN+canN} pedidos)</span></span><span class="dre-val">${fmt(d.totalBruto||0)}</span></div>`+
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Cancelamentos/devoluções <span style="font-size:10px;color:var(--mu)">(${canN} pedido${canN!==1?'s':''})</span></span><span class="dre-val neg">−&nbsp;${fmt(cancel)}</span></div>`+
     `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Receita realizada (pedidos feitos) <span style="font-size:10px;color:var(--mu)">(${feiN} feitos)</span></span><span class="dre-val">${fmt(receita)}</span></div>`+
-    (frete>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">+</span>Frete cobrado</span><span class="dre-val" style="color:var(--ok-t)">+&nbsp;${fmt(frete)}</span></div>`:'')+
+    (freteCobrado>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op"></span>Frete cobrado (informativo)</span><span class="dre-val">${fmt(freteCobrado)}</span></div>`:'')+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos ${custosCompletos?'':'(estimado)'}</span><span class="dre-val neg">${temCusto?'−&nbsp;'+fmt(custoProdutos):'—'}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Margem bruta</span><span class="dre-val">${margemBruta!=null?fmt(margemBruta):'—'}</span></div>`+
     `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Taxas de plataforma</span><span class="dre-val neg">${temTaxas?'−&nbsp;'+fmt(taxas):'…'}</span></div>`+
-    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Lucro bruto</span><span class="dre-val">${lucroBruto!=null?fmt(lucroBruto):'—'}</span></div>`+
-    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos (estimado)</span><span class="dre-val neg">${temCusto?'−&nbsp;'+fmt(custoProdutos):'—'}</span></div>`+
+    `<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo de frete do canal</span><span class="dre-val neg">${temTaxas?'−&nbsp;'+fmt(custoFrete):'…'}</span></div>`+
+    `<div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Margem de contribuição</span><span class="dre-val">${lucroContribuicao!=null?fmt(lucroContribuicao):'—'}</span></div>`+
     (custoFixoPct>0?`<div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custos fixos/variáveis (${custoFixoPct}%)</span><span class="dre-val neg">−&nbsp;${fmt(custoFixo)}</span></div>`:'')+
-    `<div class="dre-row total"><span class="dre-lbl">Lucro líquido estimado</span><span class="dre-val pos">${lucroLiquido!=null?fmt(lucroLiquido):'—'}${mPct!=null?`<span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
+    `<div class="dre-row total"><span class="dre-lbl">Resultado operacional ${custosCompletos?'':'estimado'}</span><span class="dre-val pos">${lucroOperacional!=null?fmt(lucroOperacional):'—'}${mPct!=null?` <span class="dre-margin-pill" style="background:${mCor}">${mPct}%</span>`:''}</span></div>`+
     (temCusto?'':`<p class="sh-note" style="margin-top:10px">Cadastre o <strong>custo</strong> dos produtos no editor para calcular o lucro real.</p>`);
   // Sincroniza os cards de KPI (fk-sm) com os mesmos números do DRE
   if($('fin-taxas-plataforma'))$('fin-taxas-plataforma').textContent=temTaxas?fmt(taxas):'…';
-  if($('fin-lucro-bruto'))$('fin-lucro-bruto').textContent=lucroBruto!=null?fmt(lucroBruto):'—';
-  if($('fin-lucro-liquido'))$('fin-lucro-liquido').textContent=lucroLiquido!=null?fmt(lucroLiquido):'—';
+  if($('fin-lucro-bruto'))$('fin-lucro-bruto').textContent=margemBruta!=null?fmt(margemBruta):'—';
+  if($('fin-lucro-liquido'))$('fin-lucro-liquido').textContent=lucroOperacional!=null?fmt(lucroOperacional):'—';
 }
 function renderFinChart(byDay,inicio,fim){
   const wrap=$('fin-chart');if(!wrap)return;
