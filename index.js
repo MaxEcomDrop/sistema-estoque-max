@@ -1809,11 +1809,17 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
       periodo: { inicio, fim, period },
       totais: { comissao, custoFrete, freteCobrado },
       estimativaPeriodo: {
-        comissao: comissao * fator, custoFrete: custoFrete * fator,
+        comissao: comissao * fator,
+        custoFrete: custoFrete * fator,
+        freteCobrado: freteCobrado * fator,
         fator, exata: fator === 1,
       },
       porLoja: Object.values(porLoja).sort((a, b) => b.valor - a.valor),
       topVendidos: Object.values(produtos).sort((a, b) => b.qtd - a.qtd).slice(0, 5),
+      // A lista completa da amostra permite ao frontend cruzar cada SKU com
+      // o custo cadastrado e calcular o CMV ponderado pelos itens realmente
+      // vendidos. O fator sinaliza claramente quando há projeção do período.
+      produtosVendidos: Object.values(produtos).sort((a, b) => b.faturamento - a.faturamento),
       amostra: detalhados, dePedidos: validos.length,
     };
     _taxasCache.set(key, { at: Date.now(), payload });
