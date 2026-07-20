@@ -32,3 +32,12 @@ test('painel executivo preserva IDs únicos e indicadores essenciais', () => {
     'dash-cost-coverage',
   ].forEach((id) => assert.match(html, new RegExp(`id="${id}"`)));
 });
+
+test('recálculo financeiro usa somente atualizadores disponíveis no próprio escopo', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  const start = html.indexOf('function recomputeDashLucro()');
+  const end = html.indexOf('async function loadEnhancedDashboard', start);
+  const body = start >= 0 && end > start ? html.slice(start, end) : '';
+  assert.ok(body, 'função recomputeDashLucro não encontrada');
+  assert.doesNotMatch(body, /\bsetTxt\s*\(/);
+});
