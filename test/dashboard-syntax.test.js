@@ -100,4 +100,5 @@ test('contas financeiras carregam automaticamente e possuem resumo, filtros e ba
   ['fin-acc-payable', 'fin-acc-receivable', 'fin-acc-overdue', 'fin-acc-fixed', 'fin-acc-search'].forEach(id => assert.match(html, new RegExp(`id="${id}"`)));
   assert.match(html, /loadFinanceiro\(\);loadContasCustomizadas\(\)/);
   assert.match(html, /function quickSetContaStatus\(id,status\)/);
+  assert.doesNotMatch(html, /\.mbox,\.sheet\{animation:popIn/);
 });
