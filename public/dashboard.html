@@ -2146,6 +2146,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <div style="display:flex;align-items:center;gap:4px"><input type="number" id="fin-custo-fixo-pct" min="0" max="100" step="0.5" style="width:52px;height:26px;padding:0 6px;background:var(--bg);border:1px solid var(--bord);border-radius:7px;font-size:13px;font-family:inherit;color:var(--tx)" oninput="setCustoFixoPct(this.value)"><span style="font-size:13px;color:var(--mu);font-weight:600">% da receita</span></div>
           </div>
         </div>
+        <div class="fk-sm" style="cursor:default">
+          <div class="fk-sm-ico" style="background:#ecfeff;color:#0891b2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M6 16l4-4 3 3 5-7"/><circle cx="18" cy="8" r="2"/></svg></div>
+          <div><div class="fk-sm-label">Ponto de equilíbrio</div><div class="fk-sm-val" id="fin-break-even">—</div><div style="font-size:10px;color:var(--mu)">Receita para cobrir contas fixas</div></div>
+        </div>
       </div>
       <!-- Gráfico de vendas -->
       <div class="fin-chart-wrap">
@@ -3501,7 +3505,7 @@ function setView(v){
 let dashPeriod='today';
 let _dashLoaded=false;
 let _dashReqId=0;
-let _dashFat=0,_dashTotalPedidos=0,_dashFeitos=0,_dashCancelados=0,_dashPendentes=null;
+let _dashFat=0,_metaMesFat=0,_dashTotalPedidos=0,_dashFeitos=0,_dashCancelados=0,_dashPendentes=null;
 let _dashFrete=0,_dashDesconto=0,_dashLastTaxas=null;
 function setDashPeriod(p,btn){
   dashPeriod=p;
@@ -3633,6 +3637,7 @@ async function loadDashboard(force=false){
     loadEnhancedDashboard();
     loadFinanceiroPrevisao();
     loadDashTaxas();
+    loadMetaMensal();
     loadDashNotasStatus();
     loadDashUpdates();
   }catch(e){
@@ -4639,19 +4644,28 @@ function updateLowBadge(){
   const bb=$('bnav-badge');if(bb){bb.textContent=cnt>0?String(cnt):'';bb.style.display=cnt>0?'':'none';}
 }
 function saveMetaFat(){const v=parseFloat($('cfg-meta-fat').value)||0;S.metaFat=v;localStorage.setItem('em_meta',v);renderMetaBar();toast(v>0?`Meta: ${fmt(v)}`:'Meta desativada','ok');}
+async function loadMetaMensal(){
+  const now=new Date(),ano=now.getFullYear(),mes=String(now.getMonth()+1).padStart(2,'0');
+  const inicio=`${ano}-${mes}-01`,fim=`${ano}-${mes}-${String(new Date(ano,now.getMonth()+1,0).getDate()).padStart(2,'0')}`;
+  try{
+    const r=await fetch(`/api/financeiro?period=custom&startDate=${inicio}&endDate=${fim}`),d=await r.json();
+    if(r.ok){_metaMesFat=Number(d.receitaConcluida||0);renderMetaBar();}
+  }catch{}
+}
 function renderMetaBar(){
   const wrap=$('meta-bar-wrap');if(!wrap)return;
   if(!S.metaFat||S.metaFat<=0){wrap.classList.remove('vis');return;}
   wrap.classList.add('vis');
-  const pct=Math.min(_dashFat/S.metaFat,1);
+  const realizado=_metaMesFat||0;
+  const pct=Math.min(realizado/S.metaFat,1);
   const pctPx=(pct*100).toFixed(1)+'%';
   const fill=$('meta-bar-fill');
   if(fill){fill.style.width=pctPx;fill.classList.toggle('done',pct>=1);}
   const pctEl=$('meta-bar-pct');if(pctEl)pctEl.textContent=Math.round(pct*100)+'%';
   const sub=$('meta-bar-sub');
   if(sub){
-    const rest=S.metaFat-_dashFat;
-    sub.textContent=pct>=1?`Meta atingida! ${fmt(_dashFat)} faturados neste período.`:`Faltam ${fmt(Math.max(0,rest))} para atingir a meta de ${fmt(S.metaFat)}.`;
+    const rest=S.metaFat-realizado;
+    sub.textContent=pct>=1?`Meta atingida! ${fmt(realizado)} faturados neste mês.`:`Faltam ${fmt(Math.max(0,rest))} para atingir a meta de ${fmt(S.metaFat)} · do dia 1 ao último dia do mês.`;
   }
 }
 function saveEstoqueMin(){const inp=$('cfg-min-stock');const v=Math.max(0,parseInt(inp.value)||0);S.estoqueMin=v;localStorage.setItem('em_min',v);updateLowBadge();updateKpis();renderTable();toast(`Alerta de estoque: abaixo de ${v} un.`,'ok');}
@@ -5371,7 +5385,7 @@ async function openPedidoDetalhe(id){
     const cat=categorizePed(p.situacao);
     const sb=cat==='concluido'?'s-ok':cat==='cancelado'?'s-out':'s-lo';
     const ico=pedSitIcon(p.situacao);
-    const itensRows=(p.itens||[]).map(it=>{const mp=S.products.find(q=>q.codigo&&it.codigo&&q.codigo===it.codigo);return`<tr${mp?` style="cursor:pointer" onclick="closeModal('ped-modal');setView('produtos');setTimeout(()=>openEditor(${mp.id}),80)" title="Ver produto"`:''}><td>${esc(it.descricao)}<br><span style="font-size:10px;color:var(--mu)">${it.codigo?'SKU: '+esc(it.codigo):''}</span></td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
+    const itensRows=(p.itens||[]).map(it=>{const mp=S.products.find(q=>q.codigo&&it.codigo&&q.codigo===it.codigo);const foto=it.imagemUrl||mp?.imagemUrl||'';return`<tr${mp?` style="cursor:pointer" onclick="closeModal('ped-modal');setView('produtos');setTimeout(()=>openEditor(${mp.id}),80)" title="Ver produto"`:''}><td><div style="display:flex;align-items:center;gap:9px;min-width:0">${foto?`<img src="${esc(foto)}" alt="Foto de ${esc(it.descricao)}" width="38" height="38" loading="lazy" style="width:38px;height:38px;object-fit:cover;border-radius:7px;border:1px solid var(--bord-l);flex:none" onerror="this.style.display='none'">`:''}<span style="min-width:0">${esc(it.descricao)}<br><span style="font-size:10px;color:var(--mu)">${it.codigo?'SKU: '+esc(it.codigo):''}</span></span></div></td><td class="r">${fmtN(it.qtd)}</td><td class="r">${fmt(it.valor)}</td><td class="r" style="font-weight:600">${fmt(it.total)}</td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--mu);padding:14px 0">Sem itens detalhados</td></tr>';
     const waNum=(p.contatoTel||'').replace(/\D/g,'');
     const waLink=waNum?`https://wa.me/55${waNum}`:'';
     const totalPed=Number(p.total||p.valor||0);
@@ -5426,27 +5440,6 @@ async function openPedidoDetalhe(id){
       </div>
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin-bottom:6px">ITENS DO PEDIDO (${(p.itens||[]).length})</div>
       <div class="pd-items"><table><thead><tr><th>Produto</th><th class="r">Qtd</th><th class="r">Unit.</th><th class="r">Total</th></tr></thead><tbody>${itensRows}</tbody></table></div>
-      <div style="margin-top:14px;border-top:1px solid var(--bord-l);padding-top:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <span style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px">EDITAR PEDIDO</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-          <div>
-            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Desconto (R$)</label>
-            <input type="number" id="ped-edit-desconto" value="${descPed}" min="0" step="0.01" style="width:100%;height:38px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx)">
-          </div>
-          <div>
-            <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Frete (R$)</label>
-            <input type="number" id="ped-edit-frete" value="${fretePed}" min="0" step="0.01" style="width:100%;height:38px;padding:0 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx)">
-          </div>
-        </div>
-        <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Observações (visíveis ao cliente/nota)</label>
-        <textarea id="ped-edit-obs" rows="2" style="width:100%;padding:8px 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);resize:vertical;margin-bottom:10px">${esc(p.observacoes||'')}</textarea>
-        <label style="display:block;font-size:11px;color:var(--mu);margin-bottom:4px;font-weight:600">Observações internas</label>
-        <textarea id="ped-edit-obs-int" rows="2" style="width:100%;padding:8px 10px;background:var(--bg);border:1.5px solid var(--bord);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);resize:vertical">${esc(p.observacoesInternas||'')}</textarea>
-        <div id="ped-edit-err" style="display:none;color:var(--er-t);font-size:12px;margin-top:8px;font-weight:500"></div>
-        <button class="btp" id="ped-edit-save-btn" style="width:100%;justify-content:center;margin-top:10px" onclick="savePedidoEdicao('${esc(String(id))}')">Salvar alterações no Bling</button>
-      </div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${waLink?`<a class="bts" href="${waLink}" target="_blank" rel="noopener" style="flex:0;font-size:12px;padding:8px 12px;display:inline-flex;align-items:center;gap:6px;color:#25d366;border-color:#25d366;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>WhatsApp</a>`:''}
         <button class="btp" style="flex:1;font-size:12px;padding:8px 12px;justify-content:center" onclick="closeModal('ped-modal');setView('notas');setTimeout(()=>{openEmitirNFe();$('nfe-pedido-id').value='${esc(String(p.numero||p.id))}';},80)">Emitir NF-e para este pedido</button>
@@ -5710,12 +5703,15 @@ function renderCurvaABC(){
     loadVendasRanking().then(renderCurvaABC);
     return;
   }
-  // Faturamento estimado = qtd vendida (amostra) × preço atual; produtos sem
-  // nenhuma venda na amostra não entram na curva.
+  const vendasExatas=(_finLastTaxas?.produtosVendidos||_dashLastTaxas?.produtosVendidos||[]);
+  const vendaPorSku=new Map(vendasExatas.filter(x=>x.codigo).map(x=>[x.codigo,x]));
+  // Usa o faturamento real dos itens detalhados. Só recorre a quantidade ×
+  // preço atual quando o detalhe financeiro ainda não foi carregado.
   const comVendas=S.products
     .map(p=>{
-      const qtd=S.vendasPorCodigo[p.codigo]||0;
-      const faturamento=qtd*p.preco;
+      const real=vendaPorSku.get(p.codigo);
+      const qtd=real?Number(real.qtd||0):(S.vendasPorCodigo[p.codigo]||0);
+      const faturamento=real?Number(real.faturamento||0):qtd*p.preco;
       const temCusto=p.precoCusto>0;
       return{p,qtd,faturamento,lucroBruto:temCusto?qtd*(p.preco-p.precoCusto):null,temCusto};
     })
@@ -5725,8 +5721,9 @@ function renderCurvaABC(){
   const total=comVendas.reduce((a,x)=>a+x.faturamento,0);
   let cum=0;
   _abcRows=comVendas.map(x=>{
+    const pctAntes=total>0?(cum/total)*100:100;
+    const cls=pctAntes<80?'A':pctAntes<95?'B':'C';
     cum+=x.faturamento;const pctAcum=total>0?(cum/total)*100:100;
-    const cls=pctAcum<=80?'A':pctAcum<=95?'B':'C';
     return{...x,cls,pctAcum};
   });
   renderAbcGrid();
@@ -6044,19 +6041,8 @@ async function openEditor(id){
             <div class="df"><label>Qtd. atual (un.)</label><input type="number" id="ed-estoque" value="${curEstoque}" min="0"></div>
             <div class="df"><label>Unidade</label><input type="text" id="ed-unidade" value="${esc(p.unidade||'un')}"></div>
           </div>
-          <div class="edraw-sec">Tributação e Outros</div>
-          <div class="df-2">
-            <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}"></div>
-            <div class="df"><label>CEST</label><input type="text" id="ed-cest" value="${esc(p.tributacao?.cest||'')}"></div>
-          </div>
-          <div class="df-2">
-            <div class="df"><label>Origem (0-8)</label><input type="number" id="ed-origem" value="${p.tributacao?.origem!==undefined?p.tributacao.origem:''}" min="0" max="8"></div>
-            <div class="df"><label>Peso bruto (kg)</label><input type="number" id="ed-peso" value="${p.pesoBruto||0}" min="0" step="0.001"></div>
-          </div>
-          <div class="df-2">
-            <div class="df"><label>Categoria <span style="font-size:10px;font-weight:400;color:var(--fa)">(alterar no Bling)</span></label><input type="text" id="ed-cat" value="${esc(p.categoria?.descricao||p.categoria||'-')}" readonly style="background:var(--bord-l);cursor:default;color:var(--mu)"></div>
-          </div>
-          <div class="df"><label>Descrição</label><textarea id="ed-desc" rows="3">${esc(p.descricaoComplementar||p.descricao||'')}</textarea></div>
+          <div class="edraw-sec">Tributação</div>
+          <div class="df"><label>NCM</label><input type="text" id="ed-ncm" value="${esc(p.tributacao?.ncm||'')}" autocomplete="off"></div>
         </div>
       </div>
     `;
@@ -6272,16 +6258,13 @@ async function saveEditorFull(){
     precoCusto:parseFloat($('ed-custo').value)||0,
     garantia:parseInt($('ed-garantia')?.value)||0,
     fornecedor: fornecedorPayload,
-    pesoBruto:parseFloat($('ed-peso').value)||0,
     unidade:$('ed-unidade').value.trim()||'un',
     situacao:$('ed-sit').value,
     tipo:$('ed-tipo').value,
-    descricaoComplementar:$('ed-desc').value,
     imagemUrls: finalUrls,
     tributacao: {
-      ncm: $('ed-ncm').value.trim(),
-      cest: $('ed-cest').value.trim(),
-      origem: $('ed-origem').value !== '' ? parseInt($('ed-origem').value) : undefined
+      ...(editorProduct.tributacao||{}),
+      ncm: $('ed-ncm').value.trim()
     }
   };
   try{
@@ -6300,10 +6283,9 @@ async function saveEditorFull(){
       p.tipo=updated.tipo;
       p.gtin=updated.gtin;
       p.unidade=updated.unidade;
-      p.peso=updated.pesoBruto;
-      p.descricao=updated.descricaoComplementar;
-      p.imagemUrl=updated.imagemUrl||p.imagemUrl;
+      p.imagemUrl=finalUrls[0]||p.imagemUrl;
       p.fornecedor=updated.fornecedor;
+      p.hasFornecedor=Boolean(updated.fornecedor?.id);
       if(!isNaN(newEstoque))p.estoque=newEstoque;
     }
     toast('Produto atualizado com sucesso','ok');closeEditor();updateKpis();updateLowBadge();applyFilters();
@@ -6777,6 +6759,10 @@ function renderDRE(d){
   if($('fin-taxas-plataforma'))$('fin-taxas-plataforma').textContent=temTaxas?fmt(taxas):'…';
   if($('fin-lucro-bruto'))$('fin-lucro-bruto').textContent=margemBruta!=null?fmt(margemBruta):'—';
   if($('fin-lucro-liquido'))$('fin-lucro-liquido').textContent=lucroOperacional!=null?fmt(lucroOperacional):'—';
+  const fixasMensais=(_contasCustomCache||[]).filter(c=>c.tipo==='fixa'&&c.status!=='pago').reduce((a,c)=>a+(Number(c.valor)||0),0);
+  const margemContribuicaoPct=receita>0&&lucroContribuicao!=null?lucroContribuicao/receita:0;
+  const pontoEquilibrio=fixasMensais>0&&margemContribuicaoPct>0?fixasMensais/margemContribuicaoPct:0;
+  if($('fin-break-even'))$('fin-break-even').textContent=pontoEquilibrio>0?fmt(pontoEquilibrio):(fixasMensais>0?'Sem margem':'Cadastre contas fixas');
   if(temTaxas){
     if($('fin-bruto'))$('fin-bruto').textContent=fmt(taxasEst.totalVenda||receita);
     if($('fin-rec'))$('fin-rec').textContent=fmt(receita);

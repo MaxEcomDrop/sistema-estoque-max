@@ -1376,6 +1376,25 @@ app.post('/api/fornecedores', requireAuthJson, async (req, res) => {
 
 // ── Produtos ─────────────────────────────────────────────────────────
 
+function publicProductImageUrl(req, docId, version = Date.now()) {
+  return `${req.protocol}://${req.get('host')}/img/produto/${docId}.jpg?v=${version}`;
+}
+
+async function getPersistedProductImages(req, produtoId, max = 12) {
+  const admin = getAdmin();
+  if (!admin) return [];
+  const refs = Array.from({ length: max }, (_, i) =>
+    admin.firestore().collection('produto_imagens').doc(i ? `${produtoId}_${i}` : String(produtoId))
+  );
+  try {
+    const docs = await admin.firestore().getAll(...refs);
+    return docs.filter(d => d.exists).map(d => publicProductImageUrl(req, d.id, d.updateTime?.toMillis() || Date.now()));
+  } catch (e) {
+    console.error('[produto imagens] leitura:', e.message);
+    return [];
+  }
+}
+
 app.get('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
@@ -1431,12 +1450,15 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
     if (admin) {
       try {
         const snap = await admin.firestore().collection('produto_imagens').select('updatedAt').get();
-        const overrides = new Map(snap.docs.map(d => [d.id, d.updateTime?.toMillis() || Date.now()]));
+        const overrides = new Map();
+        snap.docs.forEach(d => {
+          const productId = d.id.split('_')[0];
+          if (!overrides.has(productId) || d.id === productId) overrides.set(productId, { id: d.id, version: d.updateTime?.toMillis() || Date.now() });
+        });
         if (overrides.size) {
-          const base = `${req.protocol}://${req.get('host')}`;
           for (const prod of products) {
             const v = overrides.get(String(prod.id));
-            if (v) prod.imagemUrl = `${base}/img/produto/${prod.id}.jpg?v=${v}`;
+            if (v) prod.imagemUrl = publicProductImageUrl(req, v.id, v.version);
           }
         }
       } catch (e) { console.error('[produtos] override de imagens:', e.message); }
@@ -1448,6 +1470,20 @@ app.get('/api/produtos', requireAuthJson, async (req, res) => {
           if (ocultosSet.has(String(prod.id))) prod.oculto = true;
         }
       } catch (e) { console.error('[produtos] override de ocultos:', e.message); }
+
+      try {
+        const snapOverrides = await admin.firestore().collection('produto_overrides').get();
+        const map = new Map(snapOverrides.docs.map(d => [d.id, d.data()]));
+        for (const prod of products) {
+          const saved = map.get(String(prod.id));
+          if (!saved) continue;
+          if (saved.fornecedor?.id) {
+            prod.fornecedor = saved.fornecedor;
+            prod.hasFornecedor = true;
+          }
+          if (Number(saved.precoCusto) >= 0) prod.precoCusto = Number(saved.precoCusto);
+        }
+      } catch (e) { console.error('[produtos] override persistente:', e.message); }
     }
 
     res.json({ total: products.length, products });
@@ -1537,7 +1573,29 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
     const { data } = await axios.get(`https://www.bling.com.br/Api/v3/produtos/${produtoId}`, {
       headers: blingHeaders(token),
     });
-    res.json(data?.data || {});
+    const produto = data?.data || {};
+    const admin = getAdmin();
+    if (admin) {
+      try {
+        const saved = await admin.firestore().collection('produto_overrides').doc(String(produtoId)).get();
+        if (saved.exists) {
+          const override = saved.data();
+          if (override.fornecedor?.id && !produto.fornecedor?.id) produto.fornecedor = override.fornecedor;
+          if (Number(override.precoCusto) >= 0 && !(getProductCusto(produto) > 0)) {
+            produto.precoCusto = Number(override.precoCusto);
+            produto.fornecedor = { ...(produto.fornecedor || override.fornecedor || {}), precoCusto: Number(override.precoCusto) };
+          }
+        }
+      } catch (e) { console.error('[produto] override persistente:', e.message); }
+    }
+    const persistidas = await getPersistedProductImages(req, produtoId);
+    const bling = [
+      ...(produto.midia?.imagens?.internas || []),
+      ...(produto.midia?.imagens?.externas || []),
+    ].map(i => i?.link).filter(Boolean).map(url => String(url).replace(/^http:\/\//i, 'https://'));
+    produto.imagemUrls = [...new Set([...persistidas, ...bling])];
+    if (produto.imagemUrls[0]) produto.imagemUrl = produto.imagemUrls[0];
+    res.json(produto);
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     if (err.response?.status === 404) return res.status(404).json({ error: 'Produto não encontrado' });
@@ -1602,7 +1660,7 @@ app.post('/api/produtos/:id/imagem', requireAuthJson, async (req, res) => {
       data: b64, mime, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     // URL pública (com cache-buster) que o navegador e o Bling vão usar
-    const url = `${req.protocol}://${req.get('host')}/img/produto/${docId}.jpg?v=${Date.now()}`;
+    const url = publicProductImageUrl(req, docId);
     res.json({ url });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -1671,17 +1729,34 @@ async function fetchPedidos(token, inicio, fim, maxPg = 3) {
 
 const _pedidoDetalheCache = new Map();
 const PEDIDO_DETALHE_TTL_MS = 30 * 60 * 1000;
+const PEDIDO_DETALHE_PERSIST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PEDIDOS_EXATOS_MAX = 150;
 
 async function fetchPedidoDetalheCached(token, id) {
   const key = String(id);
   const hit = _pedidoDetalheCache.get(key);
   if (hit && Date.now() - hit.at < PEDIDO_DETALHE_TTL_MS) return hit.data;
+  const admin = getAdmin();
+  if (admin) {
+    try {
+      const snap = await admin.firestore().collection('bling_pedido_detalhes').doc(key).get();
+      const saved = snap.exists ? snap.data() : null;
+      if (saved?.detail && Date.now() - Number(saved.cachedAt || 0) < PEDIDO_DETALHE_PERSIST_TTL_MS) {
+        _pedidoDetalheCache.set(key, { at: Date.now(), data: saved.detail });
+        return saved.detail;
+      }
+    } catch (e) { console.error('[pedido cache] leitura:', e.message); }
+  }
   const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const detail = data?.data || data || {};
   _pedidoDetalheCache.set(key, { at: Date.now(), data: detail });
+  if (admin) {
+    admin.firestore().collection('bling_pedido_detalhes').doc(key).set({
+      detail, cachedAt: Date.now(), updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }).catch(e => console.error('[pedido cache] gravação:', e.message));
+  }
   return detail;
 }
 
@@ -1689,14 +1764,14 @@ async function fetchPedidosDetalhados(token, pedidos, max = PEDIDOS_EXATOS_MAX) 
   const selecionados = pedidos.slice(0, max);
   const details = [];
   let failed = 0;
-  for (let index = 0; index < selecionados.length; index++) {
-    try {
-      details.push(await fetchPedidoDetalheCached(token, selecionados[index].id));
-    } catch {
-      failed++;
-    }
-    // O Bling limita a conta inteira a 3 chamadas por segundo.
-    if (index < selecionados.length - 1) await new Promise(resolve => setTimeout(resolve, 350));
+  // Três chamadas paralelas por janela: respeita o limite da conta e reduz a
+  // latência de rede. Nas próximas consultas, o cache persistente da Vercel
+  // elimina quase todas as chamadas ao Bling.
+  for (let index = 0; index < selecionados.length; index += 3) {
+    const lote = selecionados.slice(index, index + 3);
+    const resultados = await Promise.allSettled(lote.map(p => fetchPedidoDetalheCached(token, p.id)));
+    resultados.forEach(r => { if (r.status === 'fulfilled') details.push(r.value); else failed++; });
+    if (index + 3 < selecionados.length) await new Promise(resolve => setTimeout(resolve, 1050));
   }
   return {
     details,
@@ -2022,6 +2097,14 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
             ? 'Este produto não tem um fornecedor vinculado no Bling. Cadastre um fornecedor para ele lá (Produto → Fornecedores) antes de editar o custo por aqui — é o Bling que exige isso para saber onde gravar o preço de custo.'
             : `O Bling devolveu ${custoSalvo === null ? 'nenhum valor' : `R$ ${custoSalvo.toFixed(2)}`} depois da gravação, em vez de R$ ${custoAlvo.toFixed(2)}.`);
         }
+      }
+      const admin = getAdmin();
+      if (admin && fornecedorOriginal.id) {
+        await admin.firestore().collection('produto_overrides').doc(String(id)).set({
+          fornecedor: { id: Number(fornecedorOriginal.id), nome: fornecedorOriginal.nome || '' },
+          precoCusto: custoAlvo !== null ? custoAlvo : getProductCusto(currentProd),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
       }
       changeLog.push({
         id: changeLog.length + 1, produto_id: id,
@@ -3347,6 +3430,12 @@ app.post('/api/webhook/bling', async (req, res) => {
     const tipo = String(evt.event || evt.tipo || evt.type || evt.data?.tipo || '').toLowerCase();
     let title, body;
     if (tipo.includes('order') || tipo.includes('pedido') || tipo.includes('venda')) {
+      const pedidoId = evt.data?.id || evt.data?.pedido?.id || evt.id;
+      if (pedidoId) {
+        _pedidoDetalheCache.delete(String(pedidoId));
+        _taxasCache.clear();
+        admin.firestore().collection('bling_pedido_detalhes').doc(String(pedidoId)).delete().catch(() => {});
+      }
       title = '🛒 Novo pedido!';
       body = 'Um novo pedido foi registrado no Bling. Toque para ver.';
     } else if (tipo.includes('nf') || tipo.includes('nota')) {
