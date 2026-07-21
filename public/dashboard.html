@@ -5788,6 +5788,11 @@ function setAbcFilter(cls,el){
 function renderCurvaABC(){
   const el=$('fin-abc-body');if(!el)return;
   if(!S.products.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
+  if(Number(_finLastData?.totalPedidos||0)===0){
+    _abcRows=[];
+    el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto vendido no período selecionado. Produtos sem vendas não entram na Curva ABC.</p></div>';
+    return;
+  }
   const ledgerABC=_finLastTaxas?.curvaABC;
   if(_finLastTaxas?.schemaVersion>=2&&Array.isArray(ledgerABC)){
     _abcRows=ledgerABC.map(row=>{
