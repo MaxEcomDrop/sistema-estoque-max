@@ -20,6 +20,14 @@
     {
       "path": "/api/cron/push",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/sync-vendas",
+      "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/cron/sync-estoque",
+      "schedule": "45 3 * * *"
     }
   ]
 }

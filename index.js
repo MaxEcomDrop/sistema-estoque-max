@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { normalizeBlingOrder, orderDiscount } = require('./lib/bling-order');
+const { aggregateSalesFacts, buildSalesFact, normalizeSku } = require('./lib/sales-ledger');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -156,12 +157,15 @@ async function loadPersistedData() {
   if (!admin) return;
   try {
     const doc = await admin.firestore().collection('app_state').doc('data').get();
-    if (!doc.exists) return;
-    const d = doc.data() || {};
+    const d = doc.exists ? (doc.data() || {}) : {};
     if (Array.isArray(d.customContas)) customContas = d.customContas;
     if (Array.isArray(d.calendarEvents)) calendarEvents = d.calendarEvents;
     if (Array.isArray(d.changeLog)) changeLog = d.changeLog;
     if (d.appConfig && typeof d.appConfig === 'object') appConfig = { ...appConfig, ...d.appConfig };
+    try {
+      const accountsSnap = await admin.firestore().collection('finance_accounts').get();
+      if (!accountsSnap.empty) customContas = accountsSnap.docs.map(account => ({ ...account.data(), id: Number(account.id) || account.data().id }));
+    } catch (e) { console.error('[finance_accounts load]', e.message); }
     contaIdCounter = customContas.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
     eventIdCounter = calendarEvents.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0) + 1;
     console.log(`[Persistência] ${customContas.length} conta(s), ${calendarEvents.length} evento(s) e ${changeLog.length} log(s) restaurados do Firestore`);
@@ -1235,27 +1239,93 @@ app.post('/api/ml/perguntas/:id/responder', requireAuthJson, async (req, res) =>
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao responder pergunta', e.message); }
 });
 
+async function fetchMLItemIds(ml, status = 'active', max = 1000) {
+  const ids = [];
+  for (let offset = 0; offset < max; offset += 50) {
+    const { data } = await axios.get(`https://api.mercadolibre.com/users/${ml.sellerId}/items/search`, {
+      headers: mlHeaders(ml.token), params: { status, limit: 50, offset },
+    });
+    const rows = Array.isArray(data?.results) ? data.results : [];
+    ids.push(...rows);
+    if (rows.length < 50 || ids.length >= Number(data?.paging?.total || max)) break;
+  }
+  return ids.slice(0, max);
+}
+
+async function fetchMLItems(ml, ids) {
+  const all = [];
+  for (let index = 0; index < ids.length; index += 20) {
+    const { data } = await axios.get('https://api.mercadolibre.com/items', {
+      headers: mlHeaders(ml.token), params: { ids: ids.slice(index, index + 20).join(',') },
+    });
+    all.push(...(Array.isArray(data) ? data.map(row => row.body || row).filter(Boolean) : []));
+  }
+  return all;
+}
+
+async function fetchMLOrders(ml, from, max = 1000) {
+  const results = [];
+  for (let offset = 0; offset < max; offset += 50) {
+    const { data } = await axios.get('https://api.mercadolibre.com/orders/search', {
+      headers: mlHeaders(ml.token),
+      params: { seller: ml.sellerId, 'order.date_created.from': from, sort: 'date_desc', limit: 50, offset },
+    });
+    const rows = Array.isArray(data?.results) ? data.results : [];
+    results.push(...rows);
+    if (rows.length < 50 || results.length >= Number(data?.paging?.total || max)) break;
+  }
+  return results.slice(0, max);
+}
+
+function normalizeMLListing(item) {
+  return {
+    id: item.id, titulo: item.title, preco: item.price, qtd: item.available_quantity,
+    initialQuantity: item.initial_quantity, soldQuantity: item.sold_quantity,
+    situacao: item.status, subStatus: item.sub_status || [],
+    thumb: item.pictures?.[0]?.secure_url || item.pictures?.[0]?.url || item.thumbnail,
+    pictures: (item.pictures || []).map(picture => picture.secure_url || picture.url).filter(Boolean),
+    link: item.permalink, sku: item.seller_custom_field || null,
+    categoryId: item.category_id, condition: item.condition, listingTypeId: item.listing_type_id,
+    buyingMode: item.buying_mode, warranty: item.warranty || '', videoId: item.video_id || '',
+    catalogProductId: item.catalog_product_id || null, catalogListing: Boolean(item.catalog_listing),
+    attributes: item.attributes || [], saleTerms: item.sale_terms || [],
+    dateCreated: item.date_created, lastUpdated: item.last_updated,
+  };
+}
+
 app.get('/api/ml/anuncios', requireAuthJson, async (req, res) => {
   const ml = await ensureMLToken();
   if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
   try {
     const status = req.query.status || 'active';
-    const { data: searchData } = await axios.get(`https://api.mercadolibre.com/users/${ml.sellerId}/items/search?status=${status}&limit=50`, { headers: mlHeaders(ml.token) });
-    const ids = (searchData.results || []).slice(0, 20);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.max(1, Math.min(50, Number(req.query.pageSize) || 50));
+    const allIds = await fetchMLItemIds(ml, status, 1000);
+    const ids = allIds.slice((page - 1) * pageSize, page * pageSize);
     if (!ids.length) return res.json({ anuncios: [] });
     // "pictures" vem na mesma chamada em lote (sem custo extra de requisição)
     // e traz a foto em alta do anúncio; "thumbnail" sozinho é a miniatura
     // comprimida que o ML usa nos resultados de busca, sempre baixa qualidade.
-    const { data: itemsData } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}&attributes=id,title,price,available_quantity,status,thumbnail,pictures,permalink,seller_custom_field`, { headers: mlHeaders(ml.token) });
-    const anuncios = (itemsData || []).map(r => r.body || r).filter(Boolean).map(it => ({
-      id: it.id, titulo: it.title, preco: it.price, qtd: it.available_quantity,
-      situacao: it.status, thumb: it.pictures?.[0]?.secure_url || it.pictures?.[0]?.url || it.thumbnail, link: it.permalink,
-      // SKU do vendedor no anúncio — usado para vincular exclusivamente por
-      // SKU exato ao produto correspondente no Bling (nunca por nome/título).
-      sku: it.seller_custom_field || null,
-    }));
-    res.json({ anuncios, total: searchData.paging?.total || anuncios.length });
+    const items = await fetchMLItems(ml, ids);
+    const anuncios = items.map(normalizeMLListing);
+    res.json({ anuncios, total: allIds.length, page, pageSize, pages: Math.ceil(allIds.length / pageSize) });
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao buscar anúncios', e.message); }
+});
+
+app.get('/api/ml/anuncios/:id', requireAuthJson, async (req, res) => {
+  const ml = await ensureMLToken();
+  if (!ml?.token) return res.status(401).json({ error: 'ML não conectado' });
+  try {
+    const { data: item } = await axios.get(`https://api.mercadolibre.com/items/${encodeURIComponent(req.params.id)}`, { headers: mlHeaders(ml.token) });
+    let categoryAttributes = [];
+    if (item.category_id) {
+      try {
+        const { data } = await axios.get(`https://api.mercadolibre.com/categories/${item.category_id}/attributes`, { headers: mlHeaders(ml.token) });
+        categoryAttributes = Array.isArray(data) ? data : [];
+      } catch { /* atributos são enriquecimento opcional */ }
+    }
+    res.json({ item: normalizeMLListing(item), categoryAttributes });
+  } catch (err) { sendErrorResponse(res, 500, 'Erro ao buscar anúncio', err.message); }
 });
 
 // Edita preço e/ou estoque de um anúncio e MANDA a alteração de volta para
@@ -1264,10 +1334,7 @@ app.get('/api/ml/anuncios', requireAuthJson, async (req, res) => {
 app.patch('/api/ml/anuncios/:id', requireAuthJson, async (req, res) => {
   const ml = await ensureMLToken();
   if (!ml?.token) return res.status(401).json({ error: 'ML não conectado', code: 'ML_NOT_CONNECTED' });
-  const { preco, estoque, titulo_produto } = req.body || {};
-  if (preco === undefined && estoque === undefined) {
-    return res.status(400).json({ error: 'Informe preco e/ou estoque' });
-  }
+  const { preco, estoque, titulo_produto, sku, garantia, videoId, condicao, titulo, atributos, termosVenda, imagens } = req.body || {};
   const payload = {};
   if (preco !== undefined) {
     const p = Number(preco);
@@ -1279,7 +1346,32 @@ app.patch('/api/ml/anuncios/:id', requireAuthJson, async (req, res) => {
     if (!(q >= 0) || !Number.isFinite(q)) return res.status(400).json({ error: 'Estoque inválido' });
     payload.available_quantity = q;
   }
+  if (sku !== undefined) payload.seller_custom_field = String(sku).trim().slice(0, 100);
+  if (garantia !== undefined) payload.warranty = String(garantia).trim().slice(0, 255);
+  if (videoId !== undefined) payload.video_id = String(videoId).trim().slice(0, 80) || null;
+  if (condicao !== undefined && ['new', 'used', 'not_specified'].includes(condicao)) payload.condition = condicao;
+  if (titulo !== undefined) payload.title = String(titulo).trim().slice(0, 60);
+  if (Array.isArray(atributos)) payload.attributes = atributos.slice(0, 100);
+  if (Array.isArray(termosVenda)) payload.sale_terms = termosVenda.slice(0, 50);
+  if (Array.isArray(imagens)) payload.pictures = imagens.filter(Boolean).slice(0, 12).map(source => ({ source }));
+  if (!Object.keys(payload).length) return res.status(400).json({ error: 'Nenhum campo editável informado' });
   try {
+    // Não reenvia campos iguais. Alguns anúncios com vendas/catálogo bloqueiam
+    // título, condição ou fotos; reenviar o mesmo valor faria até uma simples
+    // alteração de preço falhar por causa de um campo que não mudou.
+    const { data: current } = await axios.get(`https://api.mercadolibre.com/items/${req.params.id}`, { headers: mlHeaders(ml.token) });
+    const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    if (Number(payload.price) === Number(current.price)) delete payload.price;
+    if (Number(payload.available_quantity) === Number(current.available_quantity)) delete payload.available_quantity;
+    if (payload.title === current.title) delete payload.title;
+    if (payload.seller_custom_field === (current.seller_custom_field || '')) delete payload.seller_custom_field;
+    if (payload.warranty === (current.warranty || '')) delete payload.warranty;
+    if ((payload.video_id || null) === (current.video_id || null)) delete payload.video_id;
+    if (payload.condition === current.condition) delete payload.condition;
+    if (same(payload.attributes, current.attributes)) delete payload.attributes;
+    if (same(payload.sale_terms, current.sale_terms)) delete payload.sale_terms;
+    if (payload.pictures && same(payload.pictures.map(p => p.source), (current.pictures || []).map(p => p.secure_url || p.url))) delete payload.pictures;
+    if (!Object.keys(payload).length) return res.json({ success: true, unchanged: true, item: normalizeMLListing(current) });
     const { data } = await axios.put(`https://api.mercadolibre.com/items/${req.params.id}`, payload, { headers: mlHeaders(ml.token) });
     changeLog.push({
       id: changeLog.length + 1, produto_id: `ml_${req.params.id}`,
@@ -1289,12 +1381,76 @@ app.patch('/api/ml/anuncios/:id', requireAuthJson, async (req, res) => {
       timestamp: new Date().toISOString(),
     });
     saveInMemoryData();
-    res.json({ success: true, item: { id: data.id, price: data.price, available_quantity: data.available_quantity } });
+    res.json({ success: true, item: normalizeMLListing(data) });
   } catch (err) {
     // A API do ML retorna o motivo da rejeição em cause[] (ex: preço abaixo do mínimo, item pausado etc.)
     const detail = err.response?.data?.cause?.[0]?.message || err.response?.data?.message || err.message;
     sendErrorResponse(res, err.response?.status || 500, 'Erro ao atualizar anúncio no Mercado Livre', detail);
   }
+});
+
+// O Bling permanece como fonte do saldo. A conciliação nunca dá uma segunda
+// baixa no Bling: ela apenas replica para o anúncio ML o saldo atual do SKU,
+// registrando cada ajuste para auditoria e evitando movimentação duplicada.
+async function reconcileMLStock(blingToken, ml, { dryRun = false } = {}) {
+  const catalog = await loadProductCostCatalog(blingToken);
+  const storeLinks = await fetchProductStoreLinks(blingToken).catch(() => ({}));
+  const catalogByProductId = new Map(Object.entries(catalog).map(([sku, product]) => [String(product.productId), { sku, ...product }]));
+  const productByListingId = new Map();
+  Object.entries(storeLinks).forEach(([productId, links]) => {
+    const product = catalogByProductId.get(String(productId));
+    if (!product) return;
+    (links || []).forEach(link => { if (link.listingId) productByListingId.set(String(link.listingId).toUpperCase(), product); });
+  });
+  const ids = await fetchMLItemIds(ml, 'active', 1000);
+  const listings = await fetchMLItems(ml, ids);
+  const admin = getAdmin();
+  const result = { checked: listings.length, linked: 0, autoLinked: 0, updated: 0, missingSku: 0, notFound: 0, errors: [] };
+  for (const item of listings) {
+    let sku = normalizeSku(item.seller_custom_field);
+    let product = catalog[sku];
+    if (!sku) {
+      product = productByListingId.get(String(item.id).toUpperCase());
+      if (product) { sku = product.sku; result.autoLinked++; }
+      else { result.missingSku++; continue; }
+    }
+    if (!product) { result.notFound++; continue; }
+    result.linked++;
+    if (admin) {
+      const skuKey = crypto.createHash('sha256').update(sku).digest('hex').slice(0, 32);
+      await admin.firestore().collection('ml_sku_map').doc(skuKey).set({
+        sku, itemIds: admin.firestore.FieldValue.arrayUnion(item.id), updatedAt: Date.now(),
+      }, { merge: true });
+    }
+    const target = Math.max(0, Number(product.stock) || 0);
+    const current = Math.max(0, Number(item.available_quantity) || 0);
+    if (target === current && item.seller_custom_field) continue;
+    try {
+      const update = { available_quantity: target };
+      if (!item.seller_custom_field && sku) update.seller_custom_field = sku;
+      if (!dryRun) await axios.put(`https://api.mercadolibre.com/items/${item.id}`, update, { headers: mlHeaders(ml.token) });
+      result.updated++;
+      if (admin) {
+        const eventId = crypto.createHash('sha256').update(`${item.id}|${sku}|${current}|${target}`).digest('hex').slice(0, 32);
+        await admin.firestore().collection('stock_sync_events').doc(eventId).set({
+          itemId: item.id, productId: product.productId, sku, from: current, to: target,
+          source: 'bling', target: 'mercado_livre', dryRun, createdAt: Date.now(),
+        }, { merge: true });
+      }
+    } catch (error) {
+      result.errors.push({ itemId: item.id, sku, error: error.response?.data?.message || error.message });
+    }
+  }
+  return result;
+}
+
+app.post('/api/sync/estoque', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  const ml = await ensureMLToken();
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  if (!ml?.token) return res.status(401).json({ error: 'Mercado Livre não conectado' });
+  try { res.json(await reconcileMLStock(token, ml, { dryRun: req.body?.dryRun === true })); }
+  catch (err) { sendErrorResponse(res, 500, 'Erro ao conciliar estoque', err.message); }
 });
 
 app.get('/api/ml/metricas', requireAuthJson, async (req, res) => {
@@ -1376,6 +1532,107 @@ app.post('/api/fornecedores', requireAuthJson, async (req, res) => {
 
 // ── Produtos ─────────────────────────────────────────────────────────
 
+const BLING_API = 'https://www.bling.com.br/Api/v3';
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Paginação completa e limitada por segurança. A versão anterior cortava
+// produtos/pedidos depois de poucas páginas e silenciosamente gerava totais
+// incorretos. O intervalo a cada três chamadas respeita o limite do Bling.
+async function fetchBlingPaged(token, resource, params = {}, maxPages = 100) {
+  const all = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const { data } = await axios.get(`${BLING_API}/${resource}`, {
+      headers: blingHeaders(token), params: { limite: 100, pagina: page, ...params },
+    });
+    const items = Array.isArray(data?.data) ? data.data : [];
+    all.push(...items);
+    if (items.length < 100) break;
+    if (page % 3 === 0) await wait(1050);
+  }
+  return all;
+}
+
+async function fetchBlingProducts(token) {
+  return fetchBlingPaged(token, 'produtos', {}, 100);
+}
+
+let _channelCache = { at: 0, map: {} };
+async function getBlingChannels(token, force = false) {
+  if (!force && Date.now() - _channelCache.at < 30 * 60 * 1000 && Object.keys(_channelCache.map).length) return _channelCache.map;
+  const admin = getAdmin();
+  if (!force && admin) {
+    try {
+      const snap = await admin.firestore().collection('bling_config').doc('channels').get();
+      const saved = snap.exists ? snap.data() : null;
+      if (saved?.map && Date.now() - Number(saved.cachedAt || 0) < 24 * 60 * 60 * 1000) {
+        _channelCache = { at: Date.now(), map: saved.map };
+        return saved.map;
+      }
+    } catch (e) { console.error('[canais] cache:', e.message); }
+  }
+  try {
+    const channels = await fetchBlingPaged(token, 'canais-venda', {}, 20);
+    const map = {};
+    channels.forEach(channel => {
+      const id = channel?.id || channel?.loja?.id;
+      if (!id) return;
+      map[String(id)] = channel?.descricao || channel?.nome || channel?.loja?.nome || `Canal ${id}`;
+    });
+    _channelCache = { at: Date.now(), map };
+    if (admin) admin.firestore().collection('bling_config').doc('channels').set({ map, cachedAt: Date.now() }, { merge: true }).catch(() => {});
+    return map;
+  } catch (e) {
+    console.error('[canais] Bling:', e.response?.data || e.message);
+    return _channelCache.map;
+  }
+}
+
+async function fetchProductStoreLinks(token, force = false) {
+  const admin = getAdmin();
+  if (!force && admin) {
+    try {
+      const snap = await admin.firestore().collection('bling_config').doc('product_store_links').get();
+      const saved = snap.exists ? snap.data() : null;
+      if (saved?.links && Date.now() - Number(saved.cachedAt || 0) < 6 * 60 * 60 * 1000) return saved.links;
+    } catch (e) { console.error('[produto lojas] cache:', e.message); }
+  }
+  try {
+    const [rows, channels] = await Promise.all([
+      fetchBlingPaged(token, 'produtos/lojas', {}, 100),
+      getBlingChannels(token, force),
+    ]);
+    const links = {};
+    for (const row of rows) {
+      const productId = row?.produto?.id || row?.idProduto || row?.produtoId;
+      const storeId = row?.loja?.id || row?.canalVenda?.id || row?.idLoja || row?.idCanalVenda;
+      if (!productId || !storeId) continue;
+      const entry = {
+        id: String(storeId),
+        name: row?.loja?.nome || row?.canalVenda?.descricao || row?.canalVenda?.nome || channels[String(storeId)] || `Canal ${storeId}`,
+        listingId: row?.id || row?.codigo || row?.idProdutoLoja || null,
+        sku: row?.codigo || row?.sku || row?.produto?.codigo || '',
+        price: Number(row?.preco) || 0,
+        stock: Number(row?.estoque) || 0,
+        active: row?.situacao !== 'I',
+      };
+      if (!links[String(productId)]) links[String(productId)] = [];
+      if (!links[String(productId)].some(existing => existing.id === entry.id && existing.listingId === entry.listingId)) links[String(productId)].push(entry);
+    }
+    if (admin) await admin.firestore().collection('bling_config').doc('product_store_links').set({ links, cachedAt: Date.now() }, { merge: true });
+    return links;
+  } catch (e) {
+    console.error('[produto lojas] Bling:', e.response?.data || e.message);
+    return {};
+  }
+}
+
+app.get('/api/produtos/lojas-vinculadas', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  const links = await fetchProductStoreLinks(token, req.query.force === '1');
+  res.json({ links, totalProdutos: Object.keys(links).length, source: 'bling' });
+});
+
 function publicProductImageUrl(req, docId, version = Date.now()) {
   return `${req.protocol}://${req.get('host')}/img/produto/${docId}.jpg?v=${version}`;
 }
@@ -1395,27 +1652,29 @@ async function getPersistedProductImages(req, produtoId, max = 12) {
   }
 }
 
+async function prunePersistedProductImages(produtoId, keptUrls, max = 12) {
+  const admin = getAdmin();
+  if (!admin) return;
+  const kept = new Set((keptUrls || []).map(url => {
+    const match = String(url).match(/\/img\/produto\/(\d+(?:_\d+)?)(?:\.[a-z]+)?/i);
+    return match?.[1] || null;
+  }).filter(Boolean));
+  const refs = Array.from({ length: max }, (_, index) => admin.firestore().collection('produto_imagens').doc(index ? `${produtoId}_${index}` : String(produtoId)));
+  const docs = await admin.firestore().getAll(...refs);
+  const batch = admin.firestore().batch();
+  let changed = false;
+  docs.forEach(doc => {
+    if (doc.exists && !kept.has(doc.id)) { batch.delete(doc.ref); changed = true; }
+  });
+  if (changed) await batch.commit();
+}
+
 app.get('/api/produtos', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
-    // Fetch up to 500 products (paginated)
-    const limit = 100;
-    let page = 1;
-    let allProducts = [];
-    let hasMore = true;
-
-    while (hasMore && page <= 5) {
-      const { data } = await axios.get('https://www.bling.com.br/Api/v3/produtos', {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limite: limit, pagina: page },
-      });
-      const items = Array.isArray(data?.data) ? data.data : [];
-      allProducts = allProducts.concat(items);
-      hasMore = items.length === limit;
-      page++;
-    }
+    const allProducts = await fetchBlingProducts(token);
 
     const products = allProducts.map(p => ({
       id:         p.id,
@@ -1514,6 +1773,17 @@ app.get('/api/produtos/vendas-ranking', requireAuthJson, async (req, res) => {
   const hit = _vendasRankingCache.get(key);
   if (hit && Date.now() - hit.at < 10 * 60000 && !req.query.force) return res.json(hit.payload);
   try {
+    const ledgerFacts = await getLedgerFacts(inicio, fim);
+    if (ledgerFacts.length) {
+      const porCodigo = {}, devolucoesPorCodigo = {};
+      ledgerFacts.forEach(fact => {
+        const target = fact.statusCategory === 'cancelado' ? devolucoesPorCodigo : porCodigo;
+        (fact.items || []).forEach(item => { if (item.sku) target[item.sku] = (target[item.sku] || 0) + (Number(item.quantity) || 0); });
+      });
+      const payload = { periodo: { inicio, fim, dias }, vendasPorCodigo: porCodigo, devolucoesPorCodigo, amostra: ledgerFacts.length, dePedidos: ledgerFacts.length, exata: true, source: 'sales_ledger' };
+      _vendasRankingCache.set(key, { at: Date.now(), payload });
+      return res.json(payload);
+    }
     const lista = await fetchPedidos(token, inicio, fim, 3);
     const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
     const devolvidos = lista.filter(p => situacaoPT(p.situacao).toLowerCase().includes('devolv'));
@@ -1595,6 +1865,8 @@ app.get('/api/produtos/:id', requireAuthJson, async (req, res) => {
     ].map(i => i?.link).filter(Boolean).map(url => String(url).replace(/^http:\/\//i, 'https://'));
     produto.imagemUrls = [...new Set([...persistidas, ...bling])];
     if (produto.imagemUrls[0]) produto.imagemUrl = produto.imagemUrls[0];
+    const storeLinks = await fetchProductStoreLinks(token).catch(() => ({}));
+    produto.canaisVenda = storeLinks[String(produtoId)] || [];
     res.json(produto);
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
@@ -1713,18 +1985,8 @@ app.delete('/api/produtos/:id/ocultar', requireAuthJson, async (req, res) => {
 });
 
 // Busca pedidos de venda num intervalo (paginado)
-async function fetchPedidos(token, inicio, fim, maxPg = 3) {
-  let all = [];
-  for (let pg = 1; pg <= maxPg; pg++) {
-    const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { limite: 100, pagina: pg, dataInicial: inicio, dataFinal: fim },
-    });
-    const items = Array.isArray(data?.data) ? data.data : [];
-    all = all.concat(items);
-    if (items.length < 100) break;
-  }
-  return all;
+async function fetchPedidos(token, inicio, fim, maxPg = 100) {
+  return fetchBlingPaged(token, 'pedidos/vendas', { dataInicial: inicio, dataFinal: fim }, maxPg);
 }
 
 const _pedidoDetalheCache = new Map();
@@ -1780,14 +2042,20 @@ async function fetchPedidosDetalhados(token, pedidos, max = PEDIDOS_EXATOS_MAX) 
       });
     } catch (e) { console.error('[pedido cache] lote:', e.message); }
   }
-  // Três chamadas paralelas por janela: respeita o limite da conta e reduz a
-  // latência de rede. Nas próximas consultas, o cache persistente da Vercel
-  // elimina quase todas as chamadas ao Bling.
-  for (let index = 0; index < selecionados.length; index += 3) {
-    const lote = selecionados.slice(index, index + 3);
+  // Pedidos já sincronizados são retornados imediatamente. Só os ausentes
+  // entram nas janelas limitadas da API — antes havia uma espera de 1 segundo
+  // até quando todos os 150 detalhes já estavam no cache.
+  const missing = [];
+  for (const pedido of selecionados) {
+    const hit = _pedidoDetalheCache.get(String(pedido.id));
+    if (hit && Date.now() - hit.at < PEDIDO_DETALHE_PERSIST_TTL_MS) details.push(hit.data);
+    else missing.push(pedido);
+  }
+  for (let index = 0; index < missing.length; index += 3) {
+    const lote = missing.slice(index, index + 3);
     const resultados = await Promise.allSettled(lote.map(p => fetchPedidoDetalheCached(token, p.id)));
     resultados.forEach(r => { if (r.status === 'fulfilled') details.push(r.value); else failed++; });
-    if (index + 3 < selecionados.length) await new Promise(resolve => setTimeout(resolve, 1050));
+    if (index + 3 < missing.length) await wait(1050);
   }
   return {
     details,
@@ -1816,7 +2084,146 @@ const BLING_LOJA_NOMES = {
   '205751424': 'Max Renovação Yampi',
   '205940026': 'TM Logistica',
 };
-const nomeLojaPedido = p => p?.loja?.nome || BLING_LOJA_NOMES[String(p?.loja?.id || '')] || null;
+const nomeLojaPedido = p => {
+  const id = String(p?.loja?.id || '');
+  return p?.loja?.nome || _channelCache.map[id] || BLING_LOJA_NOMES[id] || null;
+};
+
+async function loadProductCostCatalog(token) {
+  const products = await fetchBlingProducts(token);
+  const bySku = {};
+  for (const product of products) {
+    const sku = normalizeSku(product?.codigo);
+    if (!sku) continue;
+    bySku[sku] = {
+      productId: product.id,
+      cost: getProductCusto(product),
+      price: Number(product.preco) || 0,
+      stock: typeof product.estoque === 'object' ? Number(product.estoque?.saldoVirtualTotal) || 0 : Number(product.estoque) || 0,
+      imageUrl: String(product.imagemURL || '').replace(/^http:\/\//i, 'https://'),
+      name: product.nome || sku,
+    };
+  }
+  const admin = getAdmin();
+  if (admin) {
+    try {
+      const snap = await admin.firestore().collection('produto_overrides').get();
+      const byId = new Map(products.map(product => [String(product.id), normalizeSku(product.codigo)]));
+      snap.forEach(doc => {
+        const sku = byId.get(doc.id);
+        const saved = doc.data() || {};
+        if (sku && bySku[sku] && Number(saved.precoCusto) >= 0) bySku[sku].cost = Number(saved.precoCusto);
+      });
+    } catch (e) { console.error('[custos catálogo]', e.message); }
+  }
+  return bySku;
+}
+
+async function getLedgerFacts(inicio, fim) {
+  const admin = getAdmin();
+  if (!admin) return [];
+  const snap = await admin.firestore().collection('sales_ledger')
+    .where('date', '>=', inicio).where('date', '<=', fim).get();
+  return snap.docs.map(doc => doc.data()).filter(fact => fact?.date >= inicio && fact?.date <= fim);
+}
+
+async function syncSalesLedger(token, { inicio, fim, limit = 120, force = false } = {}) {
+  const admin = getAdmin();
+  if (!admin) throw new Error('Firestore não configurado');
+  const end = fim || isoLocal();
+  const start = inicio || isoLocalDiasAtras(365);
+  const summaries = await fetchPedidos(token, start, end, 100);
+  await getBlingChannels(token).catch(() => ({}));
+
+  const refs = summaries.map(order => admin.firestore().collection('sales_ledger').doc(String(order.id)));
+  const existing = new Map();
+  for (let index = 0; index < refs.length; index += 400) {
+    const docs = await admin.firestore().getAll(...refs.slice(index, index + 400));
+    docs.forEach(doc => { if (doc.exists) existing.set(doc.id, doc.data()); });
+  }
+  const missing = summaries.filter(order => force || !existing.has(String(order.id)));
+  const selected = missing.slice(0, Math.max(1, Math.min(Number(limit) || 120, 300)));
+  const costBySku = selected.length ? await loadProductCostCatalog(token) : {};
+  const detailBatch = await fetchPedidosDetalhados(token, selected, selected.length || 1);
+  const byId = new Map(detailBatch.details.map(detail => [String(detail.id), detail]));
+
+  let batch = admin.firestore().batch();
+  let operations = 0;
+  let written = 0;
+  const commit = async () => {
+    if (!operations) return;
+    await batch.commit();
+    batch = admin.firestore().batch(); operations = 0;
+  };
+  for (const summary of summaries) {
+    const id = String(summary.id);
+    const detail = byId.get(id);
+    const statusCategory = categorizePedido(summary.situacao);
+    if (!detail && !existing.has(id)) continue;
+    const fact = detail
+      ? buildSalesFact(detail, { costBySku, channelById: _channelCache.map, status: situacaoPT(summary.situacao), statusCategory })
+      : { ...existing.get(id), status: situacaoPT(summary.situacao), statusCategory, channelName: nomeLojaPedido(summary) || existing.get(id)?.channelName || null };
+    fact.syncedAt = new Date().toISOString();
+    batch.set(admin.firestore().collection('sales_ledger').doc(id), fact, { merge: true });
+    batch.delete(admin.firestore().collection('sync_queue').doc(`order_${id}`));
+    operations += 2; written++;
+    if (operations >= 400) await commit();
+  }
+  await commit();
+  const remaining = Math.max(0, missing.length - detailBatch.details.length);
+  await admin.firestore().collection('sync_state').doc('sales').set({
+    inicio: start, fim: end, found: summaries.length, written, remaining,
+    complete: remaining === 0, syncedAt: Date.now(),
+  }, { merge: true });
+  return { inicio: start, fim: end, found: summaries.length, written, remaining, complete: remaining === 0, failed: detailBatch.failed };
+}
+
+function fixedCostsForPeriod(inicio, fim) {
+  return customContas.filter(account => account.tipo === 'fixa' && account.status !== 'cancelada' && account.dataVencimento >= inicio && account.dataVencimento <= fim)
+    .reduce((sum, account) => sum + (Number(account.valor) || 0), 0);
+}
+
+app.post('/api/sync/vendas', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  try {
+    const result = await syncSalesLedger(token, {
+      inicio: req.body?.inicio, fim: req.body?.fim,
+      limit: req.body?.limit || 120, force: req.body?.force === true,
+    });
+    res.json(result);
+  } catch (err) { sendErrorResponse(res, 500, 'Erro ao sincronizar vendas', err.message); }
+});
+
+app.delete('/api/produtos/:id/imagem/:index', requireAuthJson, async (req, res) => {
+  const admin = getAdmin();
+  if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível' });
+  try {
+    const productId = validateNumericId(req.params.id, 'ID do produto');
+    const index = Math.max(0, Math.min(11, Number(req.params.index) || 0));
+    const docId = index ? `${productId}_${index}` : String(productId);
+    await admin.firestore().collection('produto_imagens').doc(docId).delete();
+    res.json({ success: true });
+  } catch (err) { sendErrorResponse(res, 500, 'Erro ao remover imagem', err.message); }
+});
+
+app.get('/api/analytics/vendas', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
+  try {
+    let facts = await getLedgerFacts(inicio, fim);
+    let sync = null;
+    if (!facts.length && req.query.warm !== '0') {
+      sync = await syncSalesLedger(token, { inicio, fim, limit: 45 });
+      facts = await getLedgerFacts(inicio, fim);
+    }
+    await loadPersistedData();
+    const fixedCosts = fixedCostsForPeriod(inicio, fim);
+    const analytics = aggregateSalesFacts(facts, { fixedCosts, allocationRule: req.query.allocationRule || 'revenue' });
+    res.json({ periodo: { inicio, fim, period }, ...analytics, sync, exact: Boolean(facts.length) && facts.every(f => f.costSnapshotComplete), source: 'sales_ledger' });
+  } catch (err) { sendErrorResponse(res, 500, 'Erro ao calcular indicadores reais', err.message); }
+});
 
 // Calcula o intervalo imediatamente anterior, de mesma duração
 function periodoAnterior(inicio, fim) {
@@ -1836,10 +2243,11 @@ app.get('/api/financeiro', requireAuthJson, async (req, res) => {
     const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
     const prev = periodoAnterior(inicio, fim);
 
-    // Período atual (3 págs) + período anterior (2 págs) em paralelo
+    // Paginação completa: os totais não podem cortar silenciosamente depois
+    // de 300 pedidos. As duas leituras continuam em paralelo.
     const [allPedidos, prevPedidos] = await Promise.all([
-      fetchPedidos(token, inicio, fim, 3),
-      fetchPedidos(token, prev.inicio, prev.fim, 2).catch(() => []),
+      fetchPedidos(token, inicio, fim, 100),
+      fetchPedidos(token, prev.inicio, prev.fim, 100).catch(() => []),
     ]);
 
     const categorize = categorizePedido;
@@ -1910,20 +2318,71 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
   const { inicio, fim, period } = resolvePeriodo(req.query.period, req.query.startDate, req.query.endDate);
   const key = `${inicio}|${fim}`;
   const hit = _taxasCache.get(key);
-  if (hit && Date.now() - hit.at < 10 * 60000 && !req.query.force) return res.json(hit.payload);
+  if (hit?.payload?.schemaVersion >= 2 && Date.now() - hit.at < 10 * 60000 && !req.query.force) return res.json(hit.payload);
   const admin = getAdmin();
   const periodDocId = `${inicio}_${fim}`;
   if (admin && !req.query.force) {
     try {
       const saved = await admin.firestore().collection('financeiro_periodos').doc(periodDocId).get();
       const cached = saved.exists ? saved.data() : null;
-      if (cached?.payload && Date.now() - Number(cached.cachedAt || 0) < 24 * 60 * 60 * 1000) {
+      if (cached?.payload?.schemaVersion >= 2 && Date.now() - Number(cached.cachedAt || 0) < 24 * 60 * 60 * 1000) {
         _taxasCache.set(key, { at: Date.now(), payload: cached.payload });
         return res.json(cached.payload);
       }
     } catch (e) { console.error('[financeiro cache] leitura:', e.message); }
   }
   try {
+    let ledgerFacts = await getLedgerFacts(inicio, fim);
+    if (!ledgerFacts.length && !req.query.forceLegacy) {
+      await syncSalesLedger(token, { inicio, fim, limit: 30 }).catch(error => console.error('[financeiro warmup]', error.message));
+      ledgerFacts = await getLedgerFacts(inicio, fim);
+    }
+    if (ledgerFacts.length && !req.query.forceLegacy) {
+      await loadPersistedData();
+      const analytics = aggregateSalesFacts(ledgerFacts, {
+        fixedCosts: fixedCostsForPeriod(inicio, fim),
+        allocationRule: req.query.allocationRule || 'revenue',
+      });
+      let syncState = {};
+      try {
+        const stateDoc = await admin.firestore().collection('sync_state').doc('sales').get();
+        syncState = stateDoc.exists ? stateDoc.data() : {};
+      } catch { /* estado é apenas informativo */ }
+      const payload = {
+        schemaVersion: 2,
+        source: 'sales_ledger',
+        periodo: { inicio, fim, period },
+        totais: {
+          comissao: analytics.totals.fees,
+          custoFrete: analytics.totals.channelShipping,
+          freteCobrado: analytics.totals.customerShipping,
+          valorBase: analytics.totals.revenue,
+          totalVenda: analytics.totals.customerTotal,
+          totalProdutos: analytics.totals.revenue + analytics.totals.discount,
+          desconto: analytics.totals.discount,
+          outrasDespesas: 0,
+          valorLiquido: analytics.totals.revenue - analytics.totals.fees - analytics.totals.channelShipping,
+          cmv: analytics.totals.cmv,
+          custosFixos: analytics.totals.fixedCosts,
+          lucroReal: analytics.totals.realProfit,
+          pontoEquilibrio: analytics.totals.breakEven,
+        },
+        estimativaPeriodo: { fator: 1, exata: analytics.costSnapshotComplete, comissao: analytics.totals.fees, custoFrete: analytics.totals.channelShipping, valorBase: analytics.totals.revenue },
+        porLoja: analytics.channels.map(channel => ({ lojaId: channel.channelId, lojaNome: channel.channelName, pedidos: channel.orders, comissao: channel.fees, custoFrete: channel.shipping, freteCobrado: 0, valor: channel.revenue, cmv: channel.cmv, lucroReal: channel.profit })),
+        topVendidos: analytics.products.slice(0, 5).map(product => ({ codigo: product.sku, nome: product.name, qtd: product.quantity, faturamento: product.revenue, lucroReal: product.realProfit })),
+        produtosVendidos: analytics.products.map(product => ({ codigo: product.sku, nome: product.name, qtd: product.quantity, faturamento: product.revenue, cmv: product.cmv, lucroReal: product.realProfit, margemReal: product.realMargin, classeABC: analytics.abc.find(row => row.sku === product.sku)?.classification || 'C', imagemUrl: product.imageUrl || '' })),
+        curvaABC: analytics.abc,
+        allocationRule: analytics.allocationRule,
+        amostra: analytics.orders,
+        dePedidos: analytics.orders,
+        falhas: 0,
+        exact: analytics.costSnapshotComplete,
+        syncComplete: Boolean(syncState.complete),
+        syncRemaining: Number(syncState.remaining) || 0,
+      };
+      _taxasCache.set(key, { at: Date.now(), payload });
+      return res.json(payload);
+    }
     const lista = await fetchPedidos(token, inicio, fim, 2);
     const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
     const loteDetalhes = await fetchPedidosDetalhados(token, validos);
@@ -1969,6 +2428,7 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
     const detalhados = loteDetalhes.details.length;
     const exata = loteDetalhes.exact;
     const payload = {
+      schemaVersion: 1,
       periodo: { inicio, fim, period },
       totais: { comissao, custoFrete, freteCobrado, valorBase, totalVenda, totalProdutos, desconto, outrasDespesas, valorLiquido },
       estimativaPeriodo: {
@@ -2051,22 +2511,39 @@ app.put('/api/produtos/:id/fornecedor', requireAuthJson, async (req, res) => {
     const nome = String(req.body?.nome || '');
     const precoCusto = Math.max(0, Number(req.body?.precoCusto) || 0);
     const admin = getAdmin();
-    if (admin) {
-      await admin.firestore().collection('produto_overrides').doc(String(id)).set({
-        fornecedor: { id: fornecedorId, nome }, precoCusto,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
+    let linkError = null;
     try {
       await axios.post('https://www.bling.com.br/Api/v3/produtos/fornecedores', {
         produto: { id }, fornecedor: { id: fornecedorId }, precoCusto, padrao: true,
       }, { headers: blingHeaders(token) });
     } catch (e) {
-      // A persistência do painel já foi concluída; devolve aviso porque o
-      // Bling pode responder conflito quando o vínculo já existe.
+      linkError = e.response?.data?.error?.message || e.response?.data?.message || e.message;
       console.error('[fornecedor produto] Bling:', e.response?.data || e.message);
     }
-    res.json({ success: true, fornecedor: { id: fornecedorId, nome }, precoCusto });
+    let verified = false;
+    try {
+      const { data } = await axios.get(`${BLING_API}/produtos/${id}`, { headers: blingHeaders(token) });
+      const current = data?.data || {};
+      verified = Number(current?.fornecedor?.id) === Number(fornecedorId);
+      const savedCost = getProductCusto(current);
+      if (verified && Math.abs(savedCost - precoCusto) > 0.005) linkError = `Fornecedor vinculado, mas o custo retornado foi R$ ${savedCost.toFixed(2)}`;
+    } catch (verifyError) {
+      linkError = linkError || verifyError.message;
+    }
+    if (admin) {
+      await admin.firestore().collection('produto_overrides').doc(String(id)).set({
+        fornecedor: { id: fornecedorId, nome }, precoCusto,
+        blingLinked: verified, lastBlingError: verified ? null : String(linkError || 'O Bling não confirmou o vínculo'),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    res.json({
+      success: verified,
+      persisted: true,
+      blingLinked: verified,
+      fornecedor: { id: fornecedorId, nome }, precoCusto,
+      warning: verified ? null : `Fornecedor salvo no sistema, mas o Bling não confirmou o vínculo: ${linkError || 'resposta sem fornecedor'}`,
+    });
   } catch (err) {
     if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
     sendErrorResponse(res, 500, 'Erro ao fixar fornecedor', err.message);
@@ -2092,6 +2569,9 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       // Converte imagemUrl (campo frontend) para o formato do Bling v3:
       // imagens ficam em midia.imagens.externas[].link ("imagem.link" não existe)
       const payload = stripReadOnlyProdutoFields(_fullUpdate);
+      const keptImageUrls = Array.isArray(payload.imagemUrls)
+        ? payload.imagemUrls.filter(Boolean)
+        : (payload.imagemUrl ? [payload.imagemUrl] : null);
       if (payload.imagemUrls && Array.isArray(payload.imagemUrls)) {
         const externas = payload.imagemUrls.filter(Boolean).map(link => ({ link }));
         if (externas.length > 0) payload.midia = { imagens: { externas } };
@@ -2149,6 +2629,7 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       await axios.put(`https://www.bling.com.br/Api/v3/produtos/${id}`, payload, {
         headers: blingHeaders(token),
       });
+      if (keptImageUrls) await prunePersistedProductImages(id, keptImageUrls);
 
       if (estoque !== undefined) {
         const depositoId = await getDepositoId(token);
@@ -2419,10 +2900,11 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
+    await getBlingChannels(token).catch(() => ({}));
     const { inicio, fim } = req.query;
     let raw;
     if (inicio && fim) {
-      raw = await fetchPedidos(token, inicio, fim, 5);
+      raw = await fetchPedidos(token, inicio, fim, 100);
     } else {
       const { data } = await axios.get('https://www.bling.com.br/Api/v3/pedidos/vendas', {
         headers: { Authorization: `Bearer ${token}` },
@@ -2464,6 +2946,7 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
   if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
 
   try {
+    await getBlingChannels(token).catch(() => ({}));
     const id = validateNumericId(req.params.id, 'ID do pedido');
     const p = await fetchPedidoDetalheCached(token, id);
     const itens = (Array.isArray(p.itens) ? p.itens : []).map(it => ({
@@ -2515,52 +2998,6 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
     }
     sendErrorResponse(res, err.response?.status === 404 ? 404 : 500, 'Erro ao buscar detalhe do pedido', err.message);
-  }
-});
-
-// Edita um pedido de venda. O Bling v3 exige o objeto completo do pedido no
-// PUT (não aceita PATCH parcial), então buscamos o pedido bruto primeiro e
-// alteramos só os campos que o usuário editou, preservando o resto exatamente
-// como o Bling retornou — evita quebrar itens/cliente/transporte por omitir
-// um campo obrigatório que desconhecemos.
-app.put('/api/pedidos/:id', requireAuthJson, async (req, res) => {
-  const token = await ensureBlingToken(req, res);
-  if (!token) return res.status(401).json({ error: 'Bling não conectado', code: 'BLING_NOT_CONNECTED' });
-  try {
-    const id = validateNumericId(req.params.id, 'ID do pedido');
-    const { observacoes, observacoesInternas, desconto, frete } = req.body || {};
-    const { data } = await axios.get(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const raw = data?.data || data || {};
-    if (observacoes !== undefined) raw.observacoes = observacoes;
-    if (observacoesInternas !== undefined) raw.observacoesInternas = observacoesInternas;
-    if (desconto !== undefined) {
-      const valorDesconto = Number(desconto) || 0;
-      raw.desconto = raw.desconto && typeof raw.desconto === 'object'
-        ? { ...raw.desconto, valor: valorDesconto }
-        : { valor: valorDesconto, unidade: 'REAL' };
-    }
-    if (frete !== undefined) {
-      raw.transporte = raw.transporte || {};
-      raw.transporte.frete = Number(frete) || 0;
-    }
-    await axios.put(`https://www.bling.com.br/Api/v3/pedidos/vendas/${id}`, raw, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    });
-    _pedidoDetalheCache.delete(String(id));
-    _taxasCache.clear();
-    res.json({ ok: true });
-  } catch (err) {
-    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
-    if (err.response?.status === 401) {
-      res.clearCookie('bling_token');
-      return res.status(401).json({ error: 'Token expirado', code: 'BLING_TOKEN_EXPIRED' });
-    }
-    const detail = err.response?.data?.error?.fields?.[0]?.msg
-      || err.response?.data?.error?.message
-      || err.message;
-    sendErrorResponse(res, err.response?.status || 500, 'Erro ao atualizar pedido', detail);
   }
 });
 
@@ -3037,15 +3474,7 @@ async function fetchContas(token, tipo) {
   // tipo: 'receber' | 'pagar'
   let all = [];
   try {
-    for (let pg = 1; pg <= 3; pg++) {
-      const { data } = await axios.get(`https://www.bling.com.br/Api/v3/contas/${tipo}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limite: 100, pagina: pg },
-      });
-      const items = Array.isArray(data?.data) ? data.data : [];
-      all = all.concat(items);
-      if (items.length < 100) break;
-    }
+    all = await fetchBlingPaged(token, `contas/${tipo}`, {}, 100);
   } catch (e) {
     return { ok: false, total: 0, count: 0, vencidas: 0, vencidasValor: 0, itens: [], erro: e.response?.status || e.message };
   }
@@ -3087,14 +3516,15 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
   const categorize = s => categorizePedido(s);
 
   try {
-    // Pedidos do período + período anterior + contas, em paralelo
+    // Pedidos primeiro (duas chamadas simultâneas), contas depois. Isso evita
+    // disparar quatro rajadas na mesma fração de segundo e receber 429.
     const prev = periodoAnterior(inicio, fim);
-    const [pedRes, prevRes, receberRes, pagarRes] = await Promise.allSettled([
-      fetchPedidos(token, inicio, fim, 2),
-      fetchPedidos(token, prev.inicio, prev.fim, 1),
-      fetchContas(token, 'receber'),
-      fetchContas(token, 'pagar'),
+    const [pedRes, prevRes] = await Promise.allSettled([
+      fetchPedidos(token, inicio, fim, 100),
+      fetchPedidos(token, prev.inicio, prev.fim, 100),
     ]);
+    const [receberRes] = await Promise.allSettled([fetchContas(token, 'receber')]);
+    const [pagarRes] = await Promise.allSettled([fetchContas(token, 'pagar')]);
 
     if (pedRes.status === 'rejected') {
       if (pedRes.reason?.response?.status === 401) {
@@ -3137,8 +3567,25 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
       if (day) byDay[day] = (byDay[day] || 0) + valorOf(p);
     });
 
-    const receber = receberRes.status === 'fulfilled' ? receberRes.value : { ok: false, total: 0, count: 0, vencidas: 0 };
-    const pagar   = pagarRes.status === 'fulfilled' ? pagarRes.value : { ok: false, total: 0, count: 0, vencidas: 0 };
+    const receber = receberRes.status === 'fulfilled' ? receberRes.value : { ok: false, total: 0, count: 0, vencidas: 0, itens: [] };
+    const pagar   = pagarRes.status === 'fulfilled' ? pagarRes.value : { ok: false, total: 0, count: 0, vencidas: 0, itens: [] };
+    await loadPersistedData();
+    const hoje = isoLocal();
+    const mergeCustom = (base, tipos) => {
+      const rows = customContas.filter(account => tipos.includes(account.tipo) && !['pago', 'recebido', 'cancelada'].includes(account.status));
+      const itens = rows.map(account => ({ id: `custom_${account.id}`, valor: Number(account.valor) || 0, vencimento: account.dataVencimento, vencida: account.dataVencimento < hoje, contato: account.descricao, source: 'sistema' }));
+      return {
+        ...base,
+        total: (Number(base.total) || 0) + itens.reduce((sum, item) => sum + item.valor, 0),
+        count: (Number(base.count) || 0) + itens.length,
+        vencidas: (Number(base.vencidas) || 0) + itens.filter(item => item.vencida).length,
+        vencidasValor: (Number(base.vencidasValor) || 0) + itens.filter(item => item.vencida).reduce((sum, item) => sum + item.valor, 0),
+        itens: [...(base.itens || []), ...itens].sort((a, b) => String(a.vencimento || '').localeCompare(String(b.vencimento || ''))).slice(0, 30),
+        ok: Boolean(base.ok || itens.length),
+      };
+    };
+    const receberIntegrado = mergeCustom(receber, ['receber']);
+    const pagarIntegrado = mergeCustom(pagar, ['pagar', 'fixa']);
 
     res.json({
       periodo: { inicio, fim, period },
@@ -3155,8 +3602,8 @@ app.get('/api/dashboard', requireAuthJson, async (req, res) => {
         freteTotal,
         descontoTotal,
       },
-      contasReceber: { total: receber.total, count: receber.count, vencidas: receber.vencidas, vencidasValor: receber.vencidasValor || 0, ok: receber.ok, itens: receber.itens || [] },
-      contasPagar:   { total: pagar.total,   count: pagar.count,   vencidas: pagar.vencidas,   vencidasValor: pagar.vencidasValor || 0,   ok: pagar.ok,   itens: pagar.itens || [] },
+      contasReceber: receberIntegrado,
+      contasPagar: pagarIntegrado,
     });
   } catch (err) {
     if (err.response?.status === 401) {
@@ -3278,7 +3725,7 @@ app.get('/api/contas/custom', requireAuthJson, async (req, res) => {
 
 const CONTA_FREQ_DIAS = { semanal: 7, quinzenal: 15, mensal: 30, anual: 365 };
 
-app.post('/api/contas/custom', requireAuthJson, (req, res) => {
+app.post('/api/contas/custom', requireAuthJson, async (req, res) => {
   const { tipo, descricao, valor, dataVencimento, categoria, observacao, formaPagamento, parcelamento, frequencia, parcelas } = req.body;
 
   if (!tipo || !['pagar', 'receber', 'fixa'].includes(tipo)) {
@@ -3323,6 +3770,12 @@ app.post('/api/contas/custom', requireAuthJson, (req, res) => {
     criadas.push(conta);
   }
   saveInMemoryData();
+  const admin = getAdmin();
+  if (admin) {
+    const batch = admin.firestore().batch();
+    criadas.forEach(conta => batch.set(admin.firestore().collection('finance_accounts').doc(String(conta.id)), conta));
+    await batch.commit();
+  }
   changeLog.push({
     id: changeLog.length + 1,
     produto_id: `conta_${criadas[0].id}`,
@@ -3337,7 +3790,7 @@ app.post('/api/contas/custom', requireAuthJson, (req, res) => {
   res.json(totalParcelas > 1 ? { contas: criadas } : criadas[0]);
 });
 
-app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
+app.put('/api/contas/custom/:id', requireAuthJson, async (req, res) => {
   try {
     const id = validateNumericId(req.params.id, 'ID da conta');
     const conta = customContas.find(c => c.id === id);
@@ -3367,6 +3820,8 @@ app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
       timestamp: new Date().toISOString(),
     });
     saveInMemoryData();
+    const admin = getAdmin();
+    if (admin) await admin.firestore().collection('finance_accounts').doc(String(id)).set(conta, { merge: true });
 
     res.json(conta);
   } catch (err) {
@@ -3375,7 +3830,7 @@ app.put('/api/contas/custom/:id', requireAuthJson, (req, res) => {
   }
 });
 
-app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
+app.delete('/api/contas/custom/:id', requireAuthJson, async (req, res) => {
   try {
     const id = validateNumericId(req.params.id, 'ID da conta');
     const idx = customContas.findIndex(c => c.id === id);
@@ -3385,6 +3840,8 @@ app.delete('/api/contas/custom/:id', requireAuthJson, (req, res) => {
     const conta = customContas[idx];
     customContas.splice(idx, 1);
     saveInMemoryData();
+    const admin = getAdmin();
+    if (admin) await admin.firestore().collection('finance_accounts').doc(String(id)).delete();
 
     changeLog.push({
       id: changeLog.length + 1,
@@ -3503,9 +3960,44 @@ app.post('/api/webhook/bling', async (req, res) => {
         _pedidoDetalheCache.delete(String(pedidoId));
         _taxasCache.clear();
         admin.firestore().collection('bling_pedido_detalhes').doc(String(pedidoId)).delete().catch(() => {});
+        const webhookOrder = evt.data?.pedido || evt.data || {};
+        const webhookItems = Array.isArray(webhookOrder.itens) ? webhookOrder.itens : [];
+        if (webhookItems.length) {
+          const costBySku = {};
+          webhookItems.forEach(item => {
+            const sku = normalizeSku(item.codigo || item.produto?.codigo);
+            if (sku) costBySku[sku] = { cost: Number(item.precoCompra || item.produto?.precoCompra || 0), productId: item.produto?.id || null };
+          });
+          const fact = buildSalesFact(webhookOrder, {
+            costBySku, channelById: _channelCache.map,
+            status: situacaoPT(webhookOrder.situacao), statusCategory: categorizePedido(webhookOrder.situacao),
+          });
+          fact.syncedAt = new Date().toISOString();
+          admin.firestore().collection('sales_ledger').doc(String(pedidoId)).set(fact, { merge: true }).catch(() => {});
+        } else {
+          admin.firestore().collection('sync_queue').doc(`order_${pedidoId}`).set({ type: 'order', id: String(pedidoId), status: 'pending', createdAt: Date.now() }, { merge: true }).catch(() => {});
+        }
       }
       title = '🛒 Novo pedido!';
       body = 'Um novo pedido foi registrado no Bling. Toque para ver.';
+    } else if (tipo.includes('produto') || tipo.includes('estoque') || tipo.includes('stock')) {
+      const product = evt.data?.produto || evt.data || {};
+      const sku = normalizeSku(product.codigo || product.sku);
+      const balance = Number(product.estoque?.saldoVirtualTotal ?? product.saldoVirtualTotal ?? product.estoque ?? product.saldo);
+      if (sku && Number.isFinite(balance)) {
+        const skuKey = crypto.createHash('sha256').update(sku).digest('hex').slice(0, 32);
+        const mapping = await admin.firestore().collection('ml_sku_map').doc(skuKey).get();
+        const ml = await ensureMLToken();
+        if (mapping.exists && ml?.token) {
+          await Promise.allSettled((mapping.data().itemIds || []).map(itemId => axios.put(
+            `https://api.mercadolibre.com/items/${itemId}`,
+            { available_quantity: Math.max(0, balance) },
+            { headers: mlHeaders(ml.token) }
+          )));
+        }
+      }
+      title = '📦 Estoque sincronizado';
+      body = sku ? `O saldo do SKU ${sku} foi atualizado nos canais vinculados.` : 'Um produto teve o estoque atualizado no Bling.';
     } else if (tipo.includes('nf') || tipo.includes('nota')) {
       const erro = tipo.includes('rejei') || tipo.includes('erro') || tipo.includes('deneg');
       title = erro ? '❌ Nota fiscal com erro' : '🧾 Nota fiscal atualizada';
@@ -3769,9 +4261,8 @@ app.get('/api/ml/pedidos', requireAuthJson, async (req, res) => {
   try {
     const from = new Date(); from.setDate(from.getDate() - 30);
     const fromStr = from.toISOString();
-    // Buscar ordens recentes
-    const { data: orders } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}`, { headers: mlHeaders(ml.token) });
-    res.json(orders.results || []);
+    const orders = await fetchMLOrders(ml, fromStr, 1000);
+    res.json(orders);
   } catch (err) {
     sendErrorResponse(res, 500, 'Erro ao buscar pedidos do Mercado Livre', err.message);
   }
@@ -3786,22 +4277,33 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
   const fromStr = from.toISOString();
 
   try {
-    const { data: ordersData } = await axios.get(`https://api.mercadolibre.com/orders/search?seller=${ml.sellerId}&order.date_created.from=${encodeURIComponent(fromStr)}&sort=date_desc&limit=50`, { headers: mlHeaders(ml.token) });
+    const orders = await fetchMLOrders(ml, fromStr, 1000);
+    const blingToken = await getCronBlingToken();
+    const costBySku = blingToken ? await loadProductCostCatalog(blingToken).catch(() => ({})) : {};
 
     let faturamento = 0;
     let taxas = 0;
     let frete = 0;
+    let cmv = 0;
+    let itensSemCusto = 0;
     let concluidoCount = 0;
     let canceladoCount = 0;
     const byDay = {};
 
-    (ordersData.results || []).forEach(o => {
+    orders.forEach(o => {
       if (o.status === 'cancelled') { canceladoCount++; return; }
       if (o.status === 'paid' || o.status === 'closed' || o.status === 'delivered' || o.status === 'shipped') {
         concluidoCount++;
         faturamento += o.total_amount || 0;
         // Comissão do ML fica em order_items[].sale_fee (por unidade)
-        (o.order_items || []).forEach(it => { taxas += (it.sale_fee || 0) * (it.quantity || 1); });
+        (o.order_items || []).forEach(it => {
+          const qty = Number(it.quantity) || 0;
+          taxas += (it.sale_fee || 0) * qty;
+          const sku = normalizeSku(it.item?.seller_sku || it.item?.seller_custom_field || it.seller_sku);
+          const cost = Number(costBySku[sku]?.cost) || 0;
+          if (!sku || !(cost > 0)) itensSemCusto += qty;
+          cmv += cost * qty;
+        });
         // Frete cobrado do comprador fica em payments[].shipping_cost
         (o.payments || []).forEach(p => { frete += p.shipping_cost || 0; });
         const day = String(o.date_created || '').substring(0, 10);
@@ -3814,16 +4316,36 @@ app.get('/api/ml/dashboard', requireAuthJson, async (req, res) => {
       faturamento,
       taxas,
       frete,
-      lucroBruto: faturamento - taxas,
+      cmv,
+      lucroBruto: faturamento - taxas - cmv,
+      lucroReal: faturamento - taxas - frete - cmv,
+      itensSemCusto,
+      custosCompletos: itensSemCusto === 0,
       pedidosConcluidos: concluidoCount,
       pedidosCancelados: canceladoCount,
-      totalPedidos: ordersData.paging?.total ?? (ordersData.results || []).length,
+      totalPedidos: orders.length,
       ticketMedio: concluidoCount ? faturamento / concluidoCount : 0,
       byDay,
     });
   } catch (err) {
     sendErrorResponse(res, 500, 'Erro ao montar painel do Mercado Livre', err.message);
   }
+});
+
+app.get('/api/cron/sync-vendas', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  const token = await getCronBlingToken();
+  if (!token) return res.json({ ok: true, skipped: 'Bling não conectado' });
+  try { res.json({ ok: true, ...(await syncSalesLedger(token, { inicio: isoLocalDiasAtras(365), fim: isoLocal(), limit: 120 })) }); }
+  catch (err) { sendErrorResponse(res, 500, 'Erro no sincronismo de vendas', err.message); }
+});
+
+app.get('/api/cron/sync-estoque', async (req, res) => {
+  if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
+  const [token, ml] = await Promise.all([getCronBlingToken(), ensureMLToken()]);
+  if (!token || !ml?.token) return res.json({ ok: true, skipped: 'Bling ou Mercado Livre não conectado' });
+  try { res.json({ ok: true, ...(await reconcileMLStock(token, ml)) }); }
+  catch (err) { sendErrorResponse(res, 500, 'Erro no sincronismo de estoque', err.message); }
 });
 
 // ── 404 ──────────────────────────────────────────────────────────────

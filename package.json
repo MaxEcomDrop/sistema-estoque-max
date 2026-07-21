@@ -16,8 +16,9 @@
   "author": "guienhjo2019@gmail.com",
   "license": "ISC",
   "type": "commonjs",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "axios": "^1.18.1",
@@ -25,7 +26,12 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "firebase-admin": "^12.7.0",
+    "firebase-admin": "^14.2.0",
     "jsonwebtoken": "^9.0.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "uuid": ">=11.1.1"
+    }
   }
 }
