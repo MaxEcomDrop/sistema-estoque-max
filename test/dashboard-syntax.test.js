@@ -41,3 +41,16 @@ test('recálculo financeiro usa somente atualizadores disponíveis no próprio e
   assert.ok(body, 'função recomputeDashLucro não encontrada');
   assert.doesNotMatch(body, /\bsetTxt\s*\(/);
 });
+
+test('editor preserva imagens persistidas e aceita upload múltiplo', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  assert.match(html, /id="ed-img-file"[^>]*multiple/);
+  assert.match(html, /p\.imagemUrls = Array\.isArray\(p\.imagemUrls\)/);
+  assert.match(html, /function handleImgFiles\(files\)/);
+});
+
+test('produtos exibem lucro real e fornecedor é fixado imediatamente', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  assert.match(html, /Lucro real/);
+  assert.match(html, /\/fornecedor`,\{method:'PUT'/);
+});
