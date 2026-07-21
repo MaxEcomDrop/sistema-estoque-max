@@ -25,3 +25,11 @@ test('paginação operacional não mantém os antigos cortes de produtos e anún
   assert.ok(source.includes("fetchMLItemIds(ml, status, 1000)"));
   assert.ok(source.includes("fetchMLOrders(ml, fromStr, 1000)"));
 });
+
+test('Firebase Admin usa a API modular compatível com a versão instalada', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  assert.ok(source.includes("require('firebase-admin/app')"));
+  assert.ok(source.includes('getApps().length ? getApp() : initializeApp'));
+  assert.ok(!source.includes('admin.apps.length'));
+  assert.ok(!source.includes('admin.credential.cert'));
+});

@@ -36,11 +36,12 @@ function getAdmin() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) return null;
   try {
-    const admin = require('firebase-admin');
+    const { cert, getApp, getApps, initializeApp } = require('firebase-admin/app');
+    const { FieldValue, GeoPoint, Timestamp, getFirestore } = require('firebase-admin/firestore');
+    const { getAuth } = require('firebase-admin/auth');
+    const { getMessaging } = require('firebase-admin/messaging');
     const cred = JSON.parse(raw);
-    if (!admin.apps.length) {
-      admin.initializeApp({ credential: admin.credential.cert(cred) });
-    }
+    const firebaseApp = getApps().length ? getApp() : initializeApp({ credential: cert(cred) });
     _fbAdminProjectId = cred.project_id || null;
     // Erro "5 NOT_FOUND" no ping = o banco "(default)" não existe no projeto.
     // Acontece quando o banco foi criado com ID personalizado no console.
@@ -48,17 +49,20 @@ function getAdmin() {
     // redirecionamos admin.firestore() para o banco certo, preservando
     // FieldValue/Timestamp usados no resto do código.
     const dbId = process.env.FIRESTORE_DB_ID;
-    if (dbId && dbId !== '(default)') {
-      const { getFirestore } = require('firebase-admin/firestore');
-      const namedDb = getFirestore(admin.app(), dbId);
-      const orig = admin.firestore;
-      const patched = () => namedDb;
-      patched.FieldValue = orig.FieldValue;
-      patched.Timestamp = orig.Timestamp;
-      patched.GeoPoint = orig.GeoPoint;
-      admin.firestore = patched;
-      console.log(`[Firestore] usando banco nomeado "${dbId}" (FIRESTORE_DB_ID)`);
-    }
+    const db = dbId && dbId !== '(default)'
+      ? getFirestore(firebaseApp, dbId)
+      : getFirestore(firebaseApp);
+    const firestore = () => db;
+    firestore.FieldValue = FieldValue;
+    firestore.Timestamp = Timestamp;
+    firestore.GeoPoint = GeoPoint;
+    const admin = {
+      app: () => firebaseApp,
+      firestore,
+      auth: () => getAuth(firebaseApp),
+      messaging: () => getMessaging(firebaseApp),
+    };
+    if (dbId && dbId !== '(default)') console.log(`[Firestore] usando banco nomeado "${dbId}" (FIRESTORE_DB_ID)`);
     _fbAdmin = admin;
   } catch (e) {
     _fbAdminInitError = e.message;
