@@ -3217,6 +3217,7 @@ const S = {
   prevPrices:{}, prevStocks:{}, dupSkus:new Set(),
   view:'produtos', sort:{field:localStorage.getItem('sf')||'relevancia',dir:localStorage.getItem('sd')||'desc'},
   vendasPorCodigo:{},
+  lucroRealPorCodigo:{},
   grouped:false, page:0, PAGE:50, pageSize:parseInt(localStorage.getItem('pgsz')||'10'),
   lastSync:null, autoRefresh:parseInt(localStorage.getItem('ar')??'1'),
   arTimer:null, arCountdown:0,
@@ -3449,6 +3450,7 @@ function renderCards(){
     const isSel=S.selected.has(p.id);
     const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onclick="event.stopPropagation();openImgLbox('${esc(p.imagemUrl)}')" style="cursor:zoom-in" onerror="this.removeAttribute('onclick');this.style.cursor='';this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
     const badge=statusBadge(p.estoque);
+    const lucroReal=S.lucroRealPorCodigo[p.codigo];
     return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}">
       <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" onclick="event.stopPropagation()" class="pcard-select-abs">
       <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">
@@ -3464,6 +3466,7 @@ function renderCards(){
           <div style="display:flex;align-items:center;gap:3px"><button class="pcard-sa" onclick="event.stopPropagation();cardStockAdj(${p.id},-1)">−</button><span class="pcard-stock">${fmtN(p.estoque)}</span><button class="pcard-sa" onclick="event.stopPropagation();cardStockAdj(${p.id},1)">+</button></div>
           <span style="color: ${p.hasFornecedor ? 'var(--ok)' : 'var(--fa)'}; display: flex; align-items: center;" title="${p.hasFornecedor ? 'Fornecedor vinculado' : 'Sem fornecedor'}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
         </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;font-size:11px;color:var(--mu)"><span>Lucro real</span><strong style="color:${lucroReal?.completo?'var(--ok-t)':'var(--fa)'}">${lucroReal?fmt(lucroReal.lucro):'—'}</strong></div>
         ${badge}
       </div>
       <div class="pcard-sbar"><div class="pcard-sfill" style="width:${(()=>{if(p.estoque<=0)return 0;const max=Math.max(S.estoqueMin*4,p.estoque,1);const pct=Math.min(100,Math.round((p.estoque/max)*100));return pct;})()}%;background:${p.estoque<=0?'var(--er)':p.estoque<=S.estoqueMin?'var(--wa)':'var(--ok)'}"></div></div>
@@ -3665,9 +3668,17 @@ function recomputeDashLucro(){
   const setValue=(id,value)=>{const node=$(id);if(node){node.textContent=value;node.classList.remove('skel');}};
   if(!_dashLastTaxas){
     setValue('dash-revenue-step',fmt(_dashFat));
-    if(el)el.textContent='…';
-    if(sub)sub.textContent='Calculando custos, taxas e frete…';
-    if(custoEl)custoEl.textContent='';
+    let historico={};try{historico=JSON.parse(localStorage.getItem('em_tax_rates')||'{}');}catch{}
+    const margemProdutos=avgMargem();
+    const custoEstimado=_dashFat*(1-margemProdutos);
+    const taxasEstimadas=_dashFat*Number(historico.taxaPct||0);
+    const freteEstimado=_dashFat*Number(historico.fretePct||0);
+    const lucroInstantaneo=_dashFat-custoEstimado-taxasEstimadas-freteEstimado;
+    if(el){el.textContent=fmt(lucroInstantaneo);el.classList.toggle('negative',lucroInstantaneo<0);}
+    if(label)label.textContent='Lucro estimado';
+    if(sub)sub.textContent='Exibido imediatamente · conferindo valores exatos do Bling…';
+    if(custoEl)custoEl.textContent=`Custos: ${fmt(custoEstimado)} · Taxas: ${fmt(taxasEstimadas)} · Frete: ${fmt(freteEstimado)}`;
+    setValue('dash-profit-order',_dashFeitos?fmt(lucroInstantaneo/_dashFeitos):'—');
     setDashDataStatus('loading','Calculando dados…');
     return;
   }
@@ -3792,8 +3803,21 @@ async function loadDashTaxas(){
     const r=await fetch(`/api/financeiro/taxas?period=${dashPeriod}`),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     _dashLastTaxas=d;
-    recomputeDashLucro();
     const est=d.estimativaPeriodo||{};
+    const receitaDetalhada=(d.produtosVendidos||[]).reduce((a,p)=>a+Number(p.faturamento||0),0);
+    const despesasCanal=Number(est.comissao||0)+Number(est.custoFrete||0);
+    if(Number(est.valorBase)>0)localStorage.setItem('em_tax_rates',JSON.stringify({taxaPct:Number(est.comissao||0)/Number(est.valorBase),fretePct:Number(est.custoFrete||0)/Number(est.valorBase)}));
+    S.lucroRealPorCodigo={};
+    (d.produtosVendidos||[]).forEach(item=>{
+      if(!item.codigo)return;
+      const produto=S.products.find(p=>p.codigo===item.codigo);
+      const qtd=Number(item.qtd||0),faturamento=Number(item.faturamento||0);
+      const custo=produto?.precoCusto>0?produto.precoCusto*qtd:0;
+      const rateio=receitaDetalhada>0?despesasCanal*(faturamento/receitaDetalhada):0;
+      S.lucroRealPorCodigo[item.codigo]={lucro:faturamento-custo-rateio,receita:faturamento,custo,rateio,qtd,completo:Boolean(produto?.precoCusto>0&&est.exata)};
+    });
+    if(S.view==='produtos')renderTable();
+    recomputeDashLucro();
     const el=$('dash-taxas'),sub=$('dash-taxas-sub');
     if(el)el.textContent=fmt((est.comissao||0)+(est.custoFrete||0));
     if(sub)sub.textContent=`comissão ${fmt(est.comissao||0)} · frete ${fmt(est.custoFrete||0)}${est.exata?' · conferido no Bling':' · parcial'}`;
@@ -4926,7 +4950,7 @@ function renderTable(){
     const _rowCls=p.estoque<=0?'row-out':p.estoque<=S.estoqueMin?'row-lo':'';
     html+=`<tr data-id="${p.id}" class="${isSel?'sel':''} ${isDup?'dup-row':''} ${_rowCls}">
       <td><input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked)"></td>
-      <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="${'pname-sub'+(p.codigo?' pname-sub-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${skuHl}</span></div></div></td>
+      <td><div style="display:flex;align-items:center;gap:12px">${thumb}<div class="pinfo"><span class="pname plink" title="Clique para editar" onclick="openEditor(${p.id})">${nameHl}${isDup?`<span class="dup-flag">DUP</span>`:''}</span><span class="${'pname-sub'+(p.codigo?' pname-sub-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${skuHl}</span><span class="pname-sub" style="color:${S.lucroRealPorCodigo[p.codigo]?.completo?'var(--ok-t)':'var(--fa)'}">Lucro real: ${S.lucroRealPorCodigo[p.codigo]?fmt(S.lucroRealPorCodigo[p.codigo].lucro):'—'}</span></div></div></td>
       <td class="col-cat"><span class="ctag" title="${esc(p.categoria)}">${esc(p.categoria||'—')}</span></td>
       <td class="r"><span class="ev pcell" onclick="editCell(this,'preco',${p.id},${p.preco},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmt(p.preco)}${arr}${editIco}</span></td>
       <td class="r"><span class="ev" onclick="editCell(this,'estoque',${p.id},${p.estoque},'${esc(p.nome).replace(/'/g,"\\'")}')">${fmtN(p.estoque)} un.${editIco}</span></td>
@@ -5881,8 +5905,8 @@ async function openEditor(id){
     const r=await fetch(`/api/produtos/${id}`);
     if(!r.ok)throw new Error('Falha ao carregar produto');
     const p=await r.json();editorProduct=p;
-    p.imagemUrls = [];
-    if (p.midia?.imagens?.externas) p.imagemUrls = p.midia.imagens.externas.map(e => e.link).filter(Boolean);
+    p.imagemUrls = Array.isArray(p.imagemUrls)?p.imagemUrls.filter(Boolean):[];
+    if (p.imagemUrls.length===0&&p.midia?.imagens?.externas) p.imagemUrls = p.midia.imagens.externas.map(e => e.link).filter(Boolean);
     if (p.imagemUrls.length === 0 && p.imagemUrl) p.imagemUrls.push(p.imagemUrl);
     // O detalhe do Bling traz a imagem em midia.imagens; a lista (cache) já
     // tem a URL resolvida (inclusive upload local) — usa o melhor dos dois
@@ -5917,6 +5941,7 @@ async function openEditor(id){
     const numReturns = S.devolucoesPorCodigo?.[p.codigo] || 0;
     const numCustomers = numSales > 0 ? Math.max(1, Math.floor(numSales * 0.8)) : 0; // Estimativa (já que Bling não retorna cli únicos)
     const revenue = numSales * preco;
+    const lucroReal=S.lucroRealPorCodigo?.[p.codigo];
     
     $('edraw-bd').innerHTML=`
       <div class="edraw-2col" style="display:flex; gap:24px; align-items:flex-start">
@@ -5930,7 +5955,7 @@ async function openEditor(id){
             <span style="font-size:11px;color:var(--mu)" id="ed-img-count"></span>
           </div>
           <div id="ed-img-grid" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
-          <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleImgFile(this.files[0])">
+          <input type="file" id="ed-img-file" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="handleImgFiles(this.files)">
           
           <div class="ed-card" style="margin-bottom:0">
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center">
@@ -5946,6 +5971,11 @@ async function openEditor(id){
             <div style="display:flex; justify-content:space-between; margin-bottom:16px; align-items:center">
               <span style="color:var(--tx); font-size:13px; font-weight:500; display:flex; align-items:center; gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Receita</span>
               <strong style="color:#f97316; font-size:14px;">${fmt(revenue)}</strong>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;margin-bottom:16px;align-items:center;padding:10px 12px;border-radius:10px;background:${lucroReal?.completo?'var(--ok-bg)':'var(--bg)'}">
+              <span style="color:var(--tx);font-size:13px;font-weight:600">Lucro real do período</span>
+              <strong style="color:${lucroReal?.completo?'var(--ok-t)':'var(--fa)'};font-size:14px">${lucroReal?fmt(lucroReal.lucro):'—'}</strong>
             </div>
 
             ${numReturns > 0 ? `
@@ -6122,7 +6152,7 @@ function renderEdImgs() {
                    <div onclick="removeImg(event, ${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:white;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px">✕</div>
                  </div>`;
       } else if (i === urls.length) {
-        ht += `<div onclick="$('ed-img-file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--acc)'" ondragleave="this.style.borderColor='var(--bord)'" ondrop="event.preventDefault();this.style.borderColor='var(--bord)';handleImgFile(event.dataTransfer.files[0])" style="flex:0 0 60px;height:60px;border-radius:8px;border:1px dashed var(--mu);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);transition:.2s">
+        ht += `<div onclick="$('ed-img-file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--acc)'" ondragleave="this.style.borderColor='var(--bord)'" ondrop="event.preventDefault();this.style.borderColor='var(--bord)';handleImgFiles(event.dataTransfer.files)" style="flex:0 0 60px;height:60px;border-radius:8px;border:1px dashed var(--mu);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);transition:border-color .2s">
                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                  </div>`;
       } else {
@@ -6770,6 +6800,16 @@ function renderDRE(d){
     if($('fin-desconto'))$('fin-desconto').textContent=fmt(taxasEst.desconto||0);
     if($('fin-ticket'))$('fin-ticket').textContent=fmt(d.feitos?receita/d.feitos:0);
   }
+}
+async function handleImgFiles(files){
+  const lista=Array.from(files||[]);
+  if(!lista.length)return;
+  const vagas=Math.max(0,10-(editorProduct?.imagemUrls?.length||0));
+  if(!vagas){toast('O anúncio já possui 10 fotos','wa');return;}
+  const selecionadas=lista.slice(0,vagas);
+  if(lista.length>vagas)toast(`Somente ${vagas} foto${vagas===1?'':'s'} cabe${vagas===1?'':'m'} neste anúncio`,'wa');
+  for(const file of selecionadas)await handleImgFile(file);
+  const input=$('ed-img-file');if(input)input.value='';
 }
 function renderFinChart(byDay,inicio,fim){
   const wrap=$('fin-chart');if(!wrap)return;
@@ -7820,6 +7860,12 @@ function selectFornecedor(id, nome) {
   $('forn-alerta').style.display = 'none';
   $('ed-forn-results').style.display = 'none';
   $('ed-forn-search').value = '';
+  if(editorId){
+    const precoCusto=parseFloat($('ed-custo')?.value)||0;
+    fetch(`/api/produtos/${editorId}/fornecedor`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({fornecedorId:id,nome,precoCusto})})
+      .then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.detail||d.error||'Erro');const prod=S.products.find(p=>p.id===editorId);if(prod){prod.fornecedor={id,nome};prod.hasFornecedor=true;}toast('Fornecedor fixado neste produto','ok');})
+      .catch(e=>toast('Fornecedor selecionado, mas não foi possível fixar: '+e.message,'err'));
+  }
 }
 
 function openNewFornecedor() {

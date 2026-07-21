@@ -1764,6 +1764,22 @@ async function fetchPedidosDetalhados(token, pedidos, max = PEDIDOS_EXATOS_MAX) 
   const selecionados = pedidos.slice(0, max);
   const details = [];
   let failed = 0;
+  // Uma leitura em lote no Firestore substitui até 150 leituras sequenciais.
+  // Isso é o que faz trocar datas responder de imediato depois que os pedidos
+  // já foram sincronizados ao menos uma vez.
+  const admin = getAdmin();
+  if (admin && selecionados.length) {
+    try {
+      const refs = selecionados.map(p => admin.firestore().collection('bling_pedido_detalhes').doc(String(p.id)));
+      const docs = await admin.firestore().getAll(...refs);
+      docs.forEach(doc => {
+        const saved = doc.exists ? doc.data() : null;
+        if (saved?.detail && Date.now() - Number(saved.cachedAt || 0) < PEDIDO_DETALHE_PERSIST_TTL_MS) {
+          _pedidoDetalheCache.set(doc.id, { at: Date.now(), data: saved.detail });
+        }
+      });
+    } catch (e) { console.error('[pedido cache] lote:', e.message); }
+  }
   // Três chamadas paralelas por janela: respeita o limite da conta e reduz a
   // latência de rede. Nas próximas consultas, o cache persistente da Vercel
   // elimina quase todas as chamadas ao Bling.
@@ -1895,6 +1911,18 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
   const key = `${inicio}|${fim}`;
   const hit = _taxasCache.get(key);
   if (hit && Date.now() - hit.at < 10 * 60000 && !req.query.force) return res.json(hit.payload);
+  const admin = getAdmin();
+  const periodDocId = `${inicio}_${fim}`;
+  if (admin && !req.query.force) {
+    try {
+      const saved = await admin.firestore().collection('financeiro_periodos').doc(periodDocId).get();
+      const cached = saved.exists ? saved.data() : null;
+      if (cached?.payload && Date.now() - Number(cached.cachedAt || 0) < 24 * 60 * 60 * 1000) {
+        _taxasCache.set(key, { at: Date.now(), payload: cached.payload });
+        return res.json(cached.payload);
+      }
+    } catch (e) { console.error('[financeiro cache] leitura:', e.message); }
+  }
   try {
     const lista = await fetchPedidos(token, inicio, fim, 2);
     const validos = lista.filter(p => categorizePedido(p.situacao) !== 'cancelado');
@@ -1958,6 +1986,11 @@ app.get('/api/financeiro/taxas', requireAuthJson, async (req, res) => {
       falhas: loteDetalhes.failed,
     };
     _taxasCache.set(key, { at: Date.now(), payload });
+    if (admin) {
+      admin.firestore().collection('financeiro_periodos').doc(periodDocId).set({
+        payload, cachedAt: Date.now(), updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }).catch(e => console.error('[financeiro cache] gravação:', e.message));
+    }
     res.json(payload);
   } catch (err) {
     if (err.response?.status === 401) {
@@ -2009,6 +2042,37 @@ function getProductCusto(p) {
   return 0;
 }
 
+app.put('/api/produtos/:id/fornecedor', requireAuthJson, async (req, res) => {
+  const token = await ensureBlingToken(req, res);
+  if (!token) return res.status(401).json({ error: 'Bling não conectado' });
+  try {
+    const id = validateNumericId(req.params.id, 'ID do produto');
+    const fornecedorId = validateNumericId(req.body?.fornecedorId, 'ID do fornecedor');
+    const nome = String(req.body?.nome || '');
+    const precoCusto = Math.max(0, Number(req.body?.precoCusto) || 0);
+    const admin = getAdmin();
+    if (admin) {
+      await admin.firestore().collection('produto_overrides').doc(String(id)).set({
+        fornecedor: { id: fornecedorId, nome }, precoCusto,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    try {
+      await axios.post('https://www.bling.com.br/Api/v3/produtos/fornecedores', {
+        produto: { id }, fornecedor: { id: fornecedorId }, precoCusto, padrao: true,
+      }, { headers: blingHeaders(token) });
+    } catch (e) {
+      // A persistência do painel já foi concluída; devolve aviso porque o
+      // Bling pode responder conflito quando o vínculo já existe.
+      console.error('[fornecedor produto] Bling:', e.response?.data || e.message);
+    }
+    res.json({ success: true, fornecedor: { id: fornecedorId, nome }, precoCusto });
+  } catch (err) {
+    if (err.statusCode === 400) return sendErrorResponse(res, 400, err.message);
+    sendErrorResponse(res, 500, 'Erro ao fixar fornecedor', err.message);
+  }
+});
+
 app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
   const token = await ensureBlingToken(req, res);
   if (!token) return res.status(401).json({ error: 'Bling não conectado' });
@@ -2050,6 +2114,18 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
       const currentProd = current?.data || {};
       const currentFornId = currentProd.fornecedor?.id;
       const targetFornId = fornecedorOriginal.id;
+
+      // A associação de fornecedor precisa sobreviver mesmo quando o GET do
+      // Bling omite o bloco fornecedor. Grava antes do PUT/verificação para
+      // que uma resposta incompleta do Bling não faça a escolha desaparecer.
+      const admin = getAdmin();
+      if (admin && targetFornId) {
+        await admin.firestore().collection('produto_overrides').doc(String(id)).set({
+          fornecedor: { id: Number(targetFornId), nome: fornecedorOriginal.nome || '' },
+          precoCusto: custoAlvo !== null ? custoAlvo : getProductCusto(currentProd),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
       
       if (targetFornId && Number(targetFornId) !== Number(currentFornId)) {
         try {
@@ -2097,14 +2173,6 @@ app.patch('/api/produtos/:id', requireAuthJson, async (req, res) => {
             ? 'Este produto não tem um fornecedor vinculado no Bling. Cadastre um fornecedor para ele lá (Produto → Fornecedores) antes de editar o custo por aqui — é o Bling que exige isso para saber onde gravar o preço de custo.'
             : `O Bling devolveu ${custoSalvo === null ? 'nenhum valor' : `R$ ${custoSalvo.toFixed(2)}`} depois da gravação, em vez de R$ ${custoAlvo.toFixed(2)}.`);
         }
-      }
-      const admin = getAdmin();
-      if (admin && fornecedorOriginal.id) {
-        await admin.firestore().collection('produto_overrides').doc(String(id)).set({
-          fornecedor: { id: Number(fornecedorOriginal.id), nome: fornecedorOriginal.nome || '' },
-          precoCusto: custoAlvo !== null ? custoAlvo : getProductCusto(currentProd),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
       }
       changeLog.push({
         id: changeLog.length + 1, produto_id: id,
