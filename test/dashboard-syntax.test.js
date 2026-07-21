@@ -54,3 +54,14 @@ test('produtos exibem lucro real e fornecedor é fixado imediatamente', () => {
   assert.match(html, /Lucro real/);
   assert.match(html, /\/fornecedor`,\{method:'PUT'/);
 });
+
+test('novas integrações aparecem nas telas operacionais', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  assert.match(html, /Curva ABC do período/);
+  assert.match(html, /Canais de venda vinculados no Bling/);
+  assert.match(html, /id="fin-allocation-rule"/);
+  assert.match(html, /id="ml-edit-modal"/);
+  assert.match(html, /function reconcileAllMLStock\(\)/);
+  assert.match(html, /function openMLEditor\(id\)/);
+  assert.doesNotMatch(html, /function savePedidoEdicao\(/);
+});

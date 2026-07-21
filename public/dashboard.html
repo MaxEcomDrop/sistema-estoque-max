@@ -1600,6 +1600,11 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="mn-meta-sub" id="meta-bar-sub"></div>
       </div>
 
+      <div class="tcard" style="margin-top:14px">
+        <div class="toolbar"><span style="font-size:14px;font-weight:700">Curva ABC do período</span><span style="font-size:11px;color:var(--mu)">Calculada com o mesmo filtro do lucro e faturamento</span></div>
+        <div id="dash-abc-body"><div class="st-wrap" style="padding:14px"><p class="st-d">Calculando produtos do período…</p></div></div>
+      </div>
+
       <!-- KPIs -->
       <div class="dash-kpis exec-legacy" style="grid-template-columns:repeat(4,1fr)">
         <div class="fk-card fk-blue" onclick="viewPedidosFiltrado('all')">
@@ -2142,8 +2147,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="fk-sm" style="cursor:default">
           <div class="fk-sm-ico" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H1l8-8 8 8h-8v8"/></svg></div>
           <div style="flex:1">
-            <div class="fk-sm-label">Custos fixos/variáveis</div>
-            <div style="display:flex;align-items:center;gap:4px"><input type="number" id="fin-custo-fixo-pct" min="0" max="100" step="0.5" style="width:52px;height:26px;padding:0 6px;background:var(--bg);border:1px solid var(--bord);border-radius:7px;font-size:13px;font-family:inherit;color:var(--tx)" oninput="setCustoFixoPct(this.value)"><span style="font-size:13px;color:var(--mu);font-weight:600">% da receita</span></div>
+            <div class="fk-sm-label">Diluição dos custos fixos</div>
+            <select id="fin-allocation-rule" onchange="setAllocationRule(this.value)" style="height:28px;padding:0 7px;background:var(--bg);border:1px solid var(--bord);border-radius:7px;font-size:12px;color:var(--tx)">
+              <option value="revenue">Por faturamento</option><option value="order">Por pedido</option><option value="unit">Por unidade vendida</option>
+            </select>
           </div>
         </div>
         <div class="fk-sm" style="cursor:default">
@@ -2420,10 +2427,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div class="cfg-card">
         <div class="cfg-title" style="display:flex;align-items:center;gap:10px">
           <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">ML</span>
-          Mercado Livre — Dashboard Independente
+          Mercado Livre — Operação integrada por SKU
           <span class="sb2 s-lo" id="ml-dash-badge" style="margin-left:auto">Verificando…</span>
         </div>
-        <div class="cfg-desc">Visualize vendas, perguntas e métricas do Mercado Livre separadas do Bling.</div>
+        <div class="cfg-desc">Vendas, anúncios, perguntas, custos e estoque conciliados com os produtos do Bling pelo SKU.</div>
       </div>
 
       <!-- SELLER INFO -->
@@ -2481,7 +2488,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
           </div>
           <div class="fk-card fk-purple" style="cursor:default">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-              <div class="fk-label">Lucro bruto (após taxas)</div>
+              <div class="fk-label">Lucro após custo, taxas e frete</div>
               <div class="fk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
             </div>
             <div class="fk-val" id="ml-lucro" style="font-size:18px">—</div>
@@ -2506,6 +2513,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
             <option value="closed">Encerrados</option>
           </select>
           <button class="bts" style="height:32px;font-size:12px" onclick="loadMLAnunciosGrid()">↻</button>
+          <button class="btp" style="height:32px;font-size:12px" onclick="reconcileAllMLStock()">Conciliar estoque</button>
         </div>
         <div class="cfg-desc">Vínculo ao produto do Bling é feito exclusivamente por SKU exato (campo "SKU" do anúncio).</div>
         <div id="ml-anuncios-grid" style="margin-top:10px"></div>
@@ -2526,10 +2534,17 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         </div>
       </div>
 
-      <!-- AVISO DE SINCRONIZAÇÃO -->
+      <!-- STATUS DE SINCRONIZAÇÃO -->
       <div style="margin-top:12px;padding:12px 14px;background:var(--bg);border-radius:10px;font-size:12px;color:var(--mu);line-height:1.6;border-left:3px solid var(--acc)">
-        <strong style="color:var(--tx)">ℹ️ Dados Separados do Bling:</strong><br>
-        Este dashboard exibe dados exclusivos do Mercado Livre. Vendas do Bling aparecem apenas na aba Pedidos. Não há sincronização automática entre plataformas aqui — cada uma mantém seus próprios dados independentes.
+        <strong style="color:var(--tx)">Sincronização segura:</strong><br>
+        O Bling é a fonte do estoque. O sistema replica o saldo para anúncios com SKU exato e registra cada ajuste, sem dar uma segunda baixa no Bling.
+      </div>
+    </div>
+
+    <div class="modal" id="ml-edit-modal" onclick="if(event.target===this)closeModal('ml-edit-modal')">
+      <div class="mbox" style="width:94vw;max-width:780px;max-height:90vh;overflow:auto">
+        <div id="ml-edit-body"></div>
+        <div class="m-foot"><button class="bts" onclick="closeModal('ml-edit-modal')">Cancelar</button><button class="btp" id="ml-edit-save" onclick="saveMLEditor()">Salvar no Mercado Livre</button></div>
       </div>
     </div>
 
@@ -3214,6 +3229,7 @@ firebase.initializeApp({
 // ── STATE ──────────────────────────────────────────
 const S = {
   products:[], filtered:[], selected:new Set(),
+  productChannels:{},
   prevPrices:{}, prevStocks:{}, dupSkus:new Set(),
   view:'produtos', sort:{field:localStorage.getItem('sf')||'relevancia',dir:localStorage.getItem('sd')||'desc'},
   vendasPorCodigo:{},
@@ -3459,6 +3475,7 @@ function renderCards(){
     const thumb=p.imagemUrl?`<img src="${esc(p.imagemUrl)}" alt="" loading="lazy" onclick="event.stopPropagation();openImgLbox('${esc(p.imagemUrl)}')" style="cursor:zoom-in" onerror="this.removeAttribute('onclick');this.style.cursor='';this.src='';">`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
     const badge=statusBadge(p.estoque);
     const lucroReal=lucroProdutoDisplay(p);
+    const channels=S.productChannels[String(p.id)]||[];
     return `<div class="pcard${isSel?' sel':''}" data-id="${p.id}">
       <input type="checkbox" ${isSel?'checked':''} onchange="toggleRow(${p.id},this.checked);renderCards()" onclick="event.stopPropagation()" class="pcard-select-abs">
       <div class="pcard-img" onclick="openEditor(${p.id})" style="cursor:pointer">
@@ -3467,6 +3484,7 @@ function renderCards(){
       </div>
       <div class="pcard-body">
         <div class="pcard-name plink" title="Clique para editar" onclick="openEditor(${p.id})">${hl(p.nome,q)}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 2px">${channels.length?channels.map(c=>`<span class="sb2 s-lo" title="${esc(c.listingId||'Vínculo confirmado pelo Bling')}" style="font-size:9px;padding:2px 5px">${esc(c.name)}</span>`).join(''):'<span style="font-size:9px;color:var(--mu)">Sem loja vinculada no Bling</span>'}</div>
         <div class="${'pcard-sku'+(p.codigo?' pcard-sku-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${hl(p.codigo||'—',q)}</div>
         ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
         <div class="pcard-meta">
@@ -3645,12 +3663,16 @@ async function loadDashboard(force=false){
     try{renderContasVencidas(cr,cp);}catch(e){console.error('[renderContasVencidas]',e);}
     try{renderCalendarPreview();}catch(e){console.error('[renderCalendarPreview]',e);}
     try{renderDashSparkline(v.byDay||{});}catch(e){console.error('[renderDashSparkline]',e);}
-    loadEnhancedDashboard();
-    loadFinanceiroPrevisao();
+    // Lucro/taxas têm prioridade. Os widgets secundários entram depois para
+    // não disputar simultaneamente o limite de chamadas do Bling.
     loadDashTaxas();
-    loadMetaMensal();
-    loadDashNotasStatus();
-    loadDashUpdates();
+    setTimeout(()=>{
+      loadEnhancedDashboard();
+      loadFinanceiroPrevisao();
+      loadMetaMensal();
+      loadDashNotasStatus();
+      loadDashUpdates();
+    },1200);
   }catch(e){
     if(reqId!==_dashReqId)return;
     _dashLoaded=false;
@@ -3808,9 +3830,15 @@ async function loadFinanceiroPrevisao(){
 async function loadDashTaxas(){
   const topEl=$('dash-top-vendidos');
   try{
-    const r=await fetch(`/api/financeiro/taxas?period=${dashPeriod}`),d=await r.json();
+    let taxasUrl=`/api/financeiro/taxas?period=${dashPeriod}&allocationRule=${encodeURIComponent(getAllocationRule())}`;
+    if(dashPeriod==='custom'){
+      const start=$('dash-dt-start')?.value,end=$('dash-dt-end')?.value;
+      if(start&&end)taxasUrl+=`&startDate=${start}&endDate=${end}`;
+    }
+    const r=await fetch(taxasUrl),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     _dashLastTaxas=d;
+    if(d.syncComplete===false)continueSalesSync(d.periodo);
     const est=d.estimativaPeriodo||{};
     const receitaDetalhada=(d.produtosVendidos||[]).reduce((a,p)=>a+Number(p.faturamento||0),0);
     const despesasCanal=Number(est.comissao||0)+Number(est.custoFrete||0);
@@ -3822,8 +3850,10 @@ async function loadDashTaxas(){
       const qtd=Number(item.qtd||0),faturamento=Number(item.faturamento||0);
       const custo=produto?.precoCusto>0?produto.precoCusto*qtd:0;
       const rateio=receitaDetalhada>0?despesasCanal*(faturamento/receitaDetalhada):0;
-      S.lucroRealPorCodigo[item.codigo]={lucro:faturamento-custo-rateio,receita:faturamento,custo,rateio,qtd,completo:Boolean(produto?.precoCusto>0&&est.exata)};
+      const lucroLedger=Number.isFinite(Number(item.lucroReal))?Number(item.lucroReal):null;
+      S.lucroRealPorCodigo[item.codigo]={lucro:lucroLedger??(faturamento-custo-rateio),receita:faturamento,custo:Number(item.cmv)||custo,rateio,qtd,completo:Boolean(d.exact||produto?.precoCusto>0&&est.exata)};
     });
+    renderDashABC(d.curvaABC||[]);
     if(S.view==='produtos')renderTable();
     recomputeDashLucro();
     const el=$('dash-taxas'),sub=$('dash-taxas-sub');
@@ -4479,7 +4509,7 @@ async function loadMercadoLivre(){
     renderMLReputacao(mlMetrics);
     loadMLAnunciosGrid();
     const sellerInfo=$('ml-seller-detail');
-    if(sellerInfo)sellerInfo.innerHTML=`<div style="display:flex;gap:12px"><div style="width:36px;height:36px;border-radius:9px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#333;flex-shrink:0">ML</div><div><div style="font-size:13px;font-weight:700">${esc(mlStatus.apelido||'Vendedor ML')}</div><div style="font-size:11px;color:var(--mu);margin-top:1px">🔗 Independente do Bling</div></div></div>`;
+    if(sellerInfo)sellerInfo.innerHTML=`<div style="display:flex;gap:12px"><div style="width:36px;height:36px;border-radius:9px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#333;flex-shrink:0">ML</div><div><div style="font-size:13px;font-weight:700">${esc(mlStatus.apelido||'Vendedor ML')}</div><div style="font-size:11px;color:var(--ok-t);margin-top:1px">🔗 Integrado ao Bling por SKU</div></div></div>`;
     // KPIs financeiros do ML (faturamento, taxas, frete, lucro) — /api/ml/dashboard
     const setML=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
     if(mlDash&&!mlDash.error&&mlDash.faturamento!==undefined){
@@ -4488,7 +4518,7 @@ async function loadMercadoLivre(){
       setML('ml-sales-avg',fmt(mlDash.ticketMedio||0));
       setML('ml-taxas',fmt(mlDash.taxas||0));
       setML('ml-frete',fmt(mlDash.frete||0));
-      setML('ml-lucro',fmt(mlDash.lucroBruto||0));
+      setML('ml-lucro',fmt(mlDash.lucroReal||mlDash.lucroBruto||0));
     }else{
       const qtdVendas=(mlMetrics.ultimosPedidos||[]).length||0;
       const totalVendas=(mlMetrics.ultimosPedidos||[]).reduce((a,p)=>a+(p.total||0),0)||0;
@@ -4529,17 +4559,18 @@ function renderMLReputacao(d){
   el.innerHTML=cards.join('');
 }
 let _mlAnunciosGridCache=[];
+let _mlGridPage=1,_mlEditorItem=null;
 async function loadMLAnunciosGrid(){
   const el=$('ml-anuncios-grid');if(!el)return;
   el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando anúncios…</p></div>';
   const status=$('ml-grid-status')?.value||'active';
   try{
     if(!S.products.length)await loadProducts();
-    const r=await fetch(`/api/ml/anuncios?status=${status}`),d=await r.json();
+    const r=await fetch(`/api/ml/anuncios?status=${status}&page=${_mlGridPage}&pageSize=50`),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     _mlAnunciosGridCache=d.anuncios||[];
     if(!_mlAnunciosGridCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum anúncio encontrado.</p></div>';return;}
-    el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px">${_mlAnunciosGridCache.map(a=>renderMLAnuncioCard(a)).join('')}</div>`;
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:11px;color:var(--mu)"><span>${fmtN(d.total)} anúncios · página ${d.page} de ${d.pages}</span><span><button class="bts" onclick="_mlGridPage=Math.max(1,_mlGridPage-1);loadMLAnunciosGrid()" ${d.page<=1?'disabled':''}>‹</button> <button class="bts" onclick="_mlGridPage=Math.min(${d.pages},_mlGridPage+1);loadMLAnunciosGrid()" ${d.page>=d.pages?'disabled':''}>›</button></span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px">${_mlAnunciosGridCache.map(a=>renderMLAnuncioCard(a)).join('')}</div>`;
   }catch(e){el.innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
 const ML_SIT_MAP={active:'Ativo',paused:'Pausado',closed:'Encerrado',under_review:'Em revisão'};
@@ -4554,14 +4585,16 @@ function renderMLAnuncioCard(a){
   return`<div class="pcard" data-ml-id="${esc(a.id)}">
     <div class="pcard-img" onclick="window.open('${esc(a.link||'')}','_blank')" style="cursor:pointer">${a.thumb?`<img src="${esc(a.thumb)}" alt="" loading="lazy">`:''}</div>
     <div class="pcard-body">
-      <div class="pcard-name plink" title="Abrir no Mercado Livre" onclick="window.open('${esc(a.link||'')}','_blank')">${esc(a.titulo)}</div>
+      <div class="pcard-name plink" title="Editar anúncio" onclick="openMLEditor('${esc(a.id)}')">${esc(a.titulo)}</div>
       <div style="margin:4px 0">${vinculo}</div>
       <div class="pcard-meta">
         <span class="pcard-price ev" onclick="editMLCell(this,'preco','${esc(a.id)}',${a.preco},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmt(a.preco)}${editIco}</span>
         <span class="ev" onclick="editMLCell(this,'estoque','${esc(a.id)}',${a.qtd},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmtN(a.qtd)} un.${editIco}</span>
       </div>
       <span class="sb2 s-${sc}" style="margin-top:4px;display:inline-flex">${ML_SIT_MAP[a.situacao]||esc(a.situacao)}</span>
+      ${mp?`<div style="font-size:10px;color:var(--mu);margin-top:5px">Custo Bling: ${fmt(mp.precoCusto||0)} · ${S.productChannels[String(mp.id)]?.length||0} canal(is)</div>`:''}
       ${syncBtn}
+      <button class="bts" style="width:100%;margin-top:6px;height:28px;font-size:11px" onclick="openMLEditor('${esc(a.id)}')">Editar dados do anúncio</button>
     </div>
   </div>`;
 }
@@ -4582,12 +4615,16 @@ async function loadProducts(showToast=false){
   const btn=$('sync-btn'),ico=$('sync-ico');
   btn.disabled=true;ico.classList.add('spin');
   try{
-    const r=await fetch('/api/produtos');
+    const [r,linksResult]=await Promise.all([
+      fetch('/api/produtos'),
+      fetch('/api/produtos/lojas-vinculadas').then(async response=>response.ok?response.json():{links:{}}).catch(()=>({links:{}})),
+    ]);
     if(r.status===401){const d=await r.json();if(d.code==='BLING_NOT_CONNECTED'){renderNoBling();return;}if(d.code==='BLING_TOKEN_EXPIRED'){renderExpired();return;}window.location.href='/login';return;}
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     S.products.forEach(p=>{S.prevPrices[p.id]=p.preco;S.prevStocks[p.id]=p.estoque;});
     S.products=d.products||[];
+    S.productChannels=linksResult.links||{};
     S.lastSync=new Date();
     // Fotos HD já descobertas em sessões anteriores substituem a miniatura na hora
     try{const hd=JSON.parse(localStorage.getItem('hd_imgs')||'{}');S.products.forEach(p=>{if(hd[p.id]&&!String(p.imagemUrl).includes('/img/produto/'))p.imagemUrl=hd[p.id];});}catch{}
@@ -4683,6 +4720,48 @@ async function loadMetaMensal(){
     const r=await fetch(`/api/financeiro?period=custom&startDate=${inicio}&endDate=${fim}`),d=await r.json();
     if(r.ok){_metaMesFat=Number(d.receitaConcluida||0);renderMetaBar();}
   }catch{}
+}
+async function reconcileAllMLStock(){
+  try{
+    toast('Conferindo SKUs e saldos…','ok');
+    const r=await fetch('/api/sync/estoque',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Erro');
+    toast(`${d.updated||0} anúncio(s) atualizado(s) · ${d.missingSku||0} sem SKU · ${d.notFound||0} SKU(s) não encontrados`,d.errors?.length?'err':'ok');
+    loadMLAnunciosGrid();
+  }catch(e){toast('Falha na conciliação: '+e.message,'err');}
+}
+async function openMLEditor(id){
+  $('ml-edit-body').innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados completos do anúncio…</p></div>';openModal('ml-edit-modal');
+  try{
+    const r=await fetch(`/api/ml/anuncios/${id}`),d=await r.json();if(!r.ok)throw new Error(d.error||'Erro');
+    const a=d.item;_mlEditorItem=a;
+    const input=(label,id,value,type='text',readonly=false)=>`<div class="df"><label>${label}</label><input id="${id}" type="${type}" value="${esc(value??'')}" ${readonly?'readonly':''}></div>`;
+    $('ml-edit-body').innerHTML=`<div class="m-title">Editar anúncio ${esc(a.id)}</div><div class="m-sub">Campos permitidos são enviados diretamente à API do Mercado Livre.</div>
+      ${input('1. ID do anúncio','mle-id',a.id,'text',true)}
+      ${input('2. Título','mle-title',a.titulo)}
+      <div class="df-2">${input('3. SKU do vendedor','mle-sku',a.sku||'')}${input('4. Preço','mle-price',a.preco,'number')}</div>
+      <div class="df-2">${input('5. Estoque disponível','mle-stock',a.qtd,'number')}${input('6. Quantidade vendida','mle-sold',a.soldQuantity,'number',true)}</div>
+      <div class="df-2">${input('7. Quantidade inicial','mle-initial',a.initialQuantity,'number',true)}${input('8. Status','mle-status',a.situacao,'text',true)}</div>
+      <div class="df-2"><div class="df"><label>9. Condição</label><select id="mle-condition"><option value="new" ${a.condition==='new'?'selected':''}>Novo</option><option value="used" ${a.condition==='used'?'selected':''}>Usado</option><option value="not_specified" ${a.condition==='not_specified'?'selected':''}>Não especificado</option></select></div>${input('10. Garantia','mle-warranty',a.warranty||'')}</div>
+      <div class="df-2">${input('11. Vídeo','mle-video',a.videoId||'')}${input('12. Categoria','mle-category',a.categoryId,'text',true)}</div>
+      <div class="df-2">${input('13. Tipo de anúncio','mle-listing-type',a.listingTypeId,'text',true)}${input('14. Modalidade de compra','mle-buying-mode',a.buyingMode,'text',true)}</div>
+      <div class="df-2">${input('15. Produto de catálogo','mle-catalog-product',a.catalogProductId||'—','text',true)}${input('16. Anúncio de catálogo','mle-catalog',a.catalogListing?'Sim':'Não','text',true)}</div>
+      <div class="df"><label>17. Fotos (uma URL por linha)</label><textarea id="mle-pictures" rows="4">${esc((a.pictures||[]).join('\n'))}</textarea></div>
+      <div class="df"><label>18. Atributos da categoria (JSON)</label><textarea id="mle-attributes" rows="7">${esc(JSON.stringify(a.attributes||[],null,2))}</textarea></div>
+      <div class="df"><label>19. Termos da venda (JSON)</label><textarea id="mle-sale-terms" rows="5">${esc(JSON.stringify(a.saleTerms||[],null,2))}</textarea></div>
+      <div style="font-size:11px;color:var(--mu)">20. Última atualização: ${a.lastUpdated?new Date(a.lastUpdated).toLocaleString('pt-BR'):'—'} · Criado: ${a.dateCreated?new Date(a.dateCreated).toLocaleString('pt-BR'):'—'}</div>`;
+  }catch(e){$('ml-edit-body').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
+}
+async function saveMLEditor(){
+  if(!_mlEditorItem)return;
+  const btn=$('ml-edit-save');btn.disabled=true;btn.textContent='Salvando…';
+  try{
+    let atributos,termosVenda;try{atributos=JSON.parse($('mle-attributes').value||'[]');termosVenda=JSON.parse($('mle-sale-terms').value||'[]');}catch{throw new Error('Atributos ou termos estão com JSON inválido');}
+    const payload={titulo:$('mle-title').value,sku:$('mle-sku').value,preco:Number($('mle-price').value),estoque:Number($('mle-stock').value),condicao:$('mle-condition').value,garantia:$('mle-warranty').value,videoId:$('mle-video').value,imagens:$('mle-pictures').value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean),atributos,termosVenda,titulo_produto:$('mle-title').value};
+    const r=await fetch(`/api/ml/anuncios/${_mlEditorItem.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d=await r.json();
+    if(!r.ok)throw new Error(d.detail||d.error||'Erro');
+    toast('Anúncio atualizado no Mercado Livre','ok');closeModal('ml-edit-modal');loadMLAnunciosGrid();
+  }catch(e){toast(e.message,'err');}finally{btn.disabled=false;btn.textContent='Salvar no Mercado Livre';}
 }
 function renderMetaBar(){
   const wrap=$('meta-bar-wrap');if(!wrap)return;
@@ -5480,27 +5559,6 @@ async function openPedidoDetalhe(id){
     setTimeout(renderEdImgs, 50);
   }catch(e){$('ped-detalhe').innerHTML=`<div class="st-wrap"><p class="st-d">Erro: ${esc(e.message)}</p></div>`;}
 }
-async function savePedidoEdicao(id){
-  const btn=$('ped-edit-save-btn');const errEl=$('ped-edit-err');
-  errEl.style.display='none';
-  const payload={
-    desconto:parseFloat($('ped-edit-desconto').value||0),
-    frete:parseFloat($('ped-edit-frete').value||0),
-    observacoes:$('ped-edit-obs').value,
-    observacoesInternas:$('ped-edit-obs-int').value,
-  };
-  btn.disabled=true;btn.textContent='Salvando…';
-  try{
-    const r=await fetch(`/api/pedidos/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.detail||d.error||'Erro ao salvar');
-    toast('Pedido atualizado no Bling','ok');
-    _pedidosLoaded=false;
-    openPedidoDetalhe(id);
-  }catch(e){
-    errEl.textContent=e.message;errEl.style.display='block';
-  }finally{btn.disabled=false;btn.textContent='Salvar alterações no Bling';}
-}
 function exportPedidosCSV(){
   let list=_pedStatus==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===_pedStatus);
   const q=($('ped-search')?.value||'').toLowerCase().trim();
@@ -5730,6 +5788,14 @@ function setAbcFilter(cls,el){
 function renderCurvaABC(){
   const el=$('fin-abc-body');if(!el)return;
   if(!S.products.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
+  const ledgerABC=_finLastTaxas?.curvaABC;
+  if(Array.isArray(ledgerABC)&&ledgerABC.length){
+    _abcRows=ledgerABC.map(row=>{
+      const p=S.products.find(product=>product.codigo===row.sku)||{id:row.productId,nome:row.name,codigo:row.sku,estoque:0,imagemUrl:row.imageUrl||''};
+      return{p,qtd:Number(row.quantity)||0,faturamento:Number(row.revenue)||0,lucroBruto:Number(row.realProfit)||0,temCusto:true,cls:row.classification,pctAcum:Number(row.accumulated)||0};
+    });
+    renderAbcGrid();return;
+  }
   if(!Object.keys(S.vendasPorCodigo||{}).length){
     el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados de vendas…</p></div>';
     loadVendasRanking().then(renderCurvaABC);
@@ -6038,6 +6104,13 @@ async function openEditor(id){
             <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
           </div>
           
+          <div class="edraw-sec">Canais de venda vinculados no Bling</div>
+          <div class="fk-card" style="padding:14px;margin-bottom:14px">
+            ${(p.canaisVenda||[]).length
+              ? `<div style="display:flex;gap:7px;flex-wrap:wrap">${p.canaisVenda.map(c=>`<span class="sb2 s-lo" title="Anúncio ${esc(c.listingId||'—')} · SKU ${esc(c.sku||p.codigo||'—')}">${esc(c.name)}${c.listingId?` · ${esc(c.listingId)}`:''}</span>`).join('')}</div>`
+              : '<div style="font-size:12px;color:var(--mu)">Nenhuma loja ou anúncio retornado pelo Bling para este produto.</div>'}
+          </div>
+
           <div class="edraw-sec">Fornecedor e Custo</div>
           <div class="fk-card" style="padding:16px; margin-bottom:14px; overflow:visible">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
@@ -6626,8 +6699,8 @@ function setFinPeriod(p,btn){
   if(p!=='custom')loadFinanceiro();
 }
 async function loadFinanceiro(force=false){
-  const pctEl=$('fin-custo-fixo-pct');
-  if(pctEl&&document.activeElement!==pctEl)pctEl.value=getCustoFixoPct();
+  const allocationEl=$('fin-allocation-rule');
+  if(allocationEl)allocationEl.value=getAllocationRule();
   const body=$('fin-margin-body');
   let cacheKey=finPeriod;
   if(finPeriod==='custom'){const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;cacheKey=`custom:${s}:${e}`;}
@@ -6702,14 +6775,30 @@ function renderFinFromData(d){
 let _finTaxasBusy=false;
 let _finLastData=null;
 let _finLastTaxas=null;
+const _salesSyncing=new Set();
+function continueSalesSync(periodo){
+  if(!periodo?.inicio||!periodo?.fim)return;
+  const key=`${periodo.inicio}|${periodo.fim}`;if(_salesSyncing.has(key))return;
+  _salesSyncing.add(key);
+  fetch('/api/sync/vendas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inicio:periodo.inicio,fim:periodo.fim,limit:60})})
+    .then(r=>r.json()).then(d=>{if(d.complete)toast('Sincronização financeira concluída','ok');})
+    .catch(()=>{}).finally(()=>setTimeout(()=>_salesSyncing.delete(key),30000));
+}
 async function loadFinTaxas(){
   if(_finTaxasBusy)return;_finTaxasBusy=true;
   try{
-    let url=`/api/financeiro/taxas?period=${finPeriod}`;
+    let url=`/api/financeiro/taxas?period=${finPeriod}&allocationRule=${encodeURIComponent(getAllocationRule())}`;
     if(finPeriod==='custom'){const s=$('fin-dt-start')?.value,e=$('fin-dt-end')?.value;if(s&&e)url+=`&startDate=${s}&endDate=${e}`;}
     const r=await fetch(url),d=await r.json();
     if(!r.ok)throw new Error(d.error||'Erro');
     _finLastTaxas=d;
+    if(d.syncComplete===false)continueSalesSync(d.periodo);
+    if(d.schemaVersion>=2){
+      S.lucroRealPorCodigo={};
+      (d.produtosVendidos||[]).forEach(item=>{if(item.codigo)S.lucroRealPorCodigo[item.codigo]={lucro:Number(item.lucroReal)||0,receita:Number(item.faturamento)||0,custo:Number(item.cmv)||0,rateio:0,qtd:Number(item.qtd)||0,completo:Boolean(d.exact)};});
+      if(S.view==='produtos')renderTable();
+      renderCurvaABC();
+    }
   }catch(e){
     _finLastTaxas=null;
     console.error('[loadFinTaxas]',e.message);
@@ -6717,6 +6806,11 @@ async function loadFinTaxas(){
     _finTaxasBusy=false;
     try{renderDRE(_finLastData);}catch(e){console.error('[renderDRE]',e);}
   }
+}
+function getAllocationRule(){return localStorage.getItem('finAllocationRule')||'revenue';}
+function setAllocationRule(value){
+  localStorage.setItem('finAllocationRule',['revenue','order','unit'].includes(value)?value:'revenue');
+  _finCacheKey='';_finLastTaxas=null;loadFinTaxas();
 }
 function getCustoFixoPct(){return Math.max(0,Math.min(100,parseFloat(localStorage.getItem('custoFixoPct')||'0')||0));}
 function setCustoFixoPct(v){
@@ -6741,6 +6835,26 @@ function renderFinTrend(d){
 }
 function renderDRE(d){
   const el=$('dre-list');if(!el||!d)return;
+  if(_finLastTaxas?.schemaVersion>=2){
+    const t=_finLastTaxas.totais||{};
+    const real=Number(t.lucroReal)||0;
+    const margin=Number(t.valorBase)>0?real/Number(t.valorBase)*100:0;
+    const ruleLabel={revenue:'faturamento',order:'pedido',unit:'unidade'}[_finLastTaxas.allocationRule]||'faturamento';
+    el.innerHTML=`
+      <div class="dre-row"><span class="dre-lbl">Receita realizada</span><span class="dre-val">${fmt(t.valorBase)}</span></div>
+      <div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Custo dos produtos</span><span class="dre-val neg">−&nbsp;${fmt(t.cmv)}</span></div>
+      <div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Taxas reais dos canais</span><span class="dre-val neg">−&nbsp;${fmt(t.comissao)}</span></div>
+      <div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Frete real dos canais</span><span class="dre-val neg">−&nbsp;${fmt(t.custoFrete)}</span></div>
+      <div class="dre-row sub"><span class="dre-lbl"><span class="dre-op">=</span>Margem de contribuição</span><span class="dre-val">${fmt(Number(t.valorBase)-Number(t.cmv)-Number(t.comissao)-Number(t.custoFrete))}</span></div>
+      <div class="dre-row"><span class="dre-lbl"><span class="dre-op">−</span>Contas fixas do período <span style="font-size:10px;color:var(--mu)">(diluídas por ${ruleLabel})</span></span><span class="dre-val neg">−&nbsp;${fmt(t.custosFixos)}</span></div>
+      <div class="dre-row total"><span class="dre-lbl">Lucro real ${_finLastTaxas.exact?'conferido':'com custo pendente'}</span><span class="dre-val ${real>=0?'pos':'neg'}">${fmt(real)} <span class="dre-margin-pill">${margin.toFixed(1)}%</span></span></div>`;
+    const qualityTag=$('dre-quality-tag');if(qualityTag)qualityTag.textContent=_finLastTaxas.exact?'pedidos, custos, taxas e fretes conferidos':'há SKU vendido sem custo cadastrado';
+    if($('fin-taxas-plataforma'))$('fin-taxas-plataforma').textContent=fmt(t.comissao);
+    if($('fin-lucro-bruto'))$('fin-lucro-bruto').textContent=fmt(Number(t.valorBase)-Number(t.cmv));
+    if($('fin-lucro-liquido'))$('fin-lucro-liquido').textContent=fmt(real);
+    if($('fin-break-even'))$('fin-break-even').textContent=Number(t.pontoEquilibrio)>0?fmt(t.pontoEquilibrio):'Sem custo fixo';
+    return;
+  }
   const cancel=d.totalCancelado||0;
   const taxasEst=_finLastTaxas?.estimativaPeriodo||_finLastTaxas?.totais||{};
   const temTaxas=_finLastTaxas!=null;
@@ -6808,6 +6922,12 @@ function renderDRE(d){
     if($('fin-desconto'))$('fin-desconto').textContent=fmt(taxasEst.desconto||0);
     if($('fin-ticket'))$('fin-ticket').textContent=fmt(d.feitos?receita/d.feitos:0);
   }
+}
+function renderDashABC(rows){
+  const el=$('dash-abc-body');if(!el)return;
+  if(!Array.isArray(rows)||!rows.length){el.innerHTML='<div class="st-wrap" style="padding:14px"><p class="st-d">Sem vendas de produtos neste período.</p></div>';return;}
+  const cls={A:'s-ok',B:'s-lo',C:'s-out'};
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;padding:12px">${rows.slice(0,12).map(row=>`<div style="display:flex;align-items:center;gap:9px;padding:9px;border:1px solid var(--bord-l);border-radius:10px;background:var(--bg)">${row.imageUrl?`<img src="${esc(row.imageUrl)}" style="width:34px;height:34px;object-fit:cover;border-radius:7px">`:''}<div style="min-width:0;flex:1"><div style="font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.name)}</div><div style="font-size:10px;color:var(--mu)">${esc(row.sku||'Sem SKU')} · ${fmt(row.revenue)}</div></div><span class="sb2 ${cls[row.classification]||'s-out'}">${row.classification}</span></div>`).join('')}</div>`;
 }
 async function handleImgFiles(files){
   const lista=Array.from(files||[]);
@@ -7871,7 +7991,7 @@ function selectFornecedor(id, nome) {
   if(editorId){
     const precoCusto=parseFloat($('ed-custo')?.value)||0;
     fetch(`/api/produtos/${editorId}/fornecedor`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({fornecedorId:id,nome,precoCusto})})
-      .then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.detail||d.error||'Erro');const prod=S.products.find(p=>p.id===editorId);if(prod){prod.fornecedor={id,nome};prod.hasFornecedor=true;}toast('Fornecedor fixado neste produto','ok');})
+      .then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.detail||d.error||'Erro');const prod=S.products.find(p=>p.id===editorId);if(prod){prod.fornecedor={id,nome};prod.hasFornecedor=true;}if(d.warning)toast(d.warning,'err');else toast('Fornecedor confirmado no sistema e no Bling','ok');})
       .catch(e=>toast('Fornecedor selecionado, mas não foi possível fixar: '+e.message,'err'));
   }
 }
