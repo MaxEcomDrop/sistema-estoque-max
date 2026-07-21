@@ -5789,42 +5789,19 @@ function renderCurvaABC(){
   const el=$('fin-abc-body');if(!el)return;
   if(!S.products.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Carregue os produtos para calcular a curva ABC.</p></div>';return;}
   const ledgerABC=_finLastTaxas?.curvaABC;
-  if(Array.isArray(ledgerABC)&&ledgerABC.length){
+  if(_finLastTaxas?.schemaVersion>=2&&Array.isArray(ledgerABC)){
     _abcRows=ledgerABC.map(row=>{
       const p=S.products.find(product=>product.codigo===row.sku)||{id:row.productId,nome:row.name,codigo:row.sku,estoque:0,imagemUrl:row.imageUrl||''};
       return{p,qtd:Number(row.quantity)||0,faturamento:Number(row.revenue)||0,lucroBruto:Number(row.realProfit)||0,temCusto:true,cls:row.classification,pctAcum:Number(row.accumulated)||0};
     });
+    if(!_abcRows.length){
+      el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto vendido no período selecionado. Produtos sem vendas não entram na Curva ABC.</p></div>';
+      return;
+    }
     renderAbcGrid();return;
   }
-  if(!Object.keys(S.vendasPorCodigo||{}).length){
-    el.innerHTML='<div class="st-wrap"><p class="st-d">Carregando dados de vendas…</p></div>';
-    loadVendasRanking().then(renderCurvaABC);
-    return;
-  }
-  const vendasExatas=(_finLastTaxas?.produtosVendidos||_dashLastTaxas?.produtosVendidos||[]);
-  const vendaPorSku=new Map(vendasExatas.filter(x=>x.codigo).map(x=>[x.codigo,x]));
-  // Usa o faturamento real dos itens detalhados. Só recorre a quantidade ×
-  // preço atual quando o detalhe financeiro ainda não foi carregado.
-  const comVendas=S.products
-    .map(p=>{
-      const real=vendaPorSku.get(p.codigo);
-      const qtd=real?Number(real.qtd||0):(S.vendasPorCodigo[p.codigo]||0);
-      const faturamento=real?Number(real.faturamento||0):qtd*p.preco;
-      const temCusto=p.precoCusto>0;
-      return{p,qtd,faturamento,lucroBruto:temCusto?qtd*(p.preco-p.precoCusto):null,temCusto};
-    })
-    .filter(x=>x.qtd>0)
-    .sort((a,b)=>b.faturamento-a.faturamento);
-  if(!comVendas.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhum produto com vendas na amostra do período. Produtos sem vendas não entram na Curva ABC.</p></div>';return;}
-  const total=comVendas.reduce((a,x)=>a+x.faturamento,0);
-  let cum=0;
-  _abcRows=comVendas.map(x=>{
-    const pctAntes=total>0?(cum/total)*100:100;
-    const cls=pctAntes<80?'A':pctAntes<95?'B':'C';
-    cum+=x.faturamento;const pctAcum=total>0?(cum/total)*100:100;
-    return{...x,cls,pctAcum};
-  });
-  renderAbcGrid();
+  _abcRows=[];
+  el.innerHTML='<div class="st-wrap"><p class="st-d">Calculando a Curva ABC com o período selecionado…</p></div>';
 }
 function renderAbcGrid(){
   const el=$('fin-abc-body');if(!el)return;
@@ -5854,7 +5831,7 @@ function renderAbcGrid(){
   }).join('');
   el.innerHTML=
     `<div style="display:flex;gap:16px;padding:12px 16px;border-bottom:1px solid var(--bord-l);font-size:12px;flex-wrap:wrap;align-items:center">`+
-    `<span style="color:var(--mu)">Faturamento total (amostra): <strong style="color:var(--tx)">${fmt(totalFat)}</strong></span>`+
+    `<span style="color:var(--mu)">Faturamento total do período: <strong style="color:var(--tx)">${fmt(totalFat)}</strong></span>`+
     `<span style="margin-left:auto;display:flex;gap:12px">`+
     `<span style="color:var(--ok-t)">🟢 A: <strong>${countA}</strong></span>`+
     `<span style="color:var(--wa-t)">🟡 B: <strong>${countB}</strong></span>`+
