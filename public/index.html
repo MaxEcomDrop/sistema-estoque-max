@@ -202,6 +202,8 @@
       color: #1e293b;
       margin-bottom: 1px;
     }
+    .official-logo{display:block;max-width:180px;height:52px;object-fit:contain;margin:0 auto 16px}
+    .btn-official-logo{height:23px;max-width:92px;object-fit:contain;background:#fff;border-radius:5px;padding:2px 5px}
   </style>
 </head>
 <body>
@@ -217,20 +219,15 @@
   <main class="main">
     <div class="connect-card">
 
-      <div class="bling-badge">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-        </svg>
-      </div>
-
-      <h1>Conectar ao Bling</h1>
-      <p class="desc">Autorize o acesso à sua conta Bling para visualizar e gerenciar seus produtos e estoques.</p>
+      <img class="official-logo" src="/assets/channels/bling.png" alt="Bling">
+      <h1>Conectar sua conta</h1>
+      <p class="desc">Autorize o acesso para visualizar e gerenciar seus produtos e estoques.</p>
 
       <div class="error-box" id="errorBox"></div>
 
       <button class="btn-connect" id="btnConnect" onclick="connectBling()">
         <div class="spinner" id="spinner"></div>
-        <span id="btnText">Conectar com Bling</span>
+        <span id="btnText" style="display:flex;align-items:center;gap:8px">Conectar <img class="btn-official-logo" src="/assets/channels/bling.png" alt="Bling"></span>
       </button>
 
       <hr class="divider">
@@ -302,7 +299,7 @@
         document.getElementById('errorBox').style.display = 'block';
         btn.disabled = false;
         spinner.style.display = 'none';
-        btnText.textContent = 'Conectar com Bling';
+        btnText.innerHTML = 'Conectar <img class="btn-official-logo" src="/assets/channels/bling.png" alt="Bling">';
       }
     }
 

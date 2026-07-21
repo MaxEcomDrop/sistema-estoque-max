@@ -2092,6 +2092,31 @@ const nomeLojaPedido = p => {
   const id = String(p?.loja?.id || '');
   return p?.loja?.nome || _channelCache.map[id] || BLING_LOJA_NOMES[id] || null;
 };
+function plataformaCanal(nome) {
+  const raw = String(nome || '').trim();
+  const normalized = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (normalized.includes('mercado livre') || /(^|\s)ml($|\s)/.test(normalized)) return 'Mercado Livre';
+  if (normalized.includes('tiktok')) return 'TikTok Shop';
+  if (normalized.includes('shopify')) return 'Shopify';
+  if (normalized.includes('yampi')) return 'Yampi';
+  if (normalized.includes('google')) return 'Google Shopping';
+  if (normalized.includes('shopee')) return 'Shopee';
+  if (normalized.includes('amazon')) return 'Amazon';
+  return raw || null;
+}
+async function canaisPedidosPersistidos(pedidos) {
+  const admin = getAdmin();
+  if (!admin || !pedidos.length) return new Map();
+  try {
+    const refs = pedidos.map(p => admin.firestore().collection('sales_ledger').doc(String(p.id)));
+    const docs = [];
+    for (let index = 0; index < refs.length; index += 400) docs.push(...await admin.firestore().getAll(...refs.slice(index, index + 400)));
+    return new Map(docs.filter(doc => doc.exists).map(doc => [doc.id, doc.data()?.channelName || null]));
+  } catch (e) {
+    console.error('[pedidos canais persistidos]', e.message);
+    return new Map();
+  }
+}
 
 async function loadProductCostCatalog(token) {
   const products = await fetchBlingProducts(token);
@@ -2917,7 +2942,10 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       raw = Array.isArray(data?.data) ? data.data : [];
     }
 
-    const pedidos = raw.map(p => ({
+    const canaisPersistidos = await canaisPedidosPersistidos(raw);
+    const pedidos = raw.map(p => {
+      const lojaOriginal = nomeLojaPedido(p) || canaisPersistidos.get(String(p.id)) || null;
+      return ({
       id:        p.id,
       numero:    p.numero,
       data:      p.data,
@@ -2932,8 +2960,11 @@ app.get('/api/pedidos', requireAuthJson, async (req, res) => {
       // Canal de venda (nome da loja configurada no Bling — ex. "Mercado
       // Livre", "TikTok Shop"). Pode não vir na listagem em massa do Bling
       // (só confirmado no detalhe do pedido); nesse caso fica "—".
-      canal:     nomeLojaPedido(p),
-    }));
+      canal:     plataformaCanal(lojaOriginal),
+      canalLoja: lojaOriginal,
+      canalId:   p?.loja?.id || null,
+    });
+    });
 
     res.json({ total: pedidos.length, pedidos });
   } catch (err) {
@@ -2992,7 +3023,8 @@ app.get('/api/pedidos/:id', requireAuthJson, async (req, res) => {
       // Canal de venda (nome da loja configurada no Bling — ex.: "Mercado
       // Livre", "TikTok Shop"). Igual ao rótulo "Loja" que o próprio Bling
       // exibe no formulário do pedido.
-      lojaNome:         nomeLojaPedido(p),
+      lojaNome:         plataformaCanal(nomeLojaPedido(p)),
+      lojaNomeOriginal: nomeLojaPedido(p),
       itens,
     });
   } catch (err) {
@@ -3727,10 +3759,24 @@ app.get('/api/contas/custom', requireAuthJson, async (req, res) => {
   res.json({ contas: filtered });
 });
 
-const CONTA_FREQ_DIAS = { semanal: 7, quinzenal: 15, mensal: 30, anual: 365 };
+function dataRecorrente(baseData, frequencia, indice) {
+  const date = new Date(`${baseData}T12:00:00`);
+  if (isNaN(date.getTime())) return baseData;
+  if (frequencia === 'mensal' || frequencia === 'anual') {
+    const originalDay = date.getDate();
+    date.setDate(1);
+    if (frequencia === 'mensal') date.setMonth(date.getMonth() + indice);
+    else date.setFullYear(date.getFullYear() + indice);
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    date.setDate(Math.min(originalDay, lastDay));
+  } else {
+    date.setDate(date.getDate() + (frequencia === 'quinzenal' ? 15 : 7) * indice);
+  }
+  return isoLocal(date);
+}
 
 app.post('/api/contas/custom', requireAuthJson, async (req, res) => {
-  const { tipo, descricao, valor, dataVencimento, categoria, observacao, formaPagamento, parcelamento, frequencia, parcelas } = req.body;
+  const { tipo, descricao, valor, dataVencimento, categoria, observacao, formaPagamento, parcelamento, frequencia, parcelas, status } = req.body;
 
   if (!tipo || !['pagar', 'receber', 'fixa'].includes(tipo)) {
     return sendErrorResponse(res, 400, 'Tipo inválido: use "pagar", "receber" ou "fixa"');
@@ -3743,21 +3789,19 @@ app.post('/api/contas/custom', requireAuthJson, async (req, res) => {
 
   const isParcelado = parcelamento === 'parcelado';
   const totalParcelas = isParcelado ? Math.max(1, Math.min(360, parseInt(parcelas, 10) || 1)) : 1;
-  const passoDias = CONTA_FREQ_DIAS[frequencia] || 30;
   const grupoParcelamento = isParcelado && totalParcelas > 1 ? `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
   const baseData = dataVencimento || isoLocal();
+  const statusInicial = ['pendente', 'pago', 'recebido'].includes(status) ? status : 'pendente';
 
   const criadas = [];
   for (let i = 0; i < totalParcelas; i++) {
     const id = contaIdCounter++;
-    const venc = new Date(`${baseData}T12:00:00`);
-    venc.setDate(venc.getDate() + passoDias * i);
     const conta = {
       id,
       tipo,
       descricao,
       valor: valorNum,
-      dataVencimento: isNaN(venc.getTime()) ? baseData : venc.toISOString().slice(0, 10),
+      dataVencimento: dataRecorrente(baseData, frequencia || 'mensal', i),
       categoria: categoria || 'Outras',
       observacao: observacao || '',
       formaPagamento: formaPagamento || '',
@@ -3766,7 +3810,7 @@ app.post('/api/contas/custom', requireAuthJson, async (req, res) => {
       parcelaAtual: isParcelado ? i + 1 : null,
       parcelaTotal: isParcelado ? totalParcelas : null,
       grupoParcelamento,
-      status: 'pendente',
+      status: statusInicial,
       criada_em: new Date().toISOString(),
       atualizada_em: new Date().toISOString(),
     };

@@ -33,3 +33,17 @@ test('Firebase Admin usa a API modular compatível com a versão instalada', () 
   assert.ok(!source.includes('admin.apps.length'));
   assert.ok(!source.includes('admin.credential.cert'));
 });
+
+test('pedidos usam plataforma real e fallback persistido do canal do Bling', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  assert.ok(source.includes('function plataformaCanal(nome)'));
+  assert.ok(source.includes('async function canaisPedidosPersistidos(pedidos)'));
+  assert.ok(source.includes('canalLoja: lojaOriginal'));
+});
+
+test('contas recorrentes preservam calendário e status informado', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  assert.ok(source.includes('function dataRecorrente(baseData, frequencia, indice)'));
+  assert.ok(source.includes("const statusInicial = ['pendente', 'pago', 'recebido'].includes(status)"));
+  assert.ok(source.includes("dataVencimento: dataRecorrente(baseData, frequencia || 'mensal', i)"));
+});

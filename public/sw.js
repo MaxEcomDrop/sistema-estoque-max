@@ -1,6 +1,6 @@
 // Estoque Max — Service Worker v6 — Cache Busting Forçado
 // TIMESTAMP: 1719804000000
-const SW_VERSION = 'estoquemax-v9';
+const SW_VERSION = 'estoquemax-v10';
 // Precache apenas o manifest (HTML será servido sempre da rede)
 const PRECACHE = ['/manifest.json'];
 

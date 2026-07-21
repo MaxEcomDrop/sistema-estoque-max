@@ -58,10 +58,46 @@ test('produtos exibem lucro real e fornecedor é fixado imediatamente', () => {
 test('novas integrações aparecem nas telas operacionais', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
   assert.match(html, /Curva ABC do período/);
-  assert.match(html, /Canais de venda vinculados no Bling/);
+  assert.match(html, /Lojas vinculadas no/);
   assert.match(html, /id="fin-allocation-rule"/);
   assert.match(html, /id="ml-edit-modal"/);
   assert.match(html, /function reconcileAllMLStock\(\)/);
   assert.match(html, /function openMLEditor\(id\)/);
   assert.doesNotMatch(html, /function savePedidoEdicao\(/);
+});
+
+test('filtro do Início cancela requisições antigas e preserva o período selecionado', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  assert.match(html, /let _dashAbort=null/);
+  assert.match(html, /const requestedPeriod=dashPeriod/);
+  assert.match(html, /signal:_dashAbort\.signal,cache:'no-store'/);
+  assert.match(html, /loadDashTaxas\(requestedPeriod,requestedStart,requestedEnd,reqId\)/);
+  assert.doesNotMatch(html, /querySelectorAll\('\.dp-btn'\)\.forEach\(b=>b\.disabled=true\)/);
+});
+
+test('logos oficiais e lojas agrupadas são renderizadas nos canais', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  ['bling.png', 'mercado-livre.png', 'tiktok-shop.png', 'shopify.png'].forEach(file => assert.match(html, new RegExp(file.replace('.', '\\.'))));
+  assert.match(html, /function uniqueStoreChannels\(channels=\[\]\)/);
+  assert.match(html, /renderStoreLogos\(channels\)/);
+  assert.match(html, /channelLogo\(p\.canal,'sm'\)/);
+});
+
+test('telas de entrada exibem as identidades oficiais fornecidas', () => {
+  const index = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const login = fs.readFileSync(path.join(__dirname, '..', 'public', 'login.html'), 'utf8');
+  ['bling.png', 'mercado-livre.png', 'tiktok-shop.png', 'shopify.png'].forEach((asset) => {
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', 'assets', 'channels', asset)), `logo ausente: ${asset}`);
+  });
+  assert.match(index, /assets\/channels\/bling\.png/);
+  ['bling', 'mercado-livre', 'tiktok-shop', 'shopify'].forEach((asset) => {
+    assert.match(login, new RegExp(`assets/channels/${asset}\\.png`));
+  });
+});
+
+test('contas financeiras carregam automaticamente e possuem resumo, filtros e baixa rápida', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'dashboard.html'), 'utf8');
+  ['fin-acc-payable', 'fin-acc-receivable', 'fin-acc-overdue', 'fin-acc-fixed', 'fin-acc-search'].forEach(id => assert.match(html, new RegExp(`id="${id}"`)));
+  assert.match(html, /loadFinanceiro\(\);loadContasCustomizadas\(\)/);
+  assert.match(html, /function quickSetContaStatus\(id,status\)/);
 });

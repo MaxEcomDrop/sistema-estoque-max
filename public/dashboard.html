@@ -1394,6 +1394,19 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
   transform: none !important;
   box-shadow: none !important;
 }
+.channel-logo{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:24px;padding:3px 7px;border:1px solid var(--bord-l);border-radius:7px;background:#fff;vertical-align:middle;overflow:hidden}
+.channel-logo img{display:block;max-width:84px;width:auto;height:18px;object-fit:contain}
+.channel-logo.sm{height:21px;min-width:32px;padding:2px 5px;border-radius:6px}.channel-logo.sm img{height:15px;max-width:68px}
+.channel-logo.lg{height:34px;min-width:54px;padding:4px 9px;border-radius:9px}.channel-logo.lg img{height:25px;max-width:112px}
+.channel-text{display:inline-flex;align-items:center;min-height:22px;padding:2px 7px;border:1px solid var(--bord-l);border-radius:7px;background:var(--bg);font-size:11px;font-weight:650;color:var(--tx)}
+.fin-account-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px 16px;border-bottom:1px solid var(--bord-l)}
+.fin-account-kpi{padding:12px;border:1px solid var(--bord-l);border-radius:11px;background:var(--bg)}
+.fin-account-kpi span{display:block;font-size:10.5px;color:var(--mu);margin-bottom:5px}.fin-account-kpi strong{display:block;font-size:17px;color:var(--tx)}
+.fin-account-tools{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--bord-l)}
+.fin-account-tools input,.fin-account-tools select{height:34px;border:1px solid var(--bord);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;font-size:12px;padding:0 9px}
+.fin-account-row{display:grid;grid-template-columns:minmax(180px,1fr) 105px 120px 105px auto;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--bord-l)}
+.fin-account-row:last-child{border-bottom:0}.fin-account-actions{display:flex;gap:5px;justify-content:flex-end}.fin-account-actions button{height:29px;padding:0 8px;font-size:10.5px}
+@media(max-width:760px){.fin-account-summary{grid-template-columns:1fr 1fr}.fin-account-row{grid-template-columns:1fr auto}.fin-account-row .fin-account-hide-mobile{display:none}.fin-account-actions{grid-column:1/-1;justify-content:flex-start}}
 </style>
 </head>
 <body>
@@ -2197,18 +2210,29 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <div class="vtable" id="fin-margin-body"><div class="st-wrap"><p class="st-d">Clique em Atualizar para carregar os dados financeiros.</p></div></div>
       </div>
 
-      <!-- Contas Customizadas (Controle de Caixa) -->
+      <!-- Contas do negócio -->
       <div class="tcard" style="margin-top:0">
         <div class="toolbar">
-          <span style="font-size:14px;font-weight:600;color:var(--tx)">Contas Customizadas</span>
-          <span style="font-size:12px;color:var(--mu);margin-left:6px">Controle de caixa: despesas e receitas extras</span>
+          <span style="font-size:14px;font-weight:700;color:var(--tx)">Contas do negócio</span>
+          <span style="font-size:12px;color:var(--mu);margin-left:6px">A pagar, a receber e despesas fixas integradas ao resultado</span>
           <div class="tr">
-            <button class="bts" onclick="loadContasCustomizadas()">↻ Carregar</button>
+            <button class="bts" onclick="loadContasCustomizadas()">↻ Atualizar</button>
             <button class="btp" onclick="openNovaContaModal()">+ Nova conta</button>
           </div>
         </div>
+        <div class="fin-account-summary">
+          <div class="fin-account-kpi"><span>A pagar em aberto</span><strong id="fin-acc-payable">R$ 0,00</strong></div>
+          <div class="fin-account-kpi"><span>A receber em aberto</span><strong id="fin-acc-receivable">R$ 0,00</strong></div>
+          <div class="fin-account-kpi"><span>Vencidas</span><strong id="fin-acc-overdue">R$ 0,00</strong></div>
+          <div class="fin-account-kpi"><span>Custos fixos mensais</span><strong id="fin-acc-fixed">R$ 0,00</strong></div>
+        </div>
+        <div class="fin-account-tools">
+          <input id="fin-acc-search" type="search" placeholder="Buscar conta ou categoria…" oninput="renderContasCustomizadas()" style="flex:1;min-width:190px">
+          <select id="fin-acc-type" onchange="renderContasCustomizadas()"><option value="">Todos os tipos</option><option value="pagar">A pagar</option><option value="receber">A receber</option><option value="fixa">Fixas</option></select>
+          <select id="fin-acc-status" onchange="renderContasCustomizadas()"><option value="aberta">Em aberto</option><option value="vencida">Vencidas</option><option value="concluida">Pagas/recebidas</option><option value="">Todos os status</option></select>
+        </div>
         <div id="fin-contas-custom" style="min-height:150px">
-          <div class="st-wrap"><p class="st-d">Clique em Carregar para listar contas customizadas.</p></div>
+          <div class="st-wrap"><p class="st-d">Carregando contas do negócio…</p></div>
         </div>
       </div>
     </div>
@@ -2305,8 +2329,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <!-- MERCADO LIVRE DIRETO -->
       <div class="cfg-card" id="ml-card">
         <div class="cfg-title" style="display:flex;align-items:center;gap:10px">
-          <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">ML</span>
-          Mercado Livre — Integração direta
+          <span class="channel-logo lg"><img src="/assets/channels/mercado-livre.png" alt="Mercado Livre"></span>
+          <span>Integração direta</span>
           <span class="sb2 s-lo" id="ml-status-badge" style="margin-left:auto">Verificando…</span>
         </div>
         <div class="cfg-desc" id="ml-desc">Conecte sua conta do Mercado Livre para responder perguntas de clientes e monitorar anúncios diretamente aqui, sem precisar sair do sistema.</div>
@@ -2338,22 +2362,28 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
         <!-- Bling -->
         <div class="cfg-row" style="margin-bottom:10px">
           <span style="display:flex;align-items:center;gap:10px">
-            <span style="width:36px;height:36px;border-radius:10px;background:#e6f5ff;color:#1a92e3;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">B</span>
-            <span><span style="font-weight:700;color:var(--tx);font-size:13px">Bling ERP</span><br><span style="font-size:11px;color:var(--mu)">Hub central · Produtos · Pedidos · NF-e · Estoque · Contas</span></span>
+            <span class="channel-logo lg"><img src="/assets/channels/bling.png" alt="Bling"></span>
+            <span><span style="font-size:11px;color:var(--mu)">Hub central · Produtos · Pedidos · NF-e · Estoque · Contas</span></span>
           </span>
           <span class="sb2 s-ok" id="bling-status-badge">Conectado</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
           <!-- TikTok Shop -->
           <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
-            <span style="width:32px;height:32px;border-radius:8px;background:#010101;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;flex-shrink:0">TT</span>
-            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">TikTok Shop</div><div style="font-size:10px;color:var(--mu)">Comissão ~8% · Via Bling</div></span>
+            <span class="channel-logo lg"><img src="/assets/channels/tiktok-shop.png" alt="TikTok Shop"></span>
+            <span style="min-width:0"><div style="font-size:10px;color:var(--mu)">Comissão ~8% · Via Bling</div></span>
             <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
           </div>
           <!-- Mercado Livre -->
           <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
-            <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">ML</span>
-            <span style="min-width:0"><div style="font-weight:600;font-size:12.5px;color:var(--tx)">Mercado Livre</div><div style="font-size:10px;color:var(--mu)">Comissão ~14% + R$6 · Via Bling</div></span>
+            <span class="channel-logo lg"><img src="/assets/channels/mercado-livre.png" alt="Mercado Livre"></span>
+            <span style="min-width:0"><div style="font-size:10px;color:var(--mu)">Comissão ~14% + R$6 · Via Bling</div></span>
+            <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
+          </div>
+          <!-- Shopify -->
+          <div style="border:1px solid var(--bord-l);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span class="channel-logo lg"><img src="/assets/channels/shopify.png" alt="Shopify"></span>
+            <span style="min-width:0"><div style="font-size:10px;color:var(--mu)">Loja própria · Via Bling</div></span>
             <span class="sb2 s-lo" style="margin-left:auto;flex-shrink:0">Via Bling</span>
           </div>
           <!-- Shopee -->
@@ -2426,8 +2456,8 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div class="view" id="view-mercado-livre">
       <div class="cfg-card">
         <div class="cfg-title" style="display:flex;align-items:center;gap:10px">
-          <span style="width:32px;height:32px;border-radius:8px;background:#ffe600;color:#333;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">ML</span>
-          Mercado Livre — Operação integrada por SKU
+          <span class="channel-logo lg"><img src="/assets/channels/mercado-livre.png" alt="Mercado Livre"></span>
+          <span>Operação integrada por SKU</span>
           <span class="sb2 s-lo" id="ml-dash-badge" style="margin-left:auto">Verificando…</span>
         </div>
         <div class="cfg-desc">Vendas, anúncios, perguntas, custos e estoque conciliados com os produtos do Bling pelo SKU.</div>
@@ -2698,7 +2728,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
     <div style="display:grid;gap:12px;margin:20px 0">
       <div>
         <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Tipo *</label>
-        <select id="conta-tipo" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+        <select id="conta-tipo" onchange="handleContaTipoChange()" style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
           <option value="">— Selecione —</option>
           <option value="pagar">Conta a Pagar</option>
           <option value="receber">Conta a Receber</option>
@@ -2712,6 +2742,10 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       <div>
         <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Categoria</label>
         <input type="text" id="conta-categoria" placeholder="Ex: Frete, Taxa, Aluguel..." style="width:100%;height:44px;padding:0 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Observação</label>
+        <textarea id="conta-observacao" placeholder="Fornecedor, pedido relacionado ou informação adicional…" rows="2" style="width:100%;padding:10px 12px;background:var(--bg);border:1.5px solid var(--bord);border-radius:11px;font-size:14px;font-family:inherit;color:var(--tx);outline:none;resize:vertical"></textarea>
       </div>
       <div>
         <label style="display:block;font-size:12px;color:var(--mu);margin-bottom:6px;font-weight:600">Valor (R$) *</label>
@@ -3252,6 +3286,56 @@ const $=id=>document.getElementById(id);
 const fmt=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(+n||0);
 const fmtN=n=>new Intl.NumberFormat('pt-BR').format(+n||0);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const CHANNEL_BRANDS={
+  bling:{label:'Bling',src:'/assets/channels/bling.png'},
+  mercado_livre:{label:'Mercado Livre',src:'/assets/channels/mercado-livre.png'},
+  tiktok_shop:{label:'TikTok Shop',src:'/assets/channels/tiktok-shop.png'},
+  shopify:{label:'Shopify',src:'/assets/channels/shopify.png'},
+};
+function channelIdentity(value){
+  const raw=String(value||'').trim(),n=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(n.includes('mercado livre')||/(^|\s)ml($|\s)/.test(n))return{key:'mercado_livre',name:'Mercado Livre'};
+  if(n.includes('tiktok'))return{key:'tiktok_shop',name:'TikTok Shop'};
+  if(n.includes('shopify'))return{key:'shopify',name:'Shopify'};
+  if(n.includes('bling'))return{key:'bling',name:'Bling'};
+  if(n.includes('yampi'))return{key:'yampi',name:'Yampi'};
+  if(n.includes('google'))return{key:'google_shop',name:'Google Shopping'};
+  if(n.includes('shopee'))return{key:'shopee',name:'Shopee'};
+  if(n.includes('amazon'))return{key:'amazon',name:'Amazon'};
+  return{key:n.replace(/[^a-z0-9]+/g,'_')||'desconhecido',name:raw||'Canal não informado'};
+}
+function channelLogo(value,size='sm'){
+  const identity=channelIdentity(value),brand=CHANNEL_BRANDS[identity.key];
+  return brand
+    ?`<span class="channel-logo ${size}" title="${esc(brand.label)}" aria-label="${esc(brand.label)}"><img src="${brand.src}" alt="${esc(brand.label)}"></span>`
+    :`<span class="channel-text" title="${esc(identity.name)}">${esc(identity.name)}</span>`;
+}
+function uniqueStoreChannels(channels=[]){
+  const stores=new Map();
+  (Array.isArray(channels)?channels:[]).forEach(channel=>{
+    const identity=channelIdentity(channel?.name||channel?.lojaNome||channel);
+    if(!stores.has(identity.key))stores.set(identity.key,{...identity,count:0,raw:channel});
+    stores.get(identity.key).count++;
+  });
+  return [...stores.values()];
+}
+function renderStoreLogos(channels=[],size='sm'){
+  const stores=uniqueStoreChannels(channels);
+  return stores.length?stores.map(store=>channelLogo(store.name,size)).join(''):'<span style="font-size:9px;color:var(--mu)">Sem loja vinculada no Bling</span>';
+}
+function replaceStandaloneBrandLabels(root=document){
+  const accepted=/^(bling(?: erp)?|mercado livre|(?:max renovação )?ml|tiktok shop|(?:max renovação )?tiktok shop|shopify|(?:max renovação )?shopify)$/i;
+  const nodes=[];
+  if(root.nodeType===1)nodes.push(root);
+  if(root.querySelectorAll)nodes.push(...root.querySelectorAll('button span,button div,.cfg-row-val,.cfg-row-lbl,.cfg-title,.fk-label,.ni span,.bnav-item span'));
+  nodes.forEach(node=>{
+    if(node.closest?.('.channel-logo')||node.children.length||!accepted.test((node.textContent||'').trim()))return;
+    node.innerHTML=channelLogo(node.textContent.trim(),node.closest('.ni,.bnav-item')?'sm':'lg');
+  });
+}
+setTimeout(()=>replaceStandaloneBrandLabels(document),0);
+new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>replaceStandaloneBrandLabels(node))))
+  .observe(document.body,{childList:true,subtree:true});
 function lucroProdutoDisplay(p){
   const real=S.lucroRealPorCodigo[p.codigo];
   if(real)return{label:'Lucro real no período',valor:real.lucro,completo:real.completo};
@@ -3484,7 +3568,7 @@ function renderCards(){
       </div>
       <div class="pcard-body">
         <div class="pcard-name plink" title="Clique para editar" onclick="openEditor(${p.id})">${hl(p.nome,q)}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 2px">${channels.length?channels.map(c=>`<span class="sb2 s-lo" title="${esc(c.listingId||'Vínculo confirmado pelo Bling')}" style="font-size:9px;padding:2px 5px">${esc(c.name)}</span>`).join(''):'<span style="font-size:9px;color:var(--mu)">Sem loja vinculada no Bling</span>'}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 2px" title="Lojas vinculadas no Bling">${renderStoreLogos(channels)}</div>
         <div class="${'pcard-sku'+(p.codigo?' pcard-sku-cp':'')}" ${p.codigo?`onclick="event.stopPropagation();copySku('${esc(p.codigo).replace(/'/g,"&#39;")}')" title="Toque para copiar SKU"`:''}>${hl(p.codigo||'—',q)}</div>
         ${p.categoria?`<span class="pcard-cat">${esc(p.categoria)}</span>`:''}
         <div class="pcard-meta">
@@ -3513,14 +3597,15 @@ function setView(v){
   $('ni-'+v)?.classList.add('on');
   if(MAIS_VIEWS.includes(v))$('bn-mais')?.classList.add('on');
   else $('bn-'+v)?.classList.add('on');
-  $('tb-title').textContent=VIEWS[v]||v;
+  if(v==='mercado-livre')$('tb-title').innerHTML=channelLogo('Mercado Livre','lg');
+  else $('tb-title').textContent=VIEWS[v]||v;
   if(v==='inicio')loadDashboard();
   if(v==='clientes')loadClientes();
   if(v==='relatorio')renderReport();
   if(v==='notas')loadNotas();
   if(v==='pedidos')loadPedidos();
   if(v==='historico')loadHistorico();
-  if(v==='financeiro')loadFinanceiro();
+  if(v==='financeiro'){loadFinanceiro();loadContasCustomizadas();}
   if(v==='calendario')loadCalendario();
   if(v==='integracoes')loadIntegracoes();
   if(v==='mercado-livre')loadMercadoLivre();
@@ -3534,6 +3619,7 @@ function setView(v){
 let dashPeriod='today';
 let _dashLoaded=false;
 let _dashReqId=0;
+let _dashAbort=null;
 let _dashFat=0,_metaMesFat=0,_dashTotalPedidos=0,_dashFeitos=0,_dashCancelados=0,_dashPendentes=null;
 let _dashFrete=0,_dashDesconto=0,_dashLastTaxas=null;
 function setDashPeriod(p,btn){
@@ -3570,17 +3656,22 @@ async function loadDashboard(force=false){
   // sem isso, um período mais lento podia "vencer" e mostrar dado errado,
   // dando a sensação de trava/delay ao trocar o período.
   const reqId=++_dashReqId;
+  if(_dashAbort)_dashAbort.abort();
+  _dashAbort=new AbortController();
+  const requestedPeriod=dashPeriod;
+  const requestedStart=requestedPeriod==='custom'?$('dash-dt-start')?.value:'';
+  const requestedEnd=requestedPeriod==='custom'?$('dash-dt-end')?.value:'';
   const periodWrap=document.querySelector('.dash-period');
   if(periodWrap)periodWrap.classList.add('loading');
-  document.querySelectorAll('.dp-btn').forEach(b=>b.disabled=true);
   try{
-    let url=`/api/dashboard?period=${dashPeriod}`;
-    if(dashPeriod==='custom'){
-      const s=$('dash-dt-start')?.value,e=$('dash-dt-end')?.value;
-      if(!s||!e){toast('Selecione as datas','wa');return;}
-      url+=`&startDate=${s}&endDate=${e}`;
+    let url=`/api/dashboard?period=${encodeURIComponent(requestedPeriod)}`;
+    if(requestedPeriod==='custom'){
+      if(!requestedStart||!requestedEnd){toast('Selecione as datas','wa');return;}
+      if(requestedStart>requestedEnd){toast('A data inicial precisa ser anterior à final','wa');return;}
+      url+=`&startDate=${encodeURIComponent(requestedStart)}&endDate=${encodeURIComponent(requestedEnd)}`;
     }
-    const r=await fetch(url);
+    url+=`&_=${Date.now()}`;
+    const r=await fetch(url,{signal:_dashAbort.signal,cache:'no-store'});
     const d=await r.json();
     if(reqId!==_dashReqId)return;
     if(r.status===401&&(d.code==='BLING_NOT_CONNECTED'||d.code==='BLING_TOKEN_EXPIRED')){
@@ -3665,7 +3756,7 @@ async function loadDashboard(force=false){
     try{renderDashSparkline(v.byDay||{});}catch(e){console.error('[renderDashSparkline]',e);}
     // Lucro/taxas têm prioridade. Os widgets secundários entram depois para
     // não disputar simultaneamente o limite de chamadas do Bling.
-    loadDashTaxas();
+    loadDashTaxas(requestedPeriod,requestedStart,requestedEnd,reqId);
     setTimeout(()=>{
       loadEnhancedDashboard();
       loadFinanceiroPrevisao();
@@ -3675,6 +3766,7 @@ async function loadDashboard(force=false){
     },1200);
   }catch(e){
     if(reqId!==_dashReqId)return;
+    if(e.name==='AbortError')return;
     _dashLoaded=false;
     ['dash-faturamento','dash-lucro','dash-vendas','dash-ticket','dash-receber','dash-pagar'].forEach(id=>setTxt(id,'—'));
     toast('Erro ao carregar painel: '+e.message,'err');
@@ -3682,7 +3774,6 @@ async function loadDashboard(force=false){
   }finally{
     if(reqId===_dashReqId){
       if(periodWrap)periodWrap.classList.remove('loading');
-      document.querySelectorAll('.dp-btn').forEach(b=>b.disabled=false);
     }
   }
 }
@@ -3827,15 +3918,16 @@ async function loadFinanceiroPrevisao(){
     </div>`;
   }catch(e){console.error('[Previsão]',e.message);}
 }
-async function loadDashTaxas(){
+async function loadDashTaxas(period=dashPeriod,customStart='',customEnd='',reqId=_dashReqId){
   const topEl=$('dash-top-vendidos');
   try{
-    let taxasUrl=`/api/financeiro/taxas?period=${dashPeriod}&allocationRule=${encodeURIComponent(getAllocationRule())}`;
-    if(dashPeriod==='custom'){
-      const start=$('dash-dt-start')?.value,end=$('dash-dt-end')?.value;
-      if(start&&end)taxasUrl+=`&startDate=${start}&endDate=${end}`;
+    let taxasUrl=`/api/financeiro/taxas?period=${encodeURIComponent(period)}&allocationRule=${encodeURIComponent(getAllocationRule())}`;
+    if(period==='custom'){
+      if(customStart&&customEnd)taxasUrl+=`&startDate=${encodeURIComponent(customStart)}&endDate=${encodeURIComponent(customEnd)}`;
     }
-    const r=await fetch(taxasUrl),d=await r.json();
+    taxasUrl+=`&_=${Date.now()}`;
+    const r=await fetch(taxasUrl,{cache:'no-store'}),d=await r.json();
+    if(reqId!==_dashReqId||period!==dashPeriod)return;
     if(!r.ok)throw new Error(d.error||'Erro');
     _dashLastTaxas=d;
     if(d.syncComplete===false)continueSalesSync(d.periodo);
@@ -4247,6 +4339,7 @@ function compartilharCriticos(){
 // ── INTEGRAÇÕES ───────────────────────────────────
 const INT_CANAIS=[
   {id:'ml',nome:'Mercado Livre',cor:'#ffe600',tc:'#333',comissao:14,fixo:6},
+  {id:'shopify',nome:'Shopify',cor:'#95bf47',tc:'#fff',comissao:0,fixo:0},
   {id:'shopee',nome:'Shopee',cor:'#ee4d2d',tc:'#fff',comissao:13,fixo:0},
   {id:'tiktok',nome:'TikTok Shop',cor:'#010101',tc:'#fff',comissao:8,fixo:0},
   {id:'amazon',nome:'Amazon Brasil',cor:'#ff9900',tc:'#333',comissao:12,fixo:0},
@@ -4277,8 +4370,7 @@ function loadIntegracoes(){
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:160px">
         <input type="checkbox" id="int-ativo-${c.id}" ${ativo?'checked':''} onchange="updateLucroCanais()">
         <span style="display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:7px;background:${c.cor};color:${c.tc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${c.nome.split(' ').map(w=>w[0]).join('').slice(0,2)}</span>
-          <span style="font-weight:600;color:var(--tx)">${esc(c.nome)}</span>
+          ${CHANNEL_BRANDS[channelIdentity(c.nome).key]?channelLogo(c.nome,'lg'):`<span style="width:28px;height:28px;border-radius:7px;background:${c.cor};color:${c.tc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${c.nome.split(' ').map(w=>w[0]).join('').slice(0,2)}</span><span style="font-weight:600;color:var(--tx)">${esc(c.nome)}</span>`}
         </span>
       </label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -4325,8 +4417,7 @@ function updateLucroCanais(){
     const cor=netPct>=20?'ok':netPct>=5?'lo':'out';
     return`<div class="cfg-row">
       <span style="display:flex;align-items:center;gap:8px">
-        <span style="width:22px;height:22px;border-radius:5px;background:${c.cor};color:${c.tc};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:800">${c.nome.split(' ').map(w=>w[0]).join('').slice(0,2)}</span>
-        ${esc(c.nome)}
+        ${CHANNEL_BRANDS[channelIdentity(c.nome).key]?channelLogo(c.nome,'sm'):`<span style="width:22px;height:22px;border-radius:5px;background:${c.cor};color:${c.tc};display:inline-flex;align-items:center;justify-content:center;font-size:7px;font-weight:800">${c.nome.split(' ').map(w=>w[0]).join('').slice(0,2)}</span>${esc(c.nome)}`}
       </span>
       <span style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;color:var(--mu)">${mPct}% − ${com.toFixed(1)}%${fix>0?` − R$${fix.toFixed(2)}`:''}  =</span>
@@ -4592,7 +4683,7 @@ function renderMLAnuncioCard(a){
         <span class="ev" onclick="editMLCell(this,'estoque','${esc(a.id)}',${a.qtd},'${esc((a.titulo||'').replace(/'/g,"\\'"))}')">${fmtN(a.qtd)} un.${editIco}</span>
       </div>
       <span class="sb2 s-${sc}" style="margin-top:4px;display:inline-flex">${ML_SIT_MAP[a.situacao]||esc(a.situacao)}</span>
-      ${mp?`<div style="font-size:10px;color:var(--mu);margin-top:5px">Custo Bling: ${fmt(mp.precoCusto||0)} · ${S.productChannels[String(mp.id)]?.length||0} canal(is)</div>`:''}
+      ${mp?`<div style="font-size:10px;color:var(--mu);margin-top:5px">Custo ${channelLogo('Bling','sm')}: ${fmt(mp.precoCusto||0)} · ${uniqueStoreChannels(S.productChannels[String(mp.id)]||[]).length} loja(s)</div>`:''}
       ${syncBtn}
       <button class="bts" style="width:100%;margin-top:6px;height:28px;font-size:11px" onclick="openMLEditor('${esc(a.id)}')">Editar dados do anúncio</button>
     </div>
@@ -5448,7 +5539,7 @@ function renderPedidosTable(status){
   const body=$('pedidos-body');
   let list=status==='all'?_pedidosCache:_pedidosCache.filter(p=>categorizePed(p.situacao)===status);
   const q=($('ped-search')?.value||'').toLowerCase().trim();
-  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.situacao} ${pedSituacaoPT(p.situacao)}`.toLowerCase().includes(q));
+  if(q)list=list.filter(p=>`${p.numero} ${p.contato} ${p.canal||''} ${p.canalLoja||''} ${p.situacao} ${pedSituacaoPT(p.situacao)}`.toLowerCase().includes(q));
   const _statusLbl={all:'encontrado',pendente:'pendente',concluido:'concluído',cancelado:'cancelado'};
   if(!list.length){body.innerHTML=`<div class="st-wrap"><p class="st-d">Nenhum pedido ${q?'encontrado para "'+esc(q)+'"':_statusLbl[status]||status}.</p></div>`;return;}
   const totalVal=list.reduce((a,p)=>a+(p.valor||0),0);
@@ -5460,7 +5551,7 @@ function renderPedidosTable(status){
       return`<div class="mcard" onclick="openPedidoDetalhe('${esc(String(p.id))}')">
         <div class="mcard-main">
           <div class="mcard-t">${esc(p.contato)}</div>
-          <div class="mcard-s">#${esc(String(p.numero||p.id||'—'))} · ${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}${p.canal?' · '+esc(p.canal):''}</div>
+          <div class="mcard-s" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">#${esc(String(p.numero||p.id||'—'))} · ${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'} ${p.canal?channelLogo(p.canal,'sm'):''}</div>
         </div>
         <div class="mcard-side">
           <div class="mcard-v">${fmt(p.valor)}</div>
@@ -5479,7 +5570,7 @@ function renderPedidosTable(status){
       <td><span class="sku">${esc(String(p.numero||p.id||'—'))}</span></td>
       <td>${p.data?String(p.data).substring(0,10).split('-').reverse().join('/'):'—'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.contato)}</td>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mu);font-size:12px">${p.canal?esc(p.canal):'—'}</td>
+      <td style="max-width:120px;color:var(--mu);font-size:12px">${p.canal?channelLogo(p.canal,'sm'):'—'}</td>
       <td class="r o-val" style="font-weight:600">${fmt(p.valor)}</td>
       <td><span class="sb2 ${sb}" style="gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span></td>
     </tr>`;
@@ -5525,7 +5616,7 @@ async function openPedidoDetalhe(id){
         <div style="min-width:0">
           <div style="font-size:16px;font-weight:700">Pedido #${esc(String(p.numero||p.id))}</div>
           <div style="font-size:12px;color:var(--mu);margin-top:2px">${esc(p.contato)}${p.contatoDoc?' · CNPJ/CPF: '+esc(p.contatoDoc):''}</div>
-          ${p.lojaNome?`<span class="sb2 s-lo" style="margin-top:6px;display:inline-flex">📦 ${esc(p.lojaNome)}</span>`:''}
+          ${p.lojaNome?`<span style="margin-top:6px;display:inline-flex">${channelLogo(p.lojaNome,'lg')}</span>`:''}
           ${waLink?`<a href="${waLink}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#25d366;margin-top:4px;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.855L.054 23.3a.75.75 0 0 0 .916.916l5.445-1.48A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.82 9.82 0 0 1-4.97-1.349l-.356-.212-3.692 1.003 1.003-3.622-.23-.374A9.822 9.822 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>${p.contatoTel}</a>`:''}
         </div>
         <span class="sb2 ${sb}" style="flex-shrink:0;gap:4px">${ico} ${esc(pedSituacaoPT(p.situacao))}</span>
@@ -6086,11 +6177,11 @@ async function openEditor(id){
             <div class="df"><label>EAN / GTIN</label><input type="text" id="ed-ean" value="${esc(p.gtin||'')}"></div>
           </div>
           
-          <div class="edraw-sec">Canais de venda vinculados no Bling</div>
+          <div class="edraw-sec">Lojas vinculadas no ${channelLogo('Bling','sm')}</div>
           <div class="fk-card" style="padding:14px;margin-bottom:14px">
             ${(p.canaisVenda||[]).length
-              ? `<div style="display:flex;gap:7px;flex-wrap:wrap">${p.canaisVenda.map(c=>`<span class="sb2 s-lo" title="Anúncio ${esc(c.listingId||'—')} · SKU ${esc(c.sku||p.codigo||'—')}">${esc(c.name)}${c.listingId?` · ${esc(c.listingId)}`:''}</span>`).join('')}</div>`
-              : '<div style="font-size:12px;color:var(--mu)">Nenhuma loja ou anúncio retornado pelo Bling para este produto.</div>'}
+              ? `<div style="display:flex;gap:7px;flex-wrap:wrap">${renderStoreLogos(p.canaisVenda,'lg')}</div>`
+              : '<div style="font-size:12px;color:var(--mu)">Nenhuma loja vinculada retornada pelo Bling para este produto.</div>'}
           </div>
 
           <div class="edraw-sec">Fornecedor e Custo</div>
@@ -6980,45 +7071,82 @@ function contaStatusInfo(c){
 function isoLocalToday(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function renderContasCustomizadas(){
   const el=$('fin-contas-custom');
-  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma conta cadastrada. Clique em "+ Nova conta" para criar uma.</p></div>';return;}
-  const grupos=[['pagar','Contas a Pagar','var(--er-t)'],['receber','Contas a Receber','var(--ok-t)'],['fixa','Contas Fixas','var(--acc-t)']];
-  const html=grupos.map(([tipo,titulo,cor])=>{
-    const lista=_contasCustomCache.filter(c=>c.tipo===tipo).sort((a,b)=>(a.dataVencimento||'').localeCompare(b.dataVencimento||''));
-    if(!lista.length)return'';
-    const total=lista.reduce((a,c)=>a+(Number(c.valor)||0),0);
-    return`<div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bord-l)">
-        <span style="font-weight:600;color:var(--tx)">${titulo}</span>
-        <span style="font-size:13px;font-weight:700;color:${cor}">${fmt(total)}</span>
+  const hoje=isoLocalToday(),concluida=c=>['pago','recebido','cancelada'].includes(c.status);
+  const abertas=_contasCustomCache.filter(c=>!concluida(c));
+  const sum=rows=>rows.reduce((total,c)=>total+(Number(c.valor)||0),0);
+  const setValue=(id,value)=>{const node=$(id);if(node)node.textContent=fmt(value);};
+  setValue('fin-acc-payable',sum(abertas.filter(c=>c.tipo==='pagar'||c.tipo==='fixa')));
+  setValue('fin-acc-receivable',sum(abertas.filter(c=>c.tipo==='receber')));
+  setValue('fin-acc-overdue',sum(abertas.filter(c=>c.dataVencimento&&c.dataVencimento<hoje)));
+  setValue('fin-acc-fixed',sum(abertas.filter(c=>c.tipo==='fixa')));
+  if(!_contasCustomCache.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma conta cadastrada. Use “+ Nova conta” para começar.</p></div>';return;}
+  const query=($('fin-acc-search')?.value||'').trim().toLowerCase();
+  const type=$('fin-acc-type')?.value||'',status=$('fin-acc-status')?.value||'';
+  let rows=_contasCustomCache.filter(c=>{
+    if(type&&c.tipo!==type)return false;
+    const done=concluida(c),overdue=!done&&c.dataVencimento&&c.dataVencimento<hoje;
+    if(status==='aberta'&&done)return false;
+    if(status==='vencida'&&!overdue)return false;
+    if(status==='concluida'&&!done)return false;
+    if(query&&!`${c.descricao||''} ${c.categoria||''} ${c.formaPagamento||''}`.toLowerCase().includes(query))return false;
+    return true;
+  });
+  rows.sort((a,b)=>{
+    const aDone=concluida(a),bDone=concluida(b);
+    if(aDone!==bDone)return aDone?1:-1;
+    return String(a.dataVencimento||'9999').localeCompare(String(b.dataVencimento||'9999'));
+  });
+  if(!rows.length){el.innerHTML='<div class="st-wrap"><p class="st-d">Nenhuma conta corresponde aos filtros.</p></div>';return;}
+  const typeLabel={pagar:'A pagar',receber:'A receber',fixa:'Fixa'};
+  el.innerHTML=rows.map(c=>{
+    const st=contaStatusInfo(c),done=concluida(c);
+    const dataVenc=c.dataVencimento?new Date(c.dataVencimento+'T12:00:00').toLocaleDateString('pt-BR'):'Sem vencimento';
+    const parcela=c.parcelaTotal?` · ${c.parcelaAtual}/${c.parcelaTotal}`:'';
+    const completeStatus=c.tipo==='receber'?'recebido':'pago';
+    return`<div class="fin-account-row">
+      <div style="min-width:0"><div style="font-weight:650;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.descricao||c.categoria||'Conta')}</div><div style="font-size:11px;color:var(--mu);margin-top:3px">${esc(c.categoria||'Outras')}${parcela}${c.formaPagamento?' · '+esc(c.formaPagamento):''}</div></div>
+      <div class="fin-account-hide-mobile"><span class="channel-text">${typeLabel[c.tipo]||esc(c.tipo)}</span></div>
+      <div class="fin-account-hide-mobile" style="font-size:12px;color:${c.dataVencimento&&c.dataVencimento<hoje&&!done?'var(--er-t)':'var(--mu)'}">${dataVenc}</div>
+      <div style="text-align:right"><strong style="color:${c.tipo==='receber'?'var(--ok-t)':c.tipo==='fixa'?'var(--acc-t)':'var(--er-t)'}">${c.tipo==='receber'?'+':'−'} ${fmt(Number(c.valor)||0)}</strong><div style="font-size:10px;color:${st.fg};margin-top:3px">${st.label}</div></div>
+      <div class="fin-account-actions">
+        ${done?'':`<button class="bts" onclick="quickSetContaStatus(${c.id},'${completeStatus}')">${c.tipo==='receber'?'Receber':'Pagar'}</button>`}
+        <button class="bts" onclick="editContaCustomizada(${c.id})">Editar</button>
       </div>
-      ${lista.map(c=>{
-        const st=contaStatusInfo(c);
-        const dataVenc=c.dataVencimento?new Date(c.dataVencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—';
-        const parcelaInfo=c.parcelaTotal?`Parcela ${c.parcelaAtual}/${c.parcelaTotal} · ${({semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',anual:'Anual'})[c.frequencia]||''} · `:'';
-        const formaInfo=c.formaPagamento?c.formaPagamento+' · ':'';
-        return`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer" onclick="editContaCustomizada(${c.id})">
-          <div style="min-width:0;flex:1">
-            <div style="font-weight:600;color:var(--tx)">${esc(c.descricao||c.categoria)}</div>
-            <div style="font-size:12px;color:var(--mu);margin-top:2px">${parcelaInfo}${formaInfo}Vence em ${dataVenc}</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-            <span style="font-weight:700;color:var(--tx)">${fmt(Number(c.valor)||0)}</span>
-            <span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${st.bg};color:${st.fg};font-weight:600">${st.label}</span>
-          </div>
-        </div>`;}).join('')}
     </div>`;
   }).join('');
-  el.innerHTML=html||'<div class="st-wrap"><p class="st-d">Nenhuma conta cadastrada.</p></div>';
+}
+async function quickSetContaStatus(id,status){
+  const account=_contasCustomCache.find(c=>Number(c.id)===Number(id));if(!account)return;
+  try{
+    const r=await fetch(`/api/contas/custom/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Erro ao atualizar');
+    Object.assign(account,d);renderContasCustomizadas();
+    loadFinanceiro(true);loadDashboard(true);
+    toast(status==='recebido'?'Recebimento confirmado':'Pagamento confirmado','ok');
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 function toggleParcelamentoFields(){
   const v=$('conta-parcelamento').value;
   $('conta-parcelamento-fields').style.display=v==='parcelado'?'grid':'none';
+}
+function handleContaTipoChange(){
+  const tipo=$('conta-tipo').value;
+  if(tipo==='fixa'&&!_contaEditorId){
+    $('conta-parcelamento').value='parcelado';
+    $('conta-frequencia').value='mensal';
+    $('conta-parcelas').value='12';
+  }
+  const status=$('conta-status');
+  if(status&&tipo==='receber'&&status.value==='pago')status.value='recebido';
+  if(status&&tipo!=='receber'&&status.value==='recebido')status.value='pago';
+  toggleParcelamentoFields();
 }
 function openNovaContaModal(){
   _contaEditorId=null;
   $('conta-modal-title').textContent='Nova conta';
   $('conta-tipo').value='';
   $('conta-categoria').value='';
+  $('conta-observacao').value='';
   $('conta-descricao').value='';
   $('conta-valor').value='';
   $('conta-forma-pagamento').value='';
@@ -7041,6 +7169,7 @@ function editContaCustomizada(id){
   $('conta-modal-title').textContent='Editar conta';
   $('conta-tipo').value=c.tipo||'';
   $('conta-categoria').value=c.categoria||'';
+  $('conta-observacao').value=c.observacao||'';
   $('conta-descricao').value=c.descricao||'';
   $('conta-valor').value=c.valor||'';
   $('conta-forma-pagamento').value=c.formaPagamento||'';
@@ -7062,6 +7191,7 @@ function closeContaModal(){
 async function saveContaCustomizada(){
   const tipo=$('conta-tipo').value.trim();
   const categoria=$('conta-categoria').value.trim();
+  const observacao=$('conta-observacao').value.trim();
   const descricao=$('conta-descricao').value.trim();
   const valor=parseFloat($('conta-valor').value||0);
   const dataVencimento=$('conta-data-vencimento').value;
@@ -7077,8 +7207,9 @@ async function saveContaCustomizada(){
     return;
   }
   const btn=$('conta-save-btn');btn.disabled=true;btn.textContent='Salvando…';
+  const editing=Boolean(_contaEditorId);
   try{
-    const payload={tipo,categoria,descricao,valor,dataVencimento,status,formaPagamento,parcelamento,frequencia,parcelas};
+    const payload={tipo,categoria,descricao,observacao,valor,dataVencimento,status,formaPagamento,parcelamento,frequencia,parcelas};
     const url=_contaEditorId?`/api/contas/custom/${_contaEditorId}`:'/api/contas/custom';
     const method=_contaEditorId?'PUT':'POST';
     const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -7087,11 +7218,12 @@ async function saveContaCustomizada(){
     closeContaModal();
     await loadContasCustomizadas();
     const n=d.contas?.length;
-    toast(_contaEditorId?'Conta atualizada com sucesso':n>1?`${n} parcelas criadas com sucesso`:'Conta criada com sucesso','ok');
+    loadFinanceiro(true);loadDashboard(true);
+    toast(editing?'Conta atualizada com sucesso':n>1?`${n} parcelas criadas com sucesso`:'Conta criada com sucesso','ok');
   }catch(e){
     errEl.textContent=e.message;
     errEl.style.display='block';
-  }finally{btn.disabled=false;btn.textContent=_contaEditorId?'Atualizar':'Salvar';$('conta-parcelamento').disabled=false;}
+  }finally{btn.disabled=false;btn.textContent=editing?'Atualizar':'Salvar';$('conta-parcelamento').disabled=false;}
 }
 async function deleteContaCustomizada(){
   if(!_contaEditorId)return;
