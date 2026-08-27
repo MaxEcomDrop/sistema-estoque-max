@@ -2696,7 +2696,7 @@ tr.row-lo:hover>td{background:rgba(245,158,11,.08)}
       </div>
       <div class="cfg-card">
         <div class="cfg-title">Segurança</div>
-        <div class="cfg-desc" style="margin-bottom:0">Sua sessão usa cookie httpOnly assinado (JWT, 7 dias). Login protegido contra força bruta (5 tentativas / 15 min). A senha do painel é definida pela variável <strong>ADMIN_PASSWORD</strong> no servidor — para trocá-la, atualize a variável no Render/Vercel e faça um novo deploy.</div>
+        <div class="cfg-desc" style="margin-bottom:0">Sua sessão usa cookie httpOnly assinado (JWT, 7 dias). Login protegido contra força bruta (5 tentativas / 15 min). A senha do painel é definida pela variável <strong>ADMIN_PASSWORD</strong> no servidor — para trocá-la, atualize a variável no hPanel da Hostinger e faça uma implantação manual.</div>
       </div>
       <div class="cfg-card">
         <div class="cfg-title">Sobre</div>
@@ -4929,15 +4929,18 @@ async function loadDiagnostico(){
       ${row('URL que este domínio precisa',d.mercadoLivre.urlEsperadaPeloRequest,null)}
       ${row('As duas batem?',mlMatch?'✓ Sim':'✗ NÃO — é isso que quebra o redirecionamento',mlMatch)}
       ${row('Conectado agora',d.mercadoLivre.conectado?'✓ Sim':'✗ Não',d.mercadoLivre.conectado)}
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">BANCO DE DADOS</div>
+      ${row('Provedor',d.database.provider==='mysql'?'MySQL Hostinger':d.database.provider,d.database.provider==='mysql')}
+      ${row('Banco configurado',d.database.nome||'✗ NÃO CONFIGURADO',d.database.configurado)}
+      ${row('Conexão respondendo',d.database.respondendo?'✓ Sim':'✗ Não',d.database.respondendo)}
+      ${!d.database.respondendo&&d.database.erro?row('Erro de conexão',d.database.erro,false):''}
+      ${!d.database.respondendo?`<div style="font-size:12px;color:var(--mu);padding:10px 12px;background:var(--wa-bg);border-radius:10px;margin-top:8px;line-height:1.5">Configure na Hostinger: <strong>MYSQL_HOST</strong>, <strong>MYSQL_PORT</strong>, <strong>MYSQL_DATABASE</strong>, <strong>MYSQL_USER</strong> e <strong>MYSQL_PASSWORD</strong>. Depois reinicie a aplicação uma única vez.</div>`:''}
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.5px;margin:14px 0 6px">FIREBASE / LOGIN COM GOOGLE</div>
       ${row('FIREBASE_SERVICE_ACCOUNT configurado',d.firebase.configurado?'✓ Sim':'✗ NÃO — login com Google fica indisponível (use email e senha)',d.firebase.configurado)}
       ${d.firebase.erroInicializacao?row('Erro ao inicializar',d.firebase.erroInicializacao,false):''}
       ${d.firebase.configurado?row('Projeto configurado no servidor',d.firebase.projetoConfigurado||'—',d.firebase.projetoBate):''}
       ${d.firebase.configurado?row('Projeto que o login com Google espera','erp-max-sistema',null):''}
       ${d.firebase.configurado?row('Os dois batem?',d.firebase.projetoBate?'✓ Sim':'✗ NÃO — é isso que faz o login com Google sempre falhar',d.firebase.projetoBate):''}
-      ${row('Firestore respondendo',d.firebase.firestoreRespondendo?'✓ Sim':'✗ NÃO — sem ele os tokens do Bling/ML não têm onde ficar salvos',d.firebase.firestoreRespondendo)}
-      ${!d.firebase.firestoreRespondendo&&d.firebase.firestoreErro?row('Erro cru do Firestore',d.firebase.firestoreErro,false):''}
-      ${!d.firebase.firestoreRespondendo?`<div style="font-size:12px;color:var(--mu);padding:10px 12px;background:var(--wa-bg);border-radius:10px;margin-top:8px;line-height:1.5"><strong>Como resolver (erro "5 NOT_FOUND" = o banco <u>(default)</u> não existe):</strong> o sistema procura o banco com ID exatamente <strong>(default)</strong>. Se você criou com outro nome, tem 2 saídas: <strong>A)</strong> console.firebase.google.com → erp-max-sistema → Firestore → Criar banco de dados → no campo "ID do banco de dados" deixe <strong>(default)</strong> (modo produção, região southamerica-east1); ou <strong>B)</strong> na Vercel, crie a variável <strong>FIRESTORE_DB_ID</strong> com o nome do banco que você criou e faça Redeploy. Banco em uso agora: <strong>${esc(d.firebase.bancoDeDados||'(default)')}</strong>.</div>`:''}
     `;
   }catch(e){body.innerHTML=`<div class="st-wrap" style="padding:16px"><p class="st-d">Erro ao verificar: ${esc(e.message)}</p></div>`;}
 }

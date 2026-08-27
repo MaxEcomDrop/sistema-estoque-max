@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Disparar notificação
         env:
-          BASE_URL: https://sistema-estoque-max.vercel.app
+          BASE_URL: https://green-echidna-518767.hostingersite.com
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           HOUR=$(date -u +%H)

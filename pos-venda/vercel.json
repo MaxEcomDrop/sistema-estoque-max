@@ -1,5 +1,0 @@
-{
-  "functions": {
-    "api/webhook-capture.ts": { "maxDuration": 30 }
-  }
-}

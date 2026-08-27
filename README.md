@@ -1,291 +1,161 @@
-# Sistema de Estoque Max
+# Estoque Max
 
-Sistema de gestão de estoque com integração OAuth2 com a API do Bling para Max Renovação.
+Sistema de gestão de estoque, produtos e financeiro integrado ao Bling e ao Mercado Livre.
 
-## 🚀 Características
+## Produção
 
-- ✅ Autenticação OAuth2 com Bling
-- ✅ Sincronização automática de produtos via OAuth
-- ✅ **Webhooks em tempo real** do Bling (novo!)
-- ✅ Edição inline de quantidades e preços
-- ✅ Banco de dados SQLite
-- ✅ API RESTful completa
-- ✅ Dashboard responsivo
-- ✅ Busca de produtos
-- ✅ Estatísticas de estoque
-- ✅ Renovação automática de tokens
+A aplicação de produção é hospedada exclusivamente na Hostinger:
 
-## 📋 Requisitos
+- URL: `https://green-echidna-518767.hostingersite.com`
+- Runtime: Node.js 22.x
+- Servidor: Express
+- Entrada: `index.js`
+- Gerenciador: npm 10
+- Banco principal: MySQL Hostinger
+- Firebase: opcional, usado somente para login Google e push notifications
 
-- Node.js 14+
-- npm ou yarn
-- Conta Bling com credenciais OAuth configuradas
+Arquivos e instruções de Vercel foram removidos. O repositório mantém um único lockfile, `package-lock.json`.
 
-## ⚙️ Instalação
+## Desenvolvimento
 
-1. Clone o repositório:
-```bash
-git clone https://github.com/MaxEcomDrop/sistema-estoque-max.git
-cd sistema-estoque-max
-```
+Requisitos:
 
-2. Instale as dependências:
+- Node.js 22.x
+- npm 10.x
+
+Instalação:
+
 ```bash
 npm install
-```
-
-3. Configure as variáveis de ambiente:
-```bash
-cp .env.example .env
-```
-
-4. Edite o arquivo `.env` com suas credenciais do Bling:
-```env
-BLING_CLIENT_ID=seu_client_id
-BLING_CLIENT_SECRET=seu_client_secret
-BLING_REDIRECT_URI=http://localhost:3000/api/auth/callback
-JWT_SECRET=sua_chave_secreta_segura
-PORT=3000
-NODE_ENV=development
-```
-
-## 🔧 Desenvolvimento
-
-Para rodar o servidor em modo desenvolvimento com hot-reload:
-
-```bash
+copy .env.example .env
+npm test
 npm run dev
 ```
 
-O servidor rodará em `http://localhost:3000`
+Em Linux/macOS, use `cp .env.example .env`.
 
-## 📦 Produção
+## Variáveis de ambiente
 
-Para rodar o servidor em produção:
+Use `.env.example` como referência. Em produção, cadastre as mesmas variáveis no painel da aplicação Node.js da Hostinger.
+
+Principais grupos:
+
+- `BLING_*`: OAuth e callback do Bling;
+- `ML_*`: OAuth e callback do Mercado Livre;
+- `ADMIN_*` e `JWT_SECRET`: acesso ao painel;
+- `MYSQL_*`: banco MySQL da Hostinger;
+- `FIREBASE_SERVICE_ACCOUNT`: opcional para login Google e push;
+- `CRON_SECRET`: obrigatório para proteger tarefas agendadas;
+- `PORT`: fornecida automaticamente pela hospedagem.
+
+Callbacks de produção:
+
+```text
+https://green-echidna-518767.hostingersite.com/api/auth/callback
+https://green-echidna-518767.hostingersite.com/api/ml/callback
+```
+
+## MySQL Hostinger
+
+Configuração esperada:
+
+```env
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=u377662950_estoquemax
+MYSQL_USER=u377662950_estoquemax
+MYSQL_PASSWORD=senha_definida_no_hpanel
+MYSQL_CONNECTION_LIMIT=5
+MYSQL_SSL=false
+```
+
+Confirme o nome exato do banco e o host no hPanel. O sistema cria automaticamente a tabela `app_documents` no primeiro acesso.
+
+Teste de leitura e escrita:
 
 ```bash
+npm run db:check
+```
+
+### Migração do Firestore
+
+Se a produção anterior contém dados no Firestore, mantenha temporariamente `FIREBASE_SERVICE_ACCOUNT` e execute primeiro uma simulação:
+
+```bash
+npm run db:migrate:firestore -- --dry-run
+```
+
+Depois execute a migração real uma única vez:
+
+```bash
+npm run db:migrate:firestore
+```
+
+A operação é idempotente: documentos com o mesmo identificador são atualizados no MySQL.
+
+## Configuração da aplicação na Hostinger
+
+```text
+Preset: Express
+Branch de produção: main
+Node version: 22.x
+Root directory: ./
+Package manager: npm
+Entry file: index.js
+Build command: vazio
+Start command: npm start
+```
+
+## Publicações agrupadas
+
+Para evitar um deploy a cada pequena melhoria:
+
+1. desenvolva e teste em uma branch que não seja `main`;
+2. agrupe as mudanças em um único Pull Request;
+3. só faça merge depois de `npm test`, `npm audit` e teste de inicialização;
+4. mantenha a Hostinger observando apenas a branch `main`;
+5. faça um único merge quando o pacote estiver pronto;
+6. com a implantação automática desativada no hPanel, acione uma implantação manual após o merge.
+
+Não faça pushes diretos na `main`. A produção só deve ser publicada manualmente, depois de um pacote aprovado.
+
+## Tarefas agendadas
+
+Configure no agendador da Hostinger usando o domínio de produção e o cabeçalho `x-cron-secret`:
+
+- `/api/cron/push`: a cada 5 minutos;
+- `/api/cron/sync-vendas`: diariamente;
+- `/api/cron/sync-estoque`: diariamente;
+- `/api/cron/resumo`: nos horários dos resumos;
+- `/api/cron/estoque`: no horário do alerta de estoque.
+
+O workflow `.github/workflows/notificacoes.yml` dispara apenas notificações e não realiza deploy.
+
+## Verificações antes de publicar
+
+```bash
+npm install
+npm audit --omit=dev
+npm test
 npm start
 ```
 
-## 📁 Estrutura do Projeto
+Depois da publicação:
 
-```
-sistema-estoque-max/
-├── config/
-│   └── database.js           # Configuração SQLite
-├── src/
-│   ├── controllers/
-│   │   ├── authController.js   # Controlador de autenticação
-│   │   └── productController.js # Controlador de produtos
-│   ├── middleware/
-│   │   └── authMiddleware.js    # Middleware de autenticação
-│   ├── routes/
-│   │   ├── authRoutes.js       # Rotas de autenticação
-│   │   └── productRoutes.js    # Rotas de produtos
-│   └── services/
-│       ├── authService.js      # Serviço de autenticação
-│       └── blingService.js     # Serviço Bling API
-├── public/
-│   ├── index.html          # Página de login
-│   └── dashboard.html      # Dashboard de produtos
-├── app.js                  # Aplicação principal
-├── .env.example           # Exemplo de variáveis de ambiente
-└── package.json           # Dependências
+```text
+GET /health
+GET /api/diagnostico
 ```
 
-## 🔐 Fluxo OAuth2 com Bling
+O diagnóstico do painel mostra o provedor do banco, o nome configurado e o resultado da conexão sem expor a senha.
 
-1. **Login**: Usuário clica em "Autenticar com Bling"
-2. **Autorização**: É redirecionado para Bling para autorizar acesso
-3. **Callback**: Bling redireciona com um código de autorização
-4. **Token**: Sistema troca o código por um access token
-5. **Sincronização**: Produtos são importados e armazenados localmente
-6. **Dashboard**: Usuário acessa o dashboard com seus produtos
+## Segurança
 
-## 🔄 Webhooks em Tempo Real (NEW!)
+- Nunca versione `.env`, senhas MySQL ou service accounts.
+- Use uma senha forte e exclusiva para o banco.
+- Mantenha `CRON_SECRET` preenchido em produção.
+- Firebase não é necessário para persistência; remova `FIRESTORE_DB_ID` depois de concluir e validar a migração.
 
-Quando você faz mudanças no Bling, o sistema é notificado automaticamente:
-
-```
-[Você cria produto no Bling]
-         ↓
-[Bling POST para /api/webhook/bling]
-         ↓
-[Sistema busca dados completos na API]
-         ↓
-[SQLite é atualizado automaticamente]
-         ↓
-✅ Novo produto aparece no dashboard em segundos!
-```
-
-**Eventos suportados:**
-- `produto.criacao` - Novo produto criado
-- `produto.atualizacao` - Produto editado
-- `estoque.atualizacao` - Estoque alterado
-
-📖 **Guia completo**: Veja [WEBHOOK_SETUP.md](WEBHOOK_SETUP.md)
-
-## 🔌 Endpoints da API
-
-### Autenticação
-- `GET /api/auth/url` - Obtém URL de autorização Bling
-- `GET /api/auth/callback?code=xxx` - Callback do Bling (automático)
-- `POST /api/auth/logout` - Fazer logout
-- `GET /api/auth/user` - Obter usuário autenticado
-
-### Produtos
-- `POST /api/produtos/sync` - Sincronizar produtos com Bling
-- `GET /api/produtos` - Listar todos os produtos
-- `GET /api/produtos/search?q=termo` - Buscar produtos
-- `GET /api/produtos/:id` - Obter detalhes do produto
-
-## 🗄️ Banco de Dados
-
-O sistema usa SQLite com as seguintes tabelas:
-
-### Users
-```sql
-id (INTEGER PRIMARY KEY)
-bling_user_id (TEXT UNIQUE)
-access_token (TEXT)
-refresh_token (TEXT)
-expires_at (INTEGER)
-created_at (DATETIME)
-updated_at (DATETIME)
-```
-
-### Products
-```sql
-id (INTEGER PRIMARY KEY)
-user_id (INTEGER FOREIGN KEY)
-bling_product_id (TEXT UNIQUE)
-nome (TEXT)
-codigo (TEXT)
-preco (REAL)
-estoque (INTEGER)
-situacao (TEXT)
-created_at (DATETIME)
-updated_at (DATETIME)
-```
-
-## 🔄 Renovação de Token
-
-Os tokens expiram em 1 hora. O sistema automaticamente renova o token usando o refresh_token quando necessário.
-
-## 📝 Variáveis de Ambiente
-
-```env
-# Bling OAuth
-BLING_CLIENT_ID          # ID do cliente Bling
-BLING_CLIENT_SECRET      # Chave secreta do Bling
-BLING_REDIRECT_URI       # URL de callback (deve ser igual na configuração Bling)
-
-# Server
-PORT                     # Porta do servidor (padrão: 3000)
-NODE_ENV                 # Ambiente (development/production)
-JWT_SECRET               # Chave secreta para JWT
-```
-
-## 🚀 Deploy em Produção
-
-### ✅ Vercel (Recomendado)
-
-**Pré-requisitos:**
-- Conta GitHub com o repositório
-- Conta Vercel (grátis)
-
-**Passo 1: Conectar ao Vercel**
-1. Acesse [vercel.com](https://vercel.com)
-2. Clique em "New Project"
-3. Selecione seu repositório GitHub
-4. Clique em "Import"
-
-**Passo 2: Configurar Variáveis de Ambiente**
-1. Vá para **Settings → Environment Variables**
-2. Adicione as seguintes variáveis:
-   ```
-   BLING_CLIENT_ID=seu_client_id
-   BLING_CLIENT_SECRET=sua_client_secret
-   BLING_REDIRECT_URI=https://seu-dominio.vercel.app/api/auth/callback
-   JWT_SECRET=chave_segura_aleatoria
-   NODE_ENV=production
-   ```
-
-**Passo 3: Deploy**
-1. Clique em "Deploy"
-2. Aguarde o deploy completar (~2 minutos)
-3. Acesse sua URL em produção
-
-**Passo 4: Configurar Webhooks no Bling**
-1. Vá em **Configurações → Integrações → Webhooks** no Bling
-2. Configure a URL do webhook:
-   ```
-   https://seu-dominio.vercel.app/api/webhook/bling
-   ```
-3. Selecione os eventos:
-   - ✅ Produto Criado
-   - ✅ Produto Atualizado
-   - ✅ Estoque Atualizado
-4. Salve
-
-### Docker (Alternativa)
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-### Dados em Produção
-- SQLite armazena dados localmente no Vercel (não persiste entre deploys)
-- Para persistência, configure um banco de dados externo:
-  - PostgreSQL (Vercel Postgres)
-  - MongoDB (Atlas)
-  - Firebase Realtime Database
-
-**Nota para produção**: Se você quiser que os dados persistam entre deploys, substitua SQLite por um banco de dados externo.
-
-### Docker
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-## 📚 Dependências
-
-- **express** - Framework web
-- **sqlite3** - Banco de dados
-- **axios** - Cliente HTTP
-- **dotenv** - Variáveis de ambiente
-- **jsonwebtoken** - Autenticação JWT
-- **cors** - CORS middleware
-- **cookie-parser** - Parser de cookies
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📄 Licença
+## Licença
 
 ISC
-
-## 📧 Contato
-
-- Email: guienhjo2019@gmail.com
-- GitHub: [@MaxEcomDrop](https://github.com/MaxEcomDrop)
-
----
-
-**Desenvolvido com ❤️ para Max Renovação**
