@@ -8,6 +8,11 @@ const fs = require('fs');
 const path = require('path');
 const { normalizeBlingOrder, orderDiscount } = require('./lib/bling-order');
 const { aggregateSalesFacts, buildSalesFact, normalizeSku } = require('./lib/sales-ledger');
+const {
+  FieldValue: MySqlFieldValue,
+  createMySqlFirestore,
+  isMySqlConfigured,
+} = require('./lib/mysql-firestore');
 
 // ── Validação de Variáveis de Ambiente ───────────────────────────────
 function validateEnvironment() {
@@ -23,68 +28,83 @@ function validateEnvironment() {
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
     console.warn('⚠️  Variáveis de ambiente ausentes:', missing.join(', '));
-    console.warn('   Configure-as em Vercel → Settings → Environment Variables → Redeploy.');
+    console.warn('   Configure-as na aplicação Node.js da Hostinger antes de publicar.');
   }
 }
 
-// Firebase Admin SDK (lazy init para não quebrar se env var ausente)
-let _fbAdmin = null;
+// MySQL é o banco principal na Hostinger. Firebase permanece opcional para
+// validar login Google e enviar push; dados não dependem mais do Firestore.
+let _serviceAdmin = null;
 let _fbAdminProjectId = null; // exposto em /api/diagnostico p/ conferir se bate com o projeto do login.html
 let _fbAdminInitError = null;
+let _persistenceProvider = 'none';
+const rawFirebaseConfigured = () => Boolean(process.env.FIREBASE_SERVICE_ACCOUNT);
 function getAdmin() {
-  if (_fbAdmin) return _fbAdmin;
+  if (_serviceAdmin) return _serviceAdmin;
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) return null;
-  try {
-    const { cert, getApp, getApps, initializeApp } = require('firebase-admin/app');
-    const { FieldValue, GeoPoint, Timestamp, getFirestore } = require('firebase-admin/firestore');
-    const { getAuth } = require('firebase-admin/auth');
-    const { getMessaging } = require('firebase-admin/messaging');
-    const cred = JSON.parse(raw);
-    const firebaseApp = getApps().length ? getApp() : initializeApp({ credential: cert(cred) });
-    _fbAdminProjectId = cred.project_id || null;
-    // Erro "5 NOT_FOUND" no ping = o banco "(default)" não existe no projeto.
-    // Acontece quando o banco foi criado com ID personalizado no console.
-    // FIRESTORE_DB_ID permite apontar para esse banco nomeado sem recriar:
-    // redirecionamos admin.firestore() para o banco certo, preservando
-    // FieldValue/Timestamp usados no resto do código.
-    const dbId = process.env.FIRESTORE_DB_ID;
-    const db = dbId && dbId !== '(default)'
-      ? getFirestore(firebaseApp, dbId)
-      : getFirestore(firebaseApp);
-    const firestore = () => db;
-    firestore.FieldValue = FieldValue;
-    firestore.Timestamp = Timestamp;
-    firestore.GeoPoint = GeoPoint;
-    const admin = {
+  let firebaseApp = null;
+  let firebaseFirestore = null;
+  let firebaseFieldValue = null;
+  let getAuth = null;
+  let getMessaging = null;
+
+  if (raw) {
+    try {
+      const firebaseAppModule = require('firebase-admin/app');
+      const firestoreModule = require('firebase-admin/firestore');
+      ({ getAuth } = require('firebase-admin/auth'));
+      ({ getMessaging } = require('firebase-admin/messaging'));
+      const cred = JSON.parse(raw);
+      firebaseApp = firebaseAppModule.getApps().length
+        ? firebaseAppModule.getApp()
+        : firebaseAppModule.initializeApp({ credential: firebaseAppModule.cert(cred) });
+      _fbAdminProjectId = cred.project_id || null;
+      const dbId = process.env.FIRESTORE_DB_ID;
+      firebaseFirestore = dbId && dbId !== '(default)'
+        ? firestoreModule.getFirestore(firebaseApp, dbId)
+        : firestoreModule.getFirestore(firebaseApp);
+      firebaseFieldValue = firestoreModule.FieldValue;
+    } catch (e) {
+      _fbAdminInitError = e.message;
+      console.error('⚠️  Firebase Admin init error:', e.message);
+    }
+  }
+
+  let db = firebaseFirestore;
+  let fieldValue = firebaseFieldValue;
+  if (isMySqlConfigured()) {
+    db = createMySqlFirestore();
+    fieldValue = MySqlFieldValue;
+    _persistenceProvider = 'mysql';
+  } else if (firebaseFirestore) {
+    _persistenceProvider = 'firestore';
+    console.warn('⚠️  MYSQL_* ausente: usando Firestore temporariamente como persistência legada.');
+  }
+  if (!db && !firebaseApp) return null;
+
+  const firestore = db ? () => db : null;
+  if (firestore) firestore.FieldValue = fieldValue;
+  _serviceAdmin = {
+    ...(firebaseApp ? {
       app: () => firebaseApp,
-      firestore,
       auth: () => getAuth(firebaseApp),
       messaging: () => getMessaging(firebaseApp),
-    };
-    if (dbId && dbId !== '(default)') console.log(`[Firestore] usando banco nomeado "${dbId}" (FIRESTORE_DB_ID)`);
-    _fbAdmin = admin;
-  } catch (e) {
-    _fbAdminInitError = e.message;
-    console.error('⚠️  Firebase Admin init error:', e.message);
-  }
-  return _fbAdmin;
+    } : {}),
+    ...(firestore ? { firestore } : {}),
+  };
+  return _serviceAdmin;
 }
 
 const app = express();
-// Confia no 1º proxy da cadeia (Vercel/Render) para req.ip refletir o IP real do cliente
+// Confia no proxy da Hostinger para req.ip refletir o IP real do cliente.
 app.set('trust proxy', 1);
 const DATA_DIR = path.join(__dirname, 'data');
 const AUDIT_LOG_PATH = path.join(DATA_DIR, 'audit-log.jsonl');
-const IS_VERCEL = Boolean(process.env.VERCEL);
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
 const loginAttempts = new Map();
 
-// O filesystem do bundle publicado na Vercel é somente leitura. Nesse
-// ambiente, a auditoria continua disponível em memória durante a execução;
-// a persistência em arquivo fica restrita aos servidores com disco gravável.
-if (!IS_VERCEL) fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(DATA_DIR, { recursive: true });
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -121,10 +141,8 @@ const ML_CLIENT_ID     = process.env.ML_CLIENT_ID     || '';
 const ML_CLIENT_SECRET = process.env.ML_CLIENT_SECRET || '';
 const ML_REDIRECT_URI  = process.env.ML_REDIRECT_URI  || '';
 
-// In-memory change log (resets on cold start)
-// TODO: Persistir em banco de dados em produção
+// Log de auditoria em disco com cópia consolidada no banco principal.
 function loadAuditLog() {
-  if (IS_VERCEL) return [];
   try {
     if (!fs.existsSync(AUDIT_LOG_PATH)) return [];
     return fs.readFileSync(AUDIT_LOG_PATH, 'utf8')
@@ -142,9 +160,7 @@ let changeLog = loadAuditLog();
 const pushAuditEntry = Array.prototype.push.bind(changeLog);
 
 // Contas customizadas e eventos de calendário: cache em memória com
-// persistência no Firestore (quando FIREBASE_SERVICE_ACCOUNT configurado).
-// Sem Firestore, funcionam em memória e se perdem no restart — comportamento
-// anterior preservado como fallback.
+// persistência no MySQL da Hostinger.
 let customContas = [];
 let contaIdCounter = 1;
 let calendarEvents = [];
@@ -172,14 +188,14 @@ async function loadPersistedData() {
     } catch (e) { console.error('[finance_accounts load]', e.message); }
     contaIdCounter = customContas.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
     eventIdCounter = calendarEvents.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0) + 1;
-    console.log(`[Persistência] ${customContas.length} conta(s), ${calendarEvents.length} evento(s) e ${changeLog.length} log(s) restaurados do Firestore`);
+    console.log(`[Persistência:${_persistenceProvider}] ${customContas.length} conta(s), ${calendarEvents.length} evento(s) e ${changeLog.length} log(s) restaurados`);
   } catch (e) {
     console.error('[loadPersistedData]', e.message);
   }
 }
 
-// Grava o estado em memória no Firestore, com debounce para agrupar
-// mutações consecutivas. Sem Firestore configurado é um no-op seguro
+// Grava o estado em memória no banco configurado, com debounce para agrupar
+// mutações consecutivas. Sem banco configurado é um no-op seguro
 // (mantém o comportamento apenas-memória).
 let _saveTimer = null;
 function saveInMemoryData() {
@@ -250,7 +266,7 @@ app.put('/api/config', requireAuthJson, async (req, res) => {
 function saveAssetImage(collection, docId) {
   return async (req, res) => {
     const admin = getAdmin();
-    if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+    if (!admin?.firestore) return res.status(503).json({ error: 'Armazenamento indisponível (configure MYSQL_*)' });
     try {
       const m = String(req.body?.dataUrl || '').match(/^data:(image\/(?:jpeg|png|webp|svg\+xml));base64,([A-Za-z0-9+/=]+)$/);
       if (!m) return res.status(400).json({ error: 'Envie um dataURL de imagem JPG, PNG, WEBP ou SVG' });
@@ -268,7 +284,7 @@ function saveAssetImage(collection, docId) {
 function deleteAssetImage(collection, docId) {
   return async (req, res) => {
     const admin = getAdmin();
-    if (!admin) return res.status(503).json({ error: 'Armazenamento indisponível (FIREBASE_SERVICE_ACCOUNT ausente)' });
+    if (!admin?.firestore) return res.status(503).json({ error: 'Armazenamento indisponível (configure MYSQL_*)' });
     try {
       await admin.firestore().collection(collection).doc(docId).delete();
       res.json({ ok: true });
@@ -398,12 +414,10 @@ async function recordAudit(entry) {
   };
   pushAuditEntry(item);
   if (changeLog.length > 1000) changeLog.shift();
-  if (!IS_VERCEL) {
-    try {
-      await fs.promises.appendFile(AUDIT_LOG_PATH, `${JSON.stringify(item)}\n`, 'utf8');
-    } catch (error) {
-      console.error('[audit:append]', error.message);
-    }
+  try {
+    await fs.promises.appendFile(AUDIT_LOG_PATH, `${JSON.stringify(item)}\n`, 'utf8');
+  } catch (error) {
+    console.error('[audit:append]', error.message);
   }
   return item;
 }
@@ -560,12 +574,12 @@ function setBlingCookies(res, data) {
   if (data.refresh_token) {
     res.cookie('bling_refresh', data.refresh_token, { ...BLING_COOKIE_OPTS, maxAge: 30 * 24 * 3600 * 1000 });
   }
-  // Persiste o par completo no Firestore (fire-and-forget) — na Vercel cada
-  // requisição pode cair numa instância nova, então cookie sozinho não basta.
+  // Persiste o par completo no banco principal (fire-and-forget). O cookie
+  // sozinho não preserva o refresh token para rotinas executadas pelo servidor.
   saveBlingTokens(data);
 }
 
-// Guarda access + refresh do Bling no Firestore. O refresh_token do Bling é
+// Guarda access + refresh do Bling no banco principal. O refresh_token do Bling é
 // DE USO ÚNICO: guardar também o access com a validade evita renovar à toa
 // (cada renovação desnecessária é uma chance de corrida que derruba a conexão).
 async function saveBlingTokens(data) {
@@ -741,9 +755,7 @@ function nfeSituacaoPT(s) {
 }
 
 // Datas SEMPRE no fuso do negócio (Brasil), nunca em UTC do servidor.
-// Servidores da Vercel rodam em UTC: às 21h de Brasília, toISOString() já
-// devolve o dia SEGUINTE — o filtro "Hoje" passava a buscar pedidos de
-// amanhã e o faturamento do dia "zerava" à noite.
+// O servidor pode operar em UTC; o sistema sempre calcula datas no fuso do negócio.
 const APP_TZ = process.env.APP_TZ || 'America/Sao_Paulo';
 const _isoTZ = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
 function isoLocal(d = new Date()) { return _isoTZ.format(d); } // YYYY-MM-DD no fuso local
@@ -774,11 +786,8 @@ function resolvePeriodo(period, startDate, endDate) {
 
 // ── Páginas ──────────────────────────────────────────────────────────
 
-// Identifica exatamente qual deploy está no ar (Vercel/Render expõem o SHA
-// do commit em variáveis próprias). Aparece no rodapé do painel e em /health
-// — serve para confirmar se uma atualização realmente chegou ao servidor,
-// em vez de adivinhar por cache do navegador/CDN.
-const BUILD_SHA = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || 'dev').slice(0, 7);
+// BUILD_SHA pode ser informado pela publicação da Hostinger e aparece em /health.
+const BUILD_SHA = (process.env.BUILD_SHA || process.env.GIT_COMMIT_SHA || 'dev').slice(0, 7);
 const BUILD_TIME = new Date().toISOString();
 
 // HTML nunca deve ficar em cache — sem isso, navegador e CDN podem seguir
@@ -794,20 +803,20 @@ app.get('/login', (req, res) => { noCache(res); ensureCsrfCookie(req, res); res.
 app.get('/', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/index.html'); });
 app.get('/index.html', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/index.html'); });
 app.get('/dashboard.html', requireAuth, (req, res) => { noCache(res); res.sendFile(__dirname + '/public/dashboard.html'); });
-app.get('/health', (req, res) => res.json({ status: 'OK', history: changeLog.length, environment: NODE_ENV, build: BUILD_SHA, buildTime: BUILD_TIME }));
+app.get('/health', (req, res) => res.json({ status: 'OK', database: _persistenceProvider, history: changeLog.length, environment: NODE_ENV, build: BUILD_SHA, buildTime: BUILD_TIME }));
 
 // Diagnóstico ao vivo: mostra o que o servidor REALMENTE tem configurado
 // agora, sem expor segredos — só para descobrir na hora onde uma
 // integração está travando (env var ausente, redirect_uri errado, etc).
 app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
-  let blingConectado = false, mlConectado = false, firestoreOk = false;
+  let blingConectado = false, mlConectado = false, databaseOk = false;
   try { blingConectado = !!(await ensureBlingToken(req, res)); } catch {}
   try { mlConectado = !!(await ensureMLToken())?.token; } catch {}
   const admin = getAdmin();
-  let firestoreErro = null;
-  if (admin) {
-    try { await admin.firestore().collection('_diag').doc('ping').set({ t: Date.now() }); firestoreOk = true; }
-    catch (e) { firestoreOk = false; firestoreErro = e.message; }
+  let databaseError = null;
+  if (admin?.firestore) {
+    try { await admin.firestore().collection('_diag').doc('ping').set({ t: Date.now() }); databaseOk = true; }
+    catch (e) { databaseOk = false; databaseError = e.message; }
   }
   res.json({
     build: BUILD_SHA,
@@ -826,14 +835,15 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
       urlEsperadaPeloRequest: `${req.protocol}://${req.get('host')}/api/ml/callback`,
       conectado: mlConectado,
     },
+    database: {
+      provider: _persistenceProvider,
+      configurado: _persistenceProvider !== 'none',
+      respondendo: databaseOk,
+      nome: _persistenceProvider === 'mysql' ? process.env.MYSQL_DATABASE || process.env.DB_NAME || null : process.env.FIRESTORE_DB_ID || '(default)',
+      erro: databaseError,
+    },
     firebase: {
-      configurado: !!admin,
-      firestoreRespondendo: firestoreOk,
-      bancoDeDados: process.env.FIRESTORE_DB_ID || '(default)',
-      // Sem Firestore NADA persiste entre requisições na Vercel: tokens do
-      // Bling/ML somem, notificações e estado do app não salvam. O erro cru
-      // aqui aponta a causa (API desabilitada, permissão, projeto errado).
-      firestoreErro,
+      configurado: !!rawFirebaseConfigured(),
       // Precisa ser exatamente "erp-max-sistema" (mesmo projeto do
       // firebase.initializeApp em login.html) — se o FIREBASE_SERVICE_ACCOUNT
       // configurado no servidor for de outro projeto Firebase, o login com
@@ -841,7 +851,7 @@ app.get('/api/diagnostico', requireAuthJson, async (req, res) => {
       // mesmo com tudo aparentemente certo.
       projetoConfigurado: _fbAdminProjectId,
       projetoEsperado: 'erp-max-sistema',
-      projetoBate: admin ? (_fbAdminProjectId === 'erp-max-sistema') : null,
+      projetoBate: rawFirebaseConfigured() ? (_fbAdminProjectId === 'erp-max-sistema') : null,
       erroInicializacao: _fbAdminInitError,
     },
     adminEmailConfigurado: !!ADMIN_EMAIL,
@@ -878,7 +888,7 @@ app.post('/api/auth/login', loginRateLimit, requireCsrf, async (req, res) => {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !JWT_SECRET) {
     return sendErrorResponse(res, 500,
       'Configuração incompleta: variáveis de ambiente ADMIN_EMAIL, ADMIN_PASSWORD ou JWT_SECRET não definidas. ' +
-      'Acesse Vercel → Settings → Environment Variables e configure-as, depois faça um novo deploy.');
+      'Configure-as na aplicação Node.js da Hostinger e reinicie o serviço.');
   }
 
   if (!safeEqual(email, ADMIN_EMAIL) || !safeEqual(password, ADMIN_PASSWORD)) {
@@ -1005,7 +1015,7 @@ app.post('/api/auth/firebase', loginRateLimit, async (req, res) => {
   // Sem o Admin SDK não há como verificar a assinatura do token — recusar
   // em vez de confiar cegamente no que o cliente enviou.
   const admin = getAdmin();
-  if (!admin) {
+  if (!admin?.auth) {
     return sendErrorResponse(res, 503,
       'Login com Google indisponível: FIREBASE_SERVICE_ACCOUNT não configurado no servidor. Use email e senha.');
   }
@@ -2158,7 +2168,7 @@ async function getLedgerFacts(inicio, fim) {
 
 async function syncSalesLedger(token, { inicio, fim, limit = 120, force = false } = {}) {
   const admin = getAdmin();
-  if (!admin) throw new Error('Firestore não configurado');
+  if (!admin) throw new Error('Banco de dados não configurado');
   const end = fim || isoLocal();
   const start = inicio || isoLocalDiasAtras(365);
   const summaries = await fetchPedidos(token, start, end, 100);
@@ -3208,13 +3218,13 @@ app.post('/api/push/subscribe', requireAuthJson, async (req, res) => {
   if (!token) return res.status(400).json({ error: 'token FCM obrigatório' });
   const admin = getAdmin();
   if (!admin) {
-    return res.status(503).json({ error: 'Firebase não configurado. Configure FIREBASE_SERVICE_ACCOUNT.' });
+    return res.status(503).json({ error: 'Banco de dados não configurado. Configure as variáveis MYSQL_*.' });
   }
   try {
     await admin.firestore().collection('fcm_tokens').doc(token.slice(0, 128)).set({
       token, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    res.json({ ok: true, mode: 'firestore' });
+    res.json({ ok: true, mode: _persistenceProvider });
   } catch (e) {
     sendErrorResponse(res, 500, 'Erro ao registrar token FCM', e.message);
   }
@@ -3223,7 +3233,7 @@ app.post('/api/push/subscribe', requireAuthJson, async (req, res) => {
 app.post('/api/push/send', requireAuthJson, async (req, res) => {
   const { title = 'Estoque Max', body = 'Nova notificação', url = '/dashboard.html' } = req.body || {};
   const admin = getAdmin();
-  if (!admin) return res.status(503).json({ error: 'Firebase Admin não configurado (FIREBASE_SERVICE_ACCOUNT ausente)' });
+  if (!admin?.messaging) return res.status(503).json({ error: 'Firebase Messaging não configurado (FIREBASE_SERVICE_ACCOUNT ausente)' });
   try {
     const snap = await admin.firestore().collection('fcm_tokens').get();
     const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
@@ -3292,7 +3302,7 @@ app.post('/api/notif/schedule', requireAuthJson, async (req, res) => {
   if (!title || !body) return res.status(400).json({ error: 'title e body são obrigatórios' });
   if (!sendAt) return res.status(400).json({ error: 'sendAt é obrigatório' });
   const admin = getAdmin();
-  if (!admin) return res.status(503).json({ error: 'Firebase não configurado' });
+  if (!admin?.firestore) return res.status(503).json({ error: 'Banco de dados não configurado' });
   try {
     const ref = await admin.firestore().collection('notif_history').add({
       title, body, url, action: action || null,
@@ -3308,7 +3318,7 @@ app.post('/api/notif/schedule', requireAuthJson, async (req, res) => {
 
 app.delete('/api/notif/schedule/:id', requireAuthJson, async (req, res) => {
   const admin = getAdmin();
-  if (!admin) return res.status(503).json({ error: 'Firebase não configurado' });
+  if (!admin?.firestore) return res.status(503).json({ error: 'Banco de dados não configurado' });
   try {
     await admin.firestore().collection('notif_history').doc(req.params.id).delete();
     res.json({ ok: true });
@@ -3422,7 +3432,7 @@ function montaResumo(slot, { fat, lucro, nv, zerados, brl, temMargem }) {
 app.get('/api/cron/resumo', async (req, res) => {
   if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   const admin = getAdmin();
-  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  if (!admin?.messaging) return res.json({ ok: true, skipped: 'Firebase Messaging não configurado' });
   const token = await getCronBlingToken();
   if (!token) return res.json({ ok: true, skipped: 'Bling não conectado (sem refresh salvo)' });
   const slot = req.query.slot || slotAtual();
@@ -3445,7 +3455,7 @@ app.get('/api/cron/resumo', async (req, res) => {
 app.get('/api/cron/estoque', async (req, res) => {
   if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   const admin = getAdmin();
-  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  if (!admin?.messaging) return res.json({ ok: true, skipped: 'Firebase Messaging não configurado' });
   const token = await getCronBlingToken();
   if (!token) return res.json({ ok: true, skipped: 'Bling não conectado' });
   try {
@@ -3457,11 +3467,11 @@ app.get('/api/cron/estoque', async (req, res) => {
   } catch (e) { sendErrorResponse(res, 500, 'Erro ao verificar alerta de estoque no cron', e.message); }
 });
 
-// Cron: processa notificações agendadas (chamado pelo Vercel Cron a cada minuto)
+// Cron: processa notificações agendadas (chamado pelo agendador da Hostinger).
 app.get('/api/cron/push', async (req, res) => {
   if (!checkCronSecret(req)) return res.status(401).json({ error: 'unauthorized' });
   const admin = getAdmin();
-  if (!admin) return res.json({ ok: true, skipped: 'Firebase não configurado' });
+  if (!admin?.messaging) return res.json({ ok: true, skipped: 'Firebase Messaging não configurado' });
   try {
     const now = new Date();
     const snap = await admin.firestore().collection('notif_history')
@@ -4218,7 +4228,14 @@ app.get('/api/integracoes/status', requireAuthJson, async (req, res) => {
       tipo: 'Notificações',
       descricao: 'Firebase Admin SDK',
       status: process.env.FIREBASE_SERVICE_ACCOUNT ? 'ativo' : 'inativo',
-      features: ['Push Notifications', 'Histórico'],
+      features: ['Login Google', 'Push Notifications'],
+    },
+    database: {
+      conectado: _persistenceProvider !== 'none',
+      tipo: 'Banco de dados',
+      descricao: _persistenceProvider === 'mysql' ? 'MySQL Hostinger' : 'Firestore legado',
+      status: _persistenceProvider !== 'none' ? 'ativo' : 'inativo',
+      features: ['Tokens', 'Financeiro', 'Produtos', 'Histórico', 'Sincronizações'],
     },
   });
 });

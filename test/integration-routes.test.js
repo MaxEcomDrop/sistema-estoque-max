@@ -29,9 +29,17 @@ test('paginação operacional não mantém os antigos cortes de produtos e anún
 test('Firebase Admin usa a API modular compatível com a versão instalada', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
   assert.ok(source.includes("require('firebase-admin/app')"));
-  assert.ok(source.includes('getApps().length ? getApp() : initializeApp'));
+  assert.ok(source.includes('firebaseAppModule.getApps().length'));
+  assert.ok(source.includes('firebaseAppModule.initializeApp'));
   assert.ok(!source.includes('admin.apps.length'));
   assert.ok(!source.includes('admin.credential.cert'));
+});
+
+test('MySQL é a persistência principal quando as variáveis estão configuradas', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+  assert.ok(source.includes('isMySqlConfigured()'));
+  assert.ok(source.includes('createMySqlFirestore()'));
+  assert.ok(source.includes("_persistenceProvider = 'mysql'"));
 });
 
 test('pedidos usam plataforma real e fallback persistido do canal do Bling', () => {
