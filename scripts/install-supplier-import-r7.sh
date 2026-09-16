@@ -14,6 +14,7 @@ FAILED=0
 PUBLISHED=0
 RESTARTED=0
 TABLES_BEFORE=0
+MIGRATION_STARTED=0
 
 fail_install() {
   FAILED=1
@@ -25,38 +26,35 @@ fail_install() {
 }
 
 rollback_files() {
-  if [ "$PUBLISHED" != "1" ]; then
-    echo "ROLLBACK=NÃO NECESSÁRIO"
-    return
-  fi
-
   echo "ROLLBACK=INICIANDO"
 
-  cp -f "$BACKUP/runtime-index.js" "$RUNTIME/index.js"
-  cp -f "$BACKUP/runtime-dashboard.html" "$RUNTIME/public/dashboard.html"
+  if [ "$PUBLISHED" = "1" ]; then
+    cp -f "$BACKUP/runtime-index.js" "$RUNTIME/index.js"
+    cp -f "$BACKUP/runtime-dashboard.html" "$RUNTIME/public/dashboard.html"
 
-  if [ -f "$BACKUP/source-index.js" ]; then
-    cp -f "$BACKUP/source-index.js" "$SOURCE/index.js"
-  fi
-  if [ -f "$BACKUP/source-dashboard.html" ]; then
-    cp -f "$BACKUP/source-dashboard.html" "$SOURCE/public/dashboard.html"
+    if [ -f "$BACKUP/source-index.js" ]; then
+      cp -f "$BACKUP/source-index.js" "$SOURCE/index.js"
+    fi
+    if [ -f "$BACKUP/source-dashboard.html" ]; then
+      cp -f "$BACKUP/source-dashboard.html" "$SOURCE/public/dashboard.html"
+    fi
+
+    if [ -f "$BACKUP/source-supplier-index.js" ]; then
+      cp -f "$BACKUP/source-supplier-index.js" "$SOURCE/lib/supplierSync/index.js"
+    fi
+    if [ -f "$BACKUP/source-supplier-service.js" ]; then
+      cp -f "$BACKUP/source-supplier-service.js" "$SOURCE/lib/supplierSync/service.js"
+    fi
+
+    rm -rf "$RUNTIME/lib/supplierImportR7"
+    rm -rf "$SOURCE/lib/supplierImportR7"
+    rm -f "$RUNTIME/public/assets/max-supplier-import-r7.css"
+    rm -f "$RUNTIME/public/assets/max-supplier-import-r7.js"
+    rm -f "$SOURCE/public/assets/max-supplier-import-r7.css"
+    rm -f "$SOURCE/public/assets/max-supplier-import-r7.js"
   fi
 
-  if [ -f "$BACKUP/source-supplier-index.js" ]; then
-    cp -f "$BACKUP/source-supplier-index.js" "$SOURCE/lib/supplierSync/index.js"
-  fi
-  if [ -f "$BACKUP/source-supplier-service.js" ]; then
-    cp -f "$BACKUP/source-supplier-service.js" "$SOURCE/lib/supplierSync/service.js"
-  fi
-
-  rm -rf "$RUNTIME/lib/supplierImportR7"
-  rm -rf "$SOURCE/lib/supplierImportR7"
-  rm -f "$RUNTIME/public/assets/max-supplier-import-r7.css"
-  rm -f "$RUNTIME/public/assets/max-supplier-import-r7.js"
-  rm -f "$SOURCE/public/assets/max-supplier-import-r7.css"
-  rm -f "$SOURCE/public/assets/max-supplier-import-r7.js"
-
-  if [ "$TABLES_BEFORE" = "0" ]; then
+  if [ "$MIGRATION_STARTED" = "1" ] && [ "$TABLES_BEFORE" = "0" ]; then
     cd "$RUNTIME"
     "$NODE" - "$ENV_FILE" "$RUNTIME" <<'NODEDROP'
 try { require('dotenv').config({ path: process.argv[2], quiet: true }); } catch {}
@@ -82,8 +80,10 @@ const db=require(process.argv[3]+'/lib/mysql/db');
 NODEDROP
   fi
 
-  touch "$RUNTIME/tmp/restart.txt"
-  sleep 4
+  if [ "$PUBLISHED" = "1" ]; then
+    touch "$RUNTIME/tmp/restart.txt"
+    sleep 4
+  fi
   echo "ROLLBACK=CONCLUÍDO"
 }
 
@@ -1688,9 +1688,6 @@ if [ "$FAILED" = "0" ]; then
 fi
 
 if [ "$FAILED" = "0" ]; then
-  mkdir -p "$STAGE/lib/supplierImportR7"
-  cp -f "$STAGE/lib/supplierImportR7/index.js" "$STAGE/lib/supplierImportR7/index.js"
-
   "$NODE" "$STAGE/patch-r7.js" "$RUNTIME" "$STAGE"
   PATCH_RC=$?
 
@@ -1762,6 +1759,7 @@ fi
 
 if [ "$FAILED" = "0" ]; then
   cd "$RUNTIME"
+  MIGRATION_STARTED=1
   "$NODE" "$STAGE/migration-r7.js" "$ENV_FILE" "$RUNTIME"
   MIG_RC=$?
   if [ "$MIG_RC" != "0" ]; then
